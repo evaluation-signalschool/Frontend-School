@@ -1,8 +1,428 @@
 <div class="page-container">
-  <div class="header">
-    <h1>สรุปผลการประเมิน: {{ courseName || 'ทั้งหมด' }}</h1>
+  <header class="header">
+    <div class="header-title">
+      <h1>ผลการประเมิน: {{ selectedCourseName || 'ภาพรวมทั้งหมด' }}</h1>
+    </div>
+
+    <!-- ส่วน Dropdown Filter เลือกหลักสูตร & รายวิชา -->
+    <div class="filter-card">
+
+      <div class="filter-group">
+        <label for="course">รายวิชา:</label>
+        <select [(ngModel)]="selectedCourseNameSelect">
+          <option value="ALL">วิชาทั้งหมด</option>
+          <option *ngFor="let course of filteredCourses" [value]="course.name">
+            {{ course.name }}
+          </option>
+        </select>
+      </div>
+
+      <div class="export-actions">
+        <button class="btn-export pdf" (click)="exportPDF()">
+          📄 Export PDF
+        </button>
+        <button class="btn-export excel" (click)="exportExcel()">
+          📊 Export Excel
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+      <button class="tab-btn" [class.active]="activeTab === 'overview'" (click)="activeTab = 'overview'">
+        📊 สถานะการส่งประเมิน
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'results'" (click)="activeTab = 'results'">
+        ⭐ ผลคะแนนประเมินอาจารย์
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'teacher_eval'" (click)="activeTab = 'teacher_eval'">
+        👨‍🏫 อาจารย์ประเมินนักเรียน
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'course_eval'" (click)="activeTab = 'course_eval'">
+        🎓 ผู้เรียนประเมินหลักสูตร
+      </button>
+    </div>
+  </header>
+
+  <main class="content">
+    <!-- ================= TAB 1: OVERVIEW & PENDING LIST ================= -->
+    <ng-container *ngIf="activeTab === 'overview'">
+      <!-- กราฟ Donut สรุปสถิติ -->
+      <section class="overview-card">
+        <div class="chart-container">
+          <div class="donut-chart" [ngStyle]="{ 'background': chartGradient }">
+            <div class="chart-center">
+              <span class="total-number">{{ totalUsers }}</span>
+              <span class="total-label">ผู้เข้าอบรม</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="legend-container">
+          <div class="legend-card evaluated">
+            <div class="legend-header">
+              <span class="badge"></span>
+              <span class="label">ประเมินแล้ว</span>
+            </div>
+            <div class="legend-value">
+              <span class="num">{{ evaluatedCount }}</span>
+              <span class="unit">คน</span>
+              <span class="percent">({{ evaluatedPercent }}%)</span>
+            </div>
+          </div>
+
+          <div class="legend-card pending">
+            <div class="legend-header">
+              <span class="badge"></span>
+              <span class="label">ยังไม่ประเมิน</span>
+            </div>
+            <div class="legend-value">
+              <span class="num">{{ displayPendingUsers.length }}</span>
+              <span class="unit">คน</span>
+              <span class="percent">({{ pendingPercent }}%)</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- รายชื่อผู้ยังไม่ได้ประเมิน -->
+      <section class="pending-section">
+        <div class="section-header">
+          <h2>รายชื่อที่ยังไม่ได้ประเมิน</h2>
+          <span class="count-badge">{{ displayPendingUsers.length }} คน</span>
+        </div>
+
+        <div *ngIf="displayPendingUsers.length > 0; else emptyState" class="table-wrapper">
+          <table class="pending-table">
+            <thead>
+              <tr>
+                <th class="col-index">ลำดับ</th>
+                <th class="col-name">ชื่อ-นามสกุล</th>
+                <th class="col-course">วิชาที่ยังไม่ประเมิน</th>
+                <th class="col-status">สถานะ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let user of displayPendingUsers; let i = index">
+                <td class="col-index">{{ i + 1 }}</td>
+                <td class="col-name">{{ user.name }}</td>
+                <td class="col-course">{{ user.courseName }}</td>
+                <td class="col-status">
+                  <span class="status-tag">รอประเมิน</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ng-template #emptyState>
+          <div class="empty-state">
+            <div class="empty-icon">🎉</div>
+            <p>ประเมินครบถ้วนทุกคนแล้ว!</p>
+          </div>
+        </ng-template>
+      </section>
+    </ng-container>
+
+    <!-- ================= TAB 2: TEACHER EVALUATION RESULTS ================= -->
+    <ng-container *ngIf="activeTab === 'results'">
+      <section class="results-section">
+        <div class="section-header">
+          <h2>คะแนนประเมินการสอนแยกตามวิชา/อาจารย์</h2>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>ชื่อวิชา</th>
+                <th>อาจารย์ผู้สอน</th>
+                <th class="text-center">บุคลิกภาพและลักษณะท่าทาง</th>
+                <th class="text-center">การพูดและการใช้นํ้าเสียง</th>
+                <th class="text-center">การเตรียมการสอน</th>
+                <th class="text-center">การจัดเตรียมสื่อการสอน</th>
+                <th class="text-center">การถ่ายทอดความรู้และการนำเข้าสู่บทเรียน</th>
+                <th class="text-center">ผู้เรียนได้ฝึกทักษะการคิดวิเคราะห์ หรือการพัฒนาความคิดสร้างสรรค์</th>
+                <th class="text-center">ผู้เรียนได้ฝึกทักษะการสื่อสาร การนำเสนอ และการใช้งานเทคโนโลยีสารสนเทศ</th>
+                <th class="text-center">ค่าเฉลี่ยในภาพรวม</th>
+                <th class="text-center">ระดับ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of displayEvaluationResults; let i = index">
+                <td class="col-course">{{ item.courseName }}</td>
+                <td class="col-teacher">{{ item.teacherName }}</td>
+
+                <!-- คะแนนประเมิน 7 ข้อ -->
+                <td class="col-q text-center">{{ item.scores.q1 }}</td>
+                <td class="col-q text-center">{{ item.scores.q2 }}</td>
+                <td class="col-q text-center">{{ item.scores.q3 }}</td>
+                <td class="col-q text-center">{{ item.scores.q4 }}</td>
+                <td class="col-q text-center">{{ item.scores.q5 }}</td>
+                <td class="col-q text-center">{{ item.scores.q6 }}</td>
+                <td class="col-q text-center">{{ item.scores.q7 }}</td>
+
+                <!-- ค่าเฉลี่ย -->
+                <td class="col-avg text-center">
+                  <span class="score-badge">{{ item.averageScore }}</span>
+                </td>
+
+                <td class="col-level text-center">
+                  <span class="level-tag" [ngClass]="{
+    'level-high': item.level?.trim() === 'มากที่สุด',
+    'level-medium': item.level?.trim() === 'มาก',
+    'level-normal': item.level?.trim() === 'ปานกลาง'
+  }">
+                    {{ item.level }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+
+            <!-- ส่วน tfoot สรุปผล -->
+            <tfoot>
+              <!-- แถวที่ 1: ผลการประเมินโดยภาพรวม -->
+              <tr class="summary-row">
+                <td colspan="2" class="text-center font-weight-bold">ผลการประเมินโดยภาพรวม</td>
+                <td class="text-center font-weight-bold">{{ getOverallQ('q1') }}</td>
+                <td class="text-center font-weight-bold">{{ getOverallQ('q2') }}</td>
+                <td class="text-center font-weight-bold">{{ getOverallQ('q3') }}</td>
+                <td class="text-center font-weight-bold">{{ getOverallQ('q4') }}</td>
+                <td class="text-center font-weight-bold">{{ getOverallQ('q5') }}</td>
+                <td class="text-center font-weight-bold">{{ getOverallQ('q6') }}</td>
+                <td class="text-center font-weight-bold">{{ getOverallQ('q7') }}</td>
+                <td class="text-center font-weight-bold bg-highlight">{{ overallAverage }}</td>
+
+                <!-- แก้ไขช่องนี้เพื่อให้แสดงป้ายสี -->
+                <td class="text-center font-weight-bold bg-highlight">
+                  <span class="level-tag" [ngClass]="{
+        'level-high': overallLevel?.trim() === 'มากที่สุด',
+        'level-medium': overallLevel?.trim() === 'มาก',
+        'level-normal': overallLevel?.trim() === 'ปานกลาง'
+      }">
+                    {{ overallLevel }}
+                  </span>
+                </td>
+              </tr>
+
+              <!-- แถวที่ 2: จำนวนวิชาที่ประเมิน -->
+              <tr class="summary-row">
+                <td colspan="2" class="text-center">
+                  ทั้งหมด {{ displayEvaluationResults.length }} วิชา จาก {{ totalCount }} วิชา
+                </td>
+                <td colspan="9"></td> <!-- ช่องว่างที่เหลือทางขวา -->
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+
+    <!-- ================= TAB 3: STUDENT EVALUATION BY TEACHER ================= -->
+    <ng-container *ngIf="activeTab === 'teacher_eval'">
+      <div class="student-eval-container">
+        <div class="section-header">
+          <h2>ผลคะแนนการประเมินนักเรียนโดยอาจารย์</h2>
+          <div class="header-actions">
+            <span class="count-badge">ทั้งหมด {{ displayStudentEvalData.length }} วิชา</span>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>ชื่อวิชา</th>
+                <th class="text-center">ความตั้งใจเรียนและการให้ความร่วมมือของนักเรียน</th>
+                <th class="text-center">ความพร้อมที่จะเรียนและความกระตือรือร้นในการเรียน</th>
+                <th class="text-center">การปฏิบัติตามกฏระเบียบของโรงเรียนและความมีวินัย</th>
+                <th class="text-center">ความซื่อสัตย์ในการสอบและตรงต่อเวลาในการส่งงาน</th>
+                <th class="text-center">คุณลักษณะของผู้เรียน</th>
+                <th class="text-center" style="width: 100px;">ค่าเฉลี่ยรวม</th>
+                <th class="text-center" style="width: 110px;">ระดับ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of displayStudentEvalData">
+                <td class="col-course">{{ item.courseName }}</td>
+                <td class="text-center">{{ item.score1 | number:'1.2-2' }}</td>
+                <td class="text-center">{{ item.score2 | number:'1.2-2' }}</td>
+                <td class="text-center">{{ item.score3 | number:'1.2-2' }}</td>
+                <td class="text-center">{{ item.score4 | number:'1.2-2' }}</td>
+                <td class="text-center">{{ item.score5 | number:'1.2-2' }}</td>
+
+                <!-- 1. คอลัมน์ค่าเฉลี่ย (ใส่ bg-highlight เพื่อให้พื้นหลังเป็นสีม่วง-ฟ้าอ่อน) -->
+                <td class="text-center bg-highlight">{{ item.avgScore | number:'1.2-2' }}</td>
+
+                <!-- 2. คอลัมน์ระดับ (ใส่ bg-level + เปลี่ยน span เป็น level-tag) -->
+                <td class="text-center bg-level" style="white-space: nowrap;">
+                  <span class="level-tag" [ngClass]="{
+            'level-high': item.level?.includes('มากที่สุด'),
+            'level-medium': item.level?.includes('มาก') && !item.level?.includes('มากที่สุด'),
+            'level-normal': item.level?.includes('ปานกลาง')
+          }">
+                    {{ item.level }}
+                  </span>
+                </td>
+              </tr>
+
+              <tr *ngIf="displayStudentEvalData.length === 0">
+                <td colspan="8" class="text-center" style="padding: 2rem; color: #6b7280;">
+                  ไม่พบข้อมูลการประเมิน
+                </td>
+              </tr>
+            </tbody>
+
+            <tfoot class="summary-footer" *ngIf="displayStudentEvalData.length > 0">
+              <tr class="summary-row">
+                <td class="summary-label">ทั้งหมด 49 วิชา จาก 57</td>
+                <td class="text-center">{{ studentEvalSummary.avg1 | number:'1.2-2' }}</td>
+                <td class="text-center">{{ studentEvalSummary.avg2 | number:'1.2-2' }}</td>
+                <td class="text-center">{{ studentEvalSummary.avg3 | number:'1.2-2' }}</td>
+                <td class="text-center">{{ studentEvalSummary.avg4 | number:'1.2-2' }}</td>
+                <td class="text-center">{{ studentEvalSummary.avg5 | number:'1.2-2' }}</td>
+
+                <!-- ค่าเฉลี่ยสรุปภาพรวม -->
+                <td class="text-center bg-highlight">{{ studentEvalSummary.totalAvg | number:'1.2-2' }}</td>
+
+                <!-- ระดับสรุปภาพรวม -->
+                <td class="text-center bg-level" style="white-space: nowrap;">
+                  <span class="level-tag" [ngClass]="{
+            'level-high': studentEvalSummary.totalLevel?.includes('มากที่สุด'),
+            'level-medium': studentEvalSummary.totalLevel?.includes('มาก') && !studentEvalSummary.totalLevel?.includes('มากที่สุด'),
+            'level-normal': studentEvalSummary.totalLevel?.includes('ปานกลาง')
+          }">
+                    {{ studentEvalSummary.totalLevel }}
+                  </span>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+    </ng-container>
+
+  <!-- ================= TAB 4: COURSE EVALUATION BY STUDENT ================= -->
+<ng-container *ngIf="activeTab === 'course_eval'">
+  <div class="student-eval-container">
+    <div class="section-header">
+      <h2>ผลการประเมินหลักสูตรโดยผู้เรียน</h2>
+    </div>
+
+    <!-- ตารางที่ 1: 7 หัวข้อ -->
+    <div class="card-eval-wrapper">
+      <div class="card-header-title">
+        <h3>ผู้เรียนประเมิยหลักสูตร หลักสูตรชั้นนายพัน เหล่า ส. รุ่นที่ 62 (ศึกษาร่วมระหว่างเหล่าฯ)</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th *ngFor="let topic of courseEvalPart1.topics" class="text-center">
+                {{ topic }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- บรรทัดตัวเลขคะแนน -->
+            <tr class="score-row">
+              <td *ngFor="let score of courseEvalPart1.scores" class="text-center">
+                {{ score | number:'1.2-2' }}
+              </td>
+            </tr>
+            <!-- บรรทัดแสดงระดับ (ดี, ดีมาก, ดีมากที่สุด) -->
+            <tr class="level-row">
+              <td *ngFor="let lvl of courseEvalPart1.levels" class="text-center">
+                <span class="level-tag" [ngClass]="{
+                  'level-purple-dark': lvl?.includes('มากที่สุด'),
+                  'level-purple-medium': lvl?.includes('มาก') && !lvl?.includes('มากที่สุด'),
+                  'level-purple-light': lvl === 'ดี' || lvl?.includes('ปานกลาง')
+                }">
+                  {{ lvl }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ตารางที่ 2: 5 หัวข้อ -->
+    <div class="card-eval-wrapper">
+      <div class="card-header-title">
+        <h3>ผู้เรียนประเมินคณะกำกับหลักสูตร หลักสูตรชั้นนายพัน เหล่า ส. รุ่นที่ 62 (ศึกษาร่วมระหว่างเหล่าฯ)</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th *ngFor="let topic of courseEvalPart2.topics" class="text-center">
+                {{ topic }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="score-row">
+              <td *ngFor="let score of courseEvalPart2.scores" class="text-center">
+                {{ score | number:'1.2-2' }}
+              </td>
+            </tr>
+            <tr class="level-row">
+              <td *ngFor="let lvl of courseEvalPart2.levels" class="text-center">
+                <span class="level-tag" [ngClass]="{
+                  'level-purple-dark': lvl?.includes('มากที่สุด'),
+                  'level-purple-medium': lvl?.includes('มาก') && !lvl?.includes('มากที่สุด'),
+                  'level-purple-light': lvl === 'ดี' || lvl?.includes('ปานกลาง')
+                }">
+                  {{ lvl }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ตารางที่ 3: 6 หัวข้อ -->
+    <div class="card-eval-wrapper">
+      <div class="card-header-title">
+        <h3>คณะกำกับหลักสูตรประเมินหลักสูตร หลักสูตรชั้นนายพัน เหล่า ส. รุ่นที่ 62 (ศึกษาร่วมระหว่างเหล่า)</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th *ngFor="let topic of courseEvalPart3.topics" class="text-center">
+                {{ topic }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="score-row">
+              <td *ngFor="let score of courseEvalPart3.scores" class="text-center">
+                {{ score | number:'1.2-2' }}
+              </td>
+            </tr>
+            <tr class="level-row">
+              <td *ngFor="let lvl of courseEvalPart3.levels" class="text-center">
+                <span class="level-tag" [ngClass]="{
+                  'level-purple-dark': lvl?.includes('มากที่สุด'),
+                  'level-purple-medium': lvl?.includes('มาก') && !lvl?.includes('มากที่สุด'),
+                  'level-purple-light': lvl === 'ดี' || lvl?.includes('ปานกลาง')
+                }">
+                  {{ lvl }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
-  <div class="content">
-    <p>กำลังเตรียมข้อมูลสำหรับหน้าสรุปผลการประเมิน...</p>
-  </div>
+</ng-container>
+
+  </main>
 </div>

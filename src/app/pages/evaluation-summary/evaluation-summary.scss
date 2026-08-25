@@ -1,21 +1,733 @@
+// ==========================================
+// 1. VARIABLES & BASE SETUP
+// ==========================================
+$primary: #6366f1;
+$primary-hover: #4f46e5;
+$primary-light: #e0e7ff;
+$primary-bg: #f5f3ff;
+$text-main: #0f172a;
+$text-muted: #64748b;
+$border-color: #e2e8f0;
+$bg-body: #f3e8ff; // เปลี่ยนเป็นสีม่วงพาสเทลนุ่มนวล
+$shadow-sm: 0 2px 8px rgba(99, 102, 241, 0.04);
+$shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
+
+:host {
+  display: block;
+  min-height: 100vh;
+  background-color: $bg-body !important; // พื้นหลังหลักหลังสุดของเว็บ
+  padding: 2.5rem 0;
+}
+
+// ==========================================
+// 2. PAGE & HEADER LAYOUT
+// ==========================================
 .page-container {
-  padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
+  padding: 0 1.5rem;
+  font-family: 'Inter', 'Sarabun', sans-serif;
+  color: $text-main;
 
   .header {
-    margin-bottom: 24px;
-    h1 {
-      font-size: 24px;
-      font-weight: 600;
-      color: #333;
+    margin-bottom: 2rem;
+
+    .header-title h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: $text-main;
+      margin-bottom: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .filter-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 1rem 1.5rem;
+      border: 1px solid $border-color;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.25rem;
+      box-shadow: $shadow-sm;
+
+      @media (max-width: 640px) {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+      }
+
+      .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex: 1;
+        max-width: 450px;
+
+        label {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: $text-muted;
+          white-space: nowrap;
+        }
+
+        select {
+          width: 100%;
+          padding: 0.6rem 0.9rem;
+          border-radius: 10px;
+          border: 1px solid $border-color;
+          background-color: #f8fafc;
+          color: $text-main;
+          font-size: 0.875rem;
+          font-weight: 500;
+          outline: none;
+          transition: all 0.2s ease;
+          cursor: pointer;
+
+          &:hover {
+            border-color: #cbd5e1;
+          }
+
+          &:focus {
+            border-color: $primary;
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+          }
+        }
+      }
+
+      // ปุ่ม Export PDF & Excel
+      .export-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+
+        .btn-export {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.4rem;
+          padding: 0.6rem 1.1rem;
+          border-radius: 10px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          cursor: pointer;
+          border: 1px solid transparent;
+          white-space: nowrap;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+          &.pdf {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border-color: #fecaca;
+
+            &:hover {
+              background-color: #dc2626;
+              color: #ffffff;
+              box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+              transform: translateY(-1px);
+            }
+          }
+
+          &.excel {
+            background-color: #f0fdf4;
+            color: #16a34a;
+            border-color: #bbf7d0;
+
+            &:hover {
+              background-color: #16a34a;
+              color: #ffffff;
+              box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);
+              transform: translateY(-1px);
+            }
+          }
+
+          &:active {
+            transform: translateY(0);
+          }
+        }
+      }
+    }
+
+    .tab-nav {
+      display: flex;
+      gap: 0.5rem;
+      background: #ffffff;
+      padding: 0.4rem;
+      border-radius: 16px;
+      border: 1px solid $border-color;
+      box-shadow: $shadow-sm;
+      overflow-x: auto;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      .tab-btn {
+        flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.8rem 1.25rem;
+        border: none;
+        background: transparent;
+        color: $text-muted;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border-radius: 12px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+        &:hover {
+          color: $primary;
+          background: rgba(99, 102, 241, 0.08);
+        }
+
+        &.active {
+          background: linear-gradient(135deg, $primary 0%, $primary-hover 100%);
+          color: #ffffff;
+          box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+          transform: translateY(-1px);
+        }
+      }
     }
   }
 
   .content {
-    background: #fff;
-    padding: 24px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
   }
+}
+
+// ==========================================
+// 3. OVERVIEW CARD & DASHBOARD
+// ==========================================
+.overview-card {
+  background: #ffffff !important;
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: $shadow-md;
+  border: 1px solid $border-color;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 3rem;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding: 1.5rem;
+  }
+
+  .chart-container .donut-chart {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease;
+
+    &:hover {
+      transform: scale(1.03);
+    }
+
+    .chart-center {
+      width: 108px;
+      height: 108px;
+      background: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+      .total-number {
+        font-size: 1.75rem;
+        font-weight: 800;
+        line-height: 1.1;
+        color: $text-main;
+      }
+
+      .total-label {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: $text-muted;
+      }
+    }
+  }
+
+  .legend-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+    width: 100%;
+
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr;
+    }
+
+    .legend-card {
+      padding: 1.25rem;
+      border-radius: 14px;
+      background: #f8fafc !important;
+      border: 1px solid #f1f5f9;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        transform: translateY(-2px);
+      }
+
+      .legend-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.6rem;
+
+        .badge {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+        }
+
+        .label {
+          font-size: 0.875rem;
+          color: $text-muted;
+          font-weight: 600;
+        }
+      }
+
+      .legend-value {
+        display: flex;
+        align-items: baseline;
+        gap: 0.4rem;
+
+        .num {
+          font-size: 1.65rem;
+          font-weight: 800;
+          line-height: 1;
+        }
+
+        .unit {
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: $text-muted;
+        }
+
+        .percent {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: $text-muted;
+          margin-left: 0.2rem;
+        }
+      }
+
+      &.evaluated {
+        .badge {
+          background-color: $primary;
+          box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+        }
+
+        .num {
+          color: $primary;
+        }
+      }
+
+      &.pending {
+        .badge {
+          background-color: #94a3b8;
+        }
+
+        .num {
+          color: #475569;
+        }
+      }
+    }
+  }
+}
+
+// ==========================================
+// 4. SECTION WRAPPERS & TABLES (GENERAL)
+// ==========================================
+.pending-section,
+.results-section,
+.student-eval-container {
+  background: #ffffff !important;
+  border-radius: 20px;
+  padding: 1.75rem;
+  border: 1px solid $border-color;
+  box-shadow: $shadow-md;
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: $text-main;
+      margin: 0;
+    }
+
+    .count-badge {
+      background: $primary-light;
+      color: #3730a3;
+      padding: 0.35rem 0.95rem;
+      border-radius: 30px;
+      font-size: 0.825rem;
+      font-weight: 700;
+    }
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid #e0e7ff;
+
+    &::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 10px;
+    }
+  }
+}
+
+// ------------------------------------------
+// 4.1 Pending Table (วิชาทั้งหมด 49/57 วิชา)
+// ------------------------------------------
+.pending-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+
+  th,
+  td {
+    padding: 1rem 1.25rem;
+    font-size: 0.875rem;
+    vertical-align: middle;
+  }
+
+  th {
+    background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%) !important;
+    color: #3730a3 !important;
+    font-weight: 700;
+    text-align: left;
+    border-bottom: 2px solid #c7d2fe;
+    white-space: nowrap;
+
+    &.col-status {
+      text-align: center;
+      width: 150px;
+    }
+  }
+
+  tbody tr {
+    transition: all 0.15s ease;
+
+    &:nth-child(even) {
+      background-color: #f8fafc;
+    }
+
+    &:hover {
+      background-color: #f3e8ff !important;
+    }
+
+    td {
+      color: $text-main;
+      border-bottom: 1px solid #f1f5f9;
+
+      &.col-name {
+        font-weight: 600;
+        color: #312e81;
+      }
+
+      &.col-course {
+        color: #334155;
+      }
+
+      &.col-status {
+        text-align: center;
+      }
+    }
+  }
+
+  .status-tag {
+    display: inline-block;
+    background-color: #fef3c7;
+    color: #b45309;
+    padding: 0.35rem 0.85rem;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border: 1px solid #fde68a;
+    white-space: nowrap;
+  }
+}
+
+// ------------------------------------------
+// 4.2 Evaluation Tables (สำหรับ Tab 2 และ Tab 3)
+// ------------------------------------------
+.results-table,
+.student-eval-table {
+  width: 100%;
+  border-collapse: collapse !important;
+  background-color: #ffffff;
+  font-size: 0.875rem;
+
+  th,
+  td {
+    padding: 0.85rem 0.75rem;
+    border: 1px solid #e0e7ff !important;
+    vertical-align: middle;
+  }
+
+  thead th {
+    background: linear-gradient(135deg, #eef2ff 0%, #f3e8ff 100%) !important;
+    color: #3730a3 !important;
+    font-weight: 700;
+    line-height: 1.4;
+    white-space: normal !important;
+    word-break: break-word;
+    min-width: 95px;
+
+    &.col-course,
+    &.col-teacher,
+    &.col-student,
+    &:first-child {
+      min-width: 150px;
+      text-align: left;
+      padding-left: 1rem;
+    }
+  }
+
+  tbody {
+    tr {
+      background-color: #ffffff !important; // ปรับตรงกลางเป็นสีขาวล้วน
+
+      &:nth-child(even) {
+        background-color: #ffffff !important; // เอาสีสลับออก
+      }
+
+      &:hover {
+        background-color: #f8fafc !important; // ไฮไลต์สีเทาอ่อน สบายตาเวลามีการ Hover
+      }
+    }
+
+    td {
+      color: #1e293b;
+
+      &.col-course,
+      &.col-teacher,
+      &.col-student {
+        font-weight: 600;
+        color: #0f172a;
+        padding-left: 1rem;
+      }
+
+      // คอลัมน์คะแนนเฉลี่ยยังคงไฮไลท์สีให้เด่นชัด
+      &.highlight-score,
+      &.bg-highlight,
+      &.col-avg {
+        background-color: #ede9fe !important;
+        color: #4c1d95 !important;
+        font-weight: 700 !important;
+      }
+
+      &.col-level,
+      &.bg-level {
+        background-color: #ffffff !important; // เอาสีพื้นหลังระดับการประเมินออกเป็นสีขาว
+      }
+    }
+  }
+
+  .level-tag {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 90px;
+    padding: 0.35rem 0.9rem;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+    text-align: center;
+
+    &.level-high,
+    &.level-purple-dark {
+      background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%) !important;
+      color: #ffffff !important;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+    }
+
+    &.level-medium,
+    &.level-purple-medium {
+      background-color: #c084fc !important;
+      color: #ffffff !important;
+    }
+
+    &.level-normal,
+    &.level-purple-light {
+      background-color: #ddd6fe !important;
+      color: #5b21b6 !important;
+    }
+  }
+
+  tfoot,
+  tfoot.summary-footer {
+    tr.summary-row td {
+      background: linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%) !important;
+      border-top: 2px solid #818cf8 !important;
+      border-bottom: 1px solid $border-color !important;
+      color: #312e81 !important;
+      font-weight: 700;
+
+      &.bg-highlight,
+      &.highlight-score {
+        background-color: #ddd6fe !important;
+        color: #4c1d95 !important;
+        font-weight: 800 !important;
+      }
+
+      &.col-level,
+      &.bg-level {
+        background-color: #faf5ff !important;
+      }
+    }
+  }
+}
+
+// ==========================================
+// 5. TAB 4: COURSE EVALUATION (HORIZONTAL MATRIX)
+// ==========================================
+.card-eval-wrapper {
+  background: #ffffff;
+  border: 1px solid #e0e7ff;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 1.75rem;
+  box-shadow: $shadow-sm;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  .card-header-title {
+    padding: 1.25rem 1.75rem;
+    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+    border-bottom: 1px solid #ddd6fe;
+
+    h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #312e81;
+    }
+  }
+}
+
+.table-responsive {
+  overflow-x: auto;
+
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c7d2fe;
+    border-radius: 10px;
+  }
+}
+
+.matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  thead {
+    th {
+      padding: 1.25rem 1rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #3730a3;
+      background: linear-gradient(135deg, #eef2ff 0%, #f3e8ff 100%);
+      border-right: 1px solid #e0e7ff;
+      border-bottom: 2px solid #c7d2fe;
+      vertical-align: middle;
+      line-height: 1.4;
+
+      &:last-child {
+        border-right: none;
+      }
+    }
+  }
+
+  tbody {
+    // แถวแสดงคะแนน (ปรับให้เป็นตัวเลขน้ำหนักปกติ ไม่หนา)
+    tr.score-row td {
+      padding: 0.85rem 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 400; // ปรับเป็นตัวเลขปกติ
+      color: #4c1d95;
+      background-color: #faf5ff;
+      border-right: 1px solid #f1f5f9;
+      border-bottom: 1px solid #f1f5f9;
+
+      &.col-avg,
+      &.highlight-score {
+        background-color: #ede9fe;
+        color: #4c1d95;
+        font-weight: 600; // หากต้องการเน้นคอลัมน์เฉลี่ยให้หนาขึ้นนิดนึง (หรือปรับเป็น 400 ให้ปกติทั้งหมดได้ครับ)
+      }
+
+      &:last-child {
+        border-right: none;
+      }
+    }
+
+    // แถวแสดงระดับผลการประเมิน
+    tr.level-row td {
+      padding: 0.85rem 0.5rem;
+      background-color: #ffffff;
+      border-right: 1px solid #f1f5f9;
+      border-bottom: 1px solid #e0e7ff;
+
+      &:last-child {
+        border-right: none;
+      }
+    }
+  }
+}
+
+// ==========================================
+// 6. EMPTY STATE & UTILITIES
+// ==========================================
+.empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+
+  .empty-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  p {
+    color: #10b981;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+}
+
+.text-center {
+  text-align: center !important;
 }

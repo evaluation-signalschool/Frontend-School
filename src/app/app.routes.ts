@@ -76,7 +76,6 @@ export const routes: Routes = [
   {path:'edit-profile',component: EditProfile},
 
 
-
   // ส่วนของคะแนน (ทั่วไป)
   { path: 'score', component: Score },
   { path: 'score-submission', component: ScoreSubmission },
