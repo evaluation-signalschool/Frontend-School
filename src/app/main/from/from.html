@@ -75,6 +75,10 @@
               <mat-icon style="font-size: 20px; width: 20px; height: 20px;">delete</mat-icon>
             </button>
           </div>
+          <div *ngIf="isDuplicateForm()" style="color: #ef4444; font-size: 13px; margin-top: 6px; display: flex; align-items: center; gap: 4px;">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">error_outline</mat-icon>
+            รุ่นนี้มีการสร้างแบบฟอร์มประเภทนี้ไปแล้ว ไม่สามารถสร้างซ้ำได้
+          </div>
         </div>
 
       </div>
@@ -153,7 +157,7 @@
       <!-- ส่วนปุ่มกึ่งกลางหน้าจอ -->
       <div class="final-action" style="margin-top: 32px; border-top: 1px solid #ddd; padding-top: 24px;">
         <div *ngIf="!isEditMode" class="action-buttons-group">
-          <button mat-raised-button class="btn-submit-form" (click)="onCreateForm()">
+          <button mat-raised-button class="btn-submit-form" (click)="onCreateForm()" [disabled]="isDuplicateForm()" [style.opacity]="isDuplicateForm() ? 0.5 : 1" [style.cursor]="isDuplicateForm() ? 'not-allowed' : 'pointer'">
             สร้างแบบประเมิน
           </button>
         </div>

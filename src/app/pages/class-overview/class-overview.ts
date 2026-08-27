@@ -12,6 +12,8 @@ import { ScoreService } from '../../services/score.service';
 import { StudentGradeDialog, SubjectScoreDetail } from '../student-grade-dialog/student-grade-dialog';
 import { SpecialScoreDialog } from '../special-score-dialog/special-score-dialog';
 import Swal from 'sweetalert2';
+import * as ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 export interface SubjectHeader {
   id: number;
@@ -26,6 +28,7 @@ export interface SubjectHeader {
 export interface SubjectGroupHeader {
   groupId: number | string;
   groupName: string;
+  groupCode?: string;
   credit: number;
   subjects: SubjectHeader[];
   isSingle: boolean;
@@ -277,6 +280,16 @@ export class ClassOverview implements OnInit {
     return '-';
   }
 
+  getGroupColorCode(groupName: string, isSingle: boolean): string {
+    const name = groupName ? groupName.trim().toUpperCase() : '';
+    if (name.startsWith('MN')) return 'FFFFEBEE'; // Red/Pink (Minor)
+    if (name.startsWith('M')) return 'FFFFF9C4';  // Yellow (Main)
+    if (name.startsWith('S')) return 'FFE3F2FD';  // Blue (Supporting)
+    if (name.startsWith('P')) return 'FFF5F5F5';  // White/Gray (Practical)
+    // Fallback: หากไม่ได้ตั้งชื่อนำหน้าด้วยตัวย่อ ให้ใช้สีตามหน้าเว็บ (ชมพูสำหรับวิชาเดี่ยว, เขียวสำหรับวิชากลุ่ม)
+    return isSingle ? 'FFFCE4EC' : 'FFE8F5E9';
+  }
+
   getSubjectIndex(sub: SubjectHeader): number {
     return this.masterSubjects.findIndex(s => s.id === sub.id);
   }
@@ -304,8 +317,177 @@ export class ClassOverview implements OnInit {
     });
   }
 
-  exportToExcel(): void {
-    alert(`ระบบกำลังส่งออกข้อมูล Master Grid ของ ${this.getSelectedBatchName()} เป็นไฟล์ Excel...`);
+  async exportToExcel(): Promise<void> {
+    if (!this.students || this.students.length === 0) {
+      alert('ไม่มีข้อมูลสำหรับส่งออก');
+      return;
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Master Grid');
+
+    worksheet.properties.defaultRowHeight = 25;
+
+    // 1. สร้าง Headers แถวที่ 1 (กลุ่มวิชา) และ แถวที่ 2 (วิชาย่อย)
+    const headerRow1 = ['ลำดับที่', 'ยศ-ชื่อ-นามสกุล'];
+    const headerRow2 = ['', ''];
+
+    let colIndex = 3;
+    const mergeCells: { s: string, e: string, color: string }[] = [];
+    const colColors: { [col: number]: string } = {};
+
+    if (this.subjectGroups.length > 0) {
+      this.subjectGroups.forEach(grp => {
+        const startCol = colIndex;
+        const color = this.getGroupColorCode(grp.groupCode || grp.groupName, grp.isSingle);
+        
+        headerRow1.push(grp.groupName);
+        for (let i = 1; i < grp.subjects.length; i++) {
+           headerRow1.push(''); // ช่องว่างสำหรับ colspan
+        }
+        
+        if (grp.subjects.length > 1) {
+          mergeCells.push({ s: worksheet.getColumn(startCol).letter + '1', e: worksheet.getColumn(startCol + grp.subjects.length - 1).letter + '1', color: color });
+        } else {
+          mergeCells.push({ s: worksheet.getColumn(startCol).letter + '1', e: worksheet.getColumn(startCol).letter + '1', color: color });
+        }
+        
+        grp.subjects.forEach(sub => {
+           headerRow2.push(sub.name);
+           colColors[colIndex] = color;
+           colIndex++;
+        });
+      });
+    } else {
+      this.masterSubjects.forEach(sub => {
+        headerRow1.push(sub.name);
+        headerRow2.push('');
+        colIndex++;
+      });
+    }
+
+    const specialCols = ['ฝึกอบรม (100)', 'สอบ (100)', 'ความประพฤติ (200)', 'คะแนนรวม', 'GPA', 'สถานะ'];
+    specialCols.forEach(col => {
+      headerRow1.push(col);
+      headerRow2.push('');
+      mergeCells.push({ s: worksheet.getColumn(colIndex).letter + '1', e: worksheet.getColumn(colIndex).letter + '2', color: 'FFF0E6F7' });
+      colIndex++;
+    });
+
+    const hr1 = worksheet.addRow(headerRow1);
+    const hr2 = worksheet.addRow(headerRow2);
+
+    // Style Headers
+    hr1.eachCell((cell, colNumber) => {
+      cell.font = { name: 'Sarabun', size: 12, bold: true };
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+    });
+    hr2.eachCell((cell, colNumber) => {
+      cell.font = { name: 'Sarabun', size: 11, bold: true };
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+      if (colColors[colNumber]) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colColors[colNumber] } };
+      }
+    });
+
+    mergeCells.forEach(merge => {
+      worksheet.mergeCells(merge.s + ':' + merge.e);
+      const cell = worksheet.getCell(merge.s);
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: merge.color }
+      };
+    });
+    
+    worksheet.mergeCells('A1:A2');
+    worksheet.mergeCells('B1:B2');
+    worksheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEAE0F5' } };
+    worksheet.getCell('B1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEAE0F5' } };
+
+    // 2. ข้อมูลนักเรียน
+    this.students.forEach((student, index) => {
+      const row = [
+        index + 1,
+        (student.rank ? student.rank + ' ' : '') + (student.name || '')
+      ];
+      const fills: { col: number, color: string }[] = [];
+      let cIdx = 3;
+
+      if (this.subjectGroups.length > 0) {
+         this.subjectGroups.forEach(grp => {
+           const result = student.group_results?.[grp.groupId];
+           if (grp.isSingle) {
+              if (result) {
+                 row.push(this.getNumericGradeDisplay(result.grade, result.index_value, grp.credit) + ` (${result.index_value})`);
+              } else {
+                 row.push('-');
+                 fills.push({ col: cIdx, color: 'FFFFF9C4' }); // สีเหลืองอ่อน ถ้ารอคะแนน
+              }
+              cIdx++;
+           } else {
+              grp.subjects.forEach(sub => {
+                 const subResult = student.subjects?.find(s => (s as any).id === sub.id || s.name === sub.name);
+                 if (subResult) {
+                    const gradeInfo = this.formatGradeWithIndex(subResult);
+                    row.push(gradeInfo.gradeDisplay + (gradeInfo.indexDisplay ? ` ${gradeInfo.indexDisplay}` : ''));
+                 } else {
+                    row.push('-');
+                    fills.push({ col: cIdx, color: 'FFFFF9C4' }); // สีเหลืองอ่อน ถ้ารอคะแนน
+                 }
+                 cIdx++;
+              });
+           }
+         });
+      } else {
+         this.masterSubjects.forEach(sub => {
+            const subResult = student.subjects?.find(s => (s as any).id === sub.id || s.name === sub.name);
+            if (subResult) {
+               const gradeInfo = this.formatGradeWithIndex(subResult);
+               row.push(gradeInfo.gradeDisplay + (gradeInfo.indexDisplay ? ` ${gradeInfo.indexDisplay}` : ''));
+            } else {
+               row.push('-');
+               fills.push({ col: cIdx, color: 'FFFFF9C4' }); // สีเหลืองอ่อน ถ้ารอคะแนน
+            }
+            cIdx++;
+         });
+      }
+
+      row.push(
+        student.trainingTimeScore !== null && student.trainingTimeScore !== undefined ? student.trainingTimeScore : '-',
+        student.examTimeScore !== null && student.examTimeScore !== undefined ? student.examTimeScore : '-',
+        student.behaviorScore !== null && student.behaviorScore !== undefined ? student.behaviorScore : '-',
+        student.totalScore !== undefined && student.totalScore !== null ? student.totalScore : '-',
+        student.gpa || '0.00',
+        student.isPassed ? 'ผ่าน' : 'ไม่ผ่าน'
+      );
+
+      const r = worksheet.addRow(row);
+      r.eachCell((cell, colNumber) => {
+        cell.font = { name: 'Sarabun', size: 11 };
+        cell.alignment = { vertical: 'middle', horizontal: colNumber <= 2 ? 'left' : 'center' };
+        cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+      });
+      
+      fills.forEach(f => {
+        r.getCell(f.col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: f.color } };
+      });
+    });
+
+    // กำหนดความกว้างคอลัมน์
+    worksheet.getColumn(1).width = 8;
+    worksheet.getColumn(2).width = 30;
+    for (let i = 3; i <= colIndex; i++) {
+       worksheet.getColumn(i).width = 15;
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const batchName = this.getSelectedBatchName() || 'รุ่น';
+    const filename = `MasterGrid_${batchName}.xlsx`.replace(/\s+/g, '_');
+    
+    saveAs(new Blob([buffer]), filename);
   }
 
   reProcess(): void {

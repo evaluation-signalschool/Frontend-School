@@ -60,7 +60,11 @@ export class GeneralEvaluationService {
     return this.http.post<any>(`${environment.apiUrl}/forms/submit`, payload);
   }
 
-  getFormSubmissions(formId: number | string): Observable<any> {
-    return this.http.get<any>(`${environment.apiUrl}/form-submissions/${formId}`);
+  getFormSubmissions(formId: number | string, subjectId?: string | number): Observable<any> {
+    let url = `${environment.apiUrl}/form-submissions/${formId}`;
+    if (subjectId) {
+      url += `?subjectId=${subjectId}`;
+    }
+    return this.http.get<any>(url);
   }
 }

@@ -1,4 +1,4 @@
-<div class="admin-page">
+<div class="admin-page screen-only">
   <div class="page-header">
     <button mat-icon-button class="back-button" type="button" (click)="onCancel()" title="ย้อนกลับ">
       <mat-icon>chevron_left</mat-icon>
@@ -7,9 +7,274 @@
   </div>
 
   <div class="content-container">
-    <div class="empty-state">
-      <mat-icon class="empty-icon" style="font-size: 64px; width: 64px; height: 64px; color: #ccc;">card_membership</mat-icon>
-      <p style="margin-top: 16px; font-size: 1.2rem; color: #666;">ระบบออกใบประกาศนีบัตรกำลังอยู่ในระหว่างการพัฒนา</p>
+    
+    <!-- 1. ส่วนเลือกหลักสูตรและตั้งค่าใบประกาศ -->
+    <div class="config-section">
+      <h2 style="margin-bottom: 16px; font-size: 1.2rem; color: #673ab7;">ตั้งค่าใบประกาศนีบัตร</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>เลือกหลักสูตร</label>
+          <select class="custom-select" [(ngModel)]="selectedCourseName" (change)="selectedCourseId = ''; selectedBatchId = ''; onBatchChange()">
+            <option value="" disabled selected>-- เลือกหลักสูตร --</option>
+            <option *ngFor="let name of getUniqueCourseNames()" [value]="name">{{ name }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>เลือกปีการศึกษา</label>
+          <select class="custom-select" [(ngModel)]="selectedCourseId" (change)="selectedBatchId = ''; onBatchChange()" [disabled]="!selectedCourseName">
+            <option value="" disabled selected>-- เลือกปีการศึกษา --</option>
+            <option *ngFor="let c of getCoursesByName(selectedCourseName)" [value]="c.course_id">{{ c.curriculum_year }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>เลือกรุ่น</label>
+          <select class="custom-select" [(ngModel)]="selectedBatchId" (change)="onBatchChange()" [disabled]="!selectedCourseId">
+            <option value="" disabled selected>-- เลือกรุ่น --</option>
+            <option *ngFor="let b of getBatchesForCourse(selectedCourseId)" [value]="b.batch_id">{{ b.batch_name }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-top: 16px;">
+        <div class="form-group" style="flex: 2;">
+          <label>ข้อความต่อท้ายชื่อหลักสูตร (แก้ไขได้)</label>
+          <input type="text" class="custom-input" [(ngModel)]="extraCourseText" placeholder="เช่น ผ่านสื่ออิเล็กทรอนิกส์ (หลักสูตรเร่งรัด)">
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label>วันที่ออกใบประกาศ</label>
+          <input type="date" class="custom-input" [(ngModel)]="issueDate">
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-top: 16px;">
+        <div class="form-group">
+          <label>ผู้ลงนามฝั่งซ้าย (ยศ ชื่อ นามสกุล)</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" class="custom-input" [(ngModel)]="commanderRank" placeholder="ยศ" style="width: 80px;">
+            <input type="text" class="custom-input" [(ngModel)]="commanderName" placeholder="ชื่อ นามสกุล" style="flex: 1;">
+          </div>
+          <input type="text" class="custom-input" [(ngModel)]="commanderTitle" placeholder="ตำแหน่ง" style="margin-top: 8px;">
+        </div>
+        <div class="form-group">
+          <label>ผู้ลงนามฝั่งขวา (ยศ ชื่อ นามสกุล)</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" class="custom-input" [(ngModel)]="deputyRank" placeholder="ยศ" style="width: 80px;">
+            <input type="text" class="custom-input" [(ngModel)]="deputyName" placeholder="ชื่อ นามสกุล" style="flex: 1;">
+          </div>
+          <input type="text" class="custom-input" [(ngModel)]="deputyTitle" placeholder="ตำแหน่ง" style="margin-top: 8px;">
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. ตารางรายชื่อนักเรียน -->
+    <div class="students-section" *ngIf="selectedBatchId && students.length > 0" style="margin-top: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 style="font-size: 1.2rem; color: #444; margin: 0;">รายชื่อนักเรียนในรุ่น ({{ students.length }} คน)</h2>
+        <div style="display: flex; gap: 10px;">
+          <button mat-stroked-button type="button" (click)="designMode = true" style="border-color: #673ab7; color: #673ab7;">
+            <mat-icon>drag_indicator</mat-icon> จัดตำแหน่งข้อความ
+          </button>
+          <button mat-flat-button color="primary" (click)="printAllCertificates()" style="background-color: #673ab7;">
+            <mat-icon>print</mat-icon> พิมพ์ใบประกาศทั้งหมด
+          </button>
+        </div>
+      </div>
+
+      <table class="students-table">
+        <thead>
+          <tr>
+            <th style="width: 60px;">ลำดับ</th>
+            <th style="width: 120px;">รหัสประจำตัว</th>
+            <th>ยศ ชื่อ นามสกุล</th>
+            <th>สังกัด</th>
+            <th style="width: 120px; text-align: center;">พิมพ์</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of students; let i = index">
+            <td style="text-align: center;">{{ i + 1 }}</td>
+            <td>{{ s.student_code || '-' }}</td>
+            <td>{{ s.rank_name }} {{ s.first_name }} {{ s.last_name }}</td>
+            <td>{{ s.affiliation || '-' }}</td>
+            <td style="text-align: center;">
+              <button mat-icon-button color="primary" (click)="printCertificate(s)" title="พิมพ์ใบประกาศของคนนี้">
+                <mat-icon>print</mat-icon>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <div *ngIf="selectedBatchId && students.length === 0" style="margin-top: 24px; text-align: center; color: #888;">
+      ไม่พบข้อมูลนักเรียนในรุ่นนี้
+    </div>
+
+    <!-- ========================================== -->
+    <!-- ส่วนใหม่: โหมดจัดตำแหน่งข้อความอิสระ (ลาก-วาง ตกแต่งได้) -->
+    <!-- ========================================== -->
+    <div class="design-panel" *ngIf="designMode">
+      <div class="design-toolbar">
+        <ng-container *ngIf="selectedKey; else noSelection">
+          <span>กำลังแก้ไข: <strong>{{ getFieldLabel(selectedKey) }}</strong></span>
+          <label>
+            ขนาดตัวอักษร
+            <input type="number" min="10" max="72" style="width:52px; padding:2px 4px; border:1px solid #cbd5e1; border-radius:4px;"
+              [(ngModel)]="layout[selectedKey].fontSize" (input)="saveLayout()">
+            pt
+          </label>
+          <label>
+            ความกว้างกรอบ
+            <input type="number" min="20" max="297" style="width:60px; padding:2px 4px; border:1px solid #cbd5e1; border-radius:4px;"
+              [(ngModel)]="layout[selectedKey].widthMm" (input)="saveLayout()">
+            mm
+          </label>
+          <label>
+            สี
+            <input type="color" [(ngModel)]="layout[selectedKey].color" (input)="saveLayout()">
+          </label>
+          <label>
+            น้ำหนัก
+            <select [(ngModel)]="layout[selectedKey].fontWeight" (change)="saveLayout()">
+              <option [ngValue]="400">ปกติ</option>
+              <option [ngValue]="600">หนา</option>
+              <option [ngValue]="700">หนามาก</option>
+            </select>
+          </label>
+          <label>
+            จัดข้อความ
+            <select [(ngModel)]="layout[selectedKey].textAlign" (change)="saveLayout()">
+              <option value="center">กลาง</option>
+              <option value="left">ซ้าย</option>
+              <option value="right">ขวา</option>
+            </select>
+          </label>
+        </ng-container>
+        <ng-template #noSelection>
+          <span style="color:#94a3b8;">คลิกกล่องข้อความด้านล่างเพื่อเลือกและตกแต่ง</span>
+        </ng-template>
+
+        <button mat-stroked-button type="button" (click)="resetLayout()" style="margin-left: auto;">
+          รีเซ็ตตำแหน่งเริ่มต้น
+        </button>
+        <button mat-flat-button color="primary" type="button" (click)="designMode = false" style="background-color:#673ab7;">
+          เสร็จสิ้น ปิดโหมดจัดตำแหน่ง
+        </button>
+      </div>
+
+      <div class="design-stage-wrap">
+        <div class="design-stage" id="designStage" (click)="deselectField()">
+
+          <!-- แกนกลางหน้ากระดาษ (Center Axes) แนวตั้ง 148.5mm แนวนอน 105mm -->
+          <div class="center-axis-h" [class.active]="isCenterV"></div>
+          <div class="center-axis-v" [class.active]="isCenterH"></div>
+
+          <!-- Crosshair (แกน X, Y ที่วิ่งตามเมาส์ตลอดเวลาตอนลาก) -->
+          <div *ngIf="dragY !== null" class="crosshair-h" [style.top]="dragY + 'mm'"></div>
+          <div *ngIf="dragX !== null" class="crosshair-v" [style.left]="dragX + 'mm'"></div>
+
+          <!-- Horizontal guide lines พร้อมระยะห่างแนวนอน -->
+          <ng-container *ngFor="let g of getHGuides()">
+            <div class="guide-line-h" [style.top]="g.topMm + 'mm'" [class.active]="g.active">
+              <span class="guide-pos-label h-label">{{ g.topMm }}mm</span>
+              <!-- ระยะห่างแนวนอนระหว่างกล่องที่อยู่แถวเดียวกัน -->
+              <div *ngFor="let gap of g.gaps" class="guide-gap-h"
+                   [style.left]="gap.leftMm + 'mm'" [style.width]="gap.widthMm + 'mm'">
+                <span class="gap-label">{{ gap.label }}</span>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Vertical guide lines พร้อมระยะห่างแนวตั้ง -->
+          <ng-container *ngFor="let g of getVGuides()">
+            <div class="guide-line-v" [style.left]="g.leftMm + 'mm'" [class.active]="g.active">
+              <span class="guide-pos-label v-label">{{ g.leftMm }}mm</span>
+              <!-- ระยะห่างแนวตั้งระหว่างกล่องที่อยู่แถวเดียวกัน -->
+              <div *ngFor="let gap of g.gaps" class="guide-gap-v"
+                   [style.top]="gap.topMm + 'mm'" [style.height]="gap.heightMm + 'mm'">
+                <span class="gap-label">{{ gap.label }}</span>
+              </div>
+            </div>
+          </ng-container>
+
+          <div *ngFor="let f of designFields"
+               class="design-field"
+               [class.selected]="selectedKey === f.key"
+               [ngStyle]="fieldStyle(f.key)"
+               (pointerdown)="startDrag($event, f.key)"
+               (click)="selectField(f.key); $event.stopPropagation()">
+
+            <ng-container [ngSwitch]="f.key">
+            <ng-container *ngSwitchCase="'sigLeftRank'">
+              {{ commanderRank }}
+            </ng-container>
+            <ng-container *ngSwitchCase="'sigLeftName'">
+              ({{ commanderName }})
+            </ng-container>
+            <ng-container *ngSwitchCase="'sigLeftTitle'">
+              {{ commanderTitle }}
+            </ng-container>
+            <ng-container *ngSwitchCase="'sigRightRank'">
+              {{ deputyRank }}
+            </ng-container>
+            <ng-container *ngSwitchCase="'sigRightName'">
+              ({{ deputyName }})
+            </ng-container>
+            <ng-container *ngSwitchCase="'sigRightTitle'">
+              {{ deputyTitle }}
+            </ng-container>
+            <ng-container *ngSwitchDefault>{{ previewText(f.key) }}</ng-container>
+          </ng-container>
+          </div>
+        </div>
+      </div>
+
+      <p class="design-hint">
+        ลากกล่องข้อความเพื่อย้ายตำแหน่งอิสระ (ขึ้น-ลง-ซ้าย-ขวา) ตำแหน่ง สี ขนาด และน้ำหนักตัวอักษรที่ปรับจะถูกบันทึกอัตโนมัติในเบราว์เซอร์นี้ และถูกใช้จริงตอนสั่งพิมพ์ใบประกาศทุกครั้ง
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- ส่วนหน้ากระดาษใบประกาศสำหรับสั่งพิมพ์ (ซ่อนไว้เสมอ จะแสดงเฉพาะตอน Print) -->
+<!-- ========================================== -->
+<div class="print-only">
+  <!-- วนลูปตามรายชื่อนักเรียนที่ต้องการพิมพ์ (1 ใบ ต่อ 1 คน) -->
+  <div class="certificate-page" *ngFor="let s of printStudents">
+    <div class="certificate-content">
+
+      <!-- 1. ชื่อนักเรียน -->
+      <div class="cert-row name-row" [ngStyle]="fieldStyle('name')">
+        {{ s.rank_name }} {{ s.first_name }} {{ s.last_name }}
+      </div>
+
+      <!-- 2. ชื่อหลักสูตร -->
+      <div class="cert-row course-row" [ngStyle]="fieldStyle('course')">
+        {{ getPrintCourseAndBatch() }}
+      </div>
+
+      <!-- 3. ระยะเวลาอบรม -->
+      <div class="cert-row duration-row" [ngStyle]="fieldStyle('duration')">
+        {{ getPrintDuration() }}
+      </div>
+
+      <!-- 4. วันที่ออกใบประกาศ -->
+      <div class="cert-row issue-date-row" [ngStyle]="fieldStyle('issueDate')">
+        {{ getPrintIssueDate() }}
+      </div>
+
+      <!-- 5. ลายเซ็นซ้าย (แยกทีละบรรทัด) -->
+      <div class="cert-row" [ngStyle]="fieldStyle('sigLeftRank')">{{ commanderRank }}</div>
+      <div class="cert-row" [ngStyle]="fieldStyle('sigLeftName')">({{ commanderName }})</div>
+      <div class="cert-row" [ngStyle]="fieldStyle('sigLeftTitle')">{{ commanderTitle }}</div>
+
+      <!-- 6. ลายเซ็นขวา (แยกทีละบรรทัด) -->
+      <div class="cert-row" [ngStyle]="fieldStyle('sigRightRank')">{{ deputyRank }}</div>
+      <div class="cert-row" [ngStyle]="fieldStyle('sigRightName')">({{ deputyName }})</div>
+      <div class="cert-row" [ngStyle]="fieldStyle('sigRightTitle')">{{ deputyTitle }}</div>
+
     </div>
   </div>
 </div>

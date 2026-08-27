@@ -99,6 +99,15 @@ export class StudentGradeDialog implements OnInit {
     }
   }
 
+  get printFontSize(): string {
+    const count = this.data.student.subjects?.length || 0;
+    if (count >= 25) return '10px';
+    if (count >= 20) return '11px';
+    if (count >= 15) return '12px';
+    if (count >= 10) return '13px';
+    return '14px';
+  }
+
   getGradeDescription(score: number | string): string {
     const numScore = Number(score);
     if (isNaN(numScore)) return "";

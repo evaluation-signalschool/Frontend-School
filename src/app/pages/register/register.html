@@ -2,40 +2,44 @@
   <!-- Header Section -->
   <header class="header">
     <h1 class="title">ลงทะเบียน</h1>
+    <div class="course-context" *ngIf="courseName">
+      <p class="course-name"><strong>หลักสูตร:</strong> {{ courseName }}</p>
+      <p class="batch-name"><strong>รุ่น:</strong> {{ batchName }}</p>
+    </div>
   </header>
 
   <!-- Form Section -->
-  <form (submit)="onSubmit()" class="form-content">
+  <form (submit)="onSubmit($event)" class="form-content">
     
     <!-- Row 1: ยศ และ ชื่อ-สกุล -->
     <div class="row-two-cols">
       <div class="input-group flex-1">
         <label for="rank">ยศ</label>
-        <input type="text" id="rank" name="rank" placeholder="" />
+        <input type="text" id="rank" name="rank" placeholder="" [(ngModel)]="formData.rank" />
          <small class="hint-text"> *กรุณาระบุชื่อยศเต็ม </small>
       </div>
       <div class="input-group flex-2">
         <label for="fullName">ชื่อ-สกุล</label>
-        <input type="text" id="fullName" name="fullName" placeholder="" required />
+        <input type="text" id="fullName" name="fullName" placeholder="" [(ngModel)]="formData.fullName" required />
       </div>
     </div>
 
     <!-- Row 2: หน่วยต้นสังกัด -->
     <div class="input-group">
       <label for="affiliation">หน่วยต้นสังกัด</label>
-      <input type="text" id="affiliation" name="affiliation" placeholder="" required />
+      <input type="text" id="affiliation" name="affiliation" placeholder="" [(ngModel)]="formData.affiliation" required />
     </div>
 
     <!-- Row 3: เบอร์โทร -->
     <div class="input-group">
       <label for="phone">เบอร์โทรศัพท์</label>
-      <input type="tel" id="phone" name="phone" placeholder="" pattern="[0-9]{9,10}" required />
+      <input type="tel" id="phone" name="phone" placeholder="" [(ngModel)]="formData.phone" pattern="[0-9]{9,10}" required />
     </div>
 
     <!-- Row 4: อีเมล -->
     <div class="input-group">
       <label for="email">อีเมล</label>
-      <input type="email" id="email" name="email" placeholder="" required />
+      <input type="email" id="email" name="email" placeholder="" [(ngModel)]="formData.email" required />
     </div>
 
     <!-- Row 5: รหัสผ่าน -->
@@ -51,6 +55,7 @@
           [type]="showPassword ? 'text' : 'password'" 
           name="password" 
           placeholder="" 
+          [(ngModel)]="formData.password"
           maxlength="10"
           minlength="10"
           required

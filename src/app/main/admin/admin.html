@@ -1,8 +1,8 @@
 <div class="admin-page">
   <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
     <div style="display: flex; align-items: center; gap: 8px;">
-      <!-- ปุ่มย้อนกลับไปหน้าคุณครู -->
-      <button mat-icon-button class="back-button" routerLink="/teacher">
+      <!-- ปุ่มย้อนกลับ (ทำหน้าที่ออกจากระบบ) -->
+      <button mat-icon-button class="back-button" (click)="onLogout()" title="ออกจากระบบ">
         <mat-icon>chevron_left</mat-icon>
       </button>
       <h1 class="course-title" style="margin: 0;">ส่วนจัดการระบบ (สำหรับผู้ดูแลระบบ)</h1>
@@ -46,6 +46,19 @@
         <button mat-raised-button class="btn-navigate btn-teal" routerLink="/admin/addstudent">
           <mat-icon class="btn-icon">add</mat-icon>
           <span>เพิ่มข้อมูลนักเรียน</span>
+        </button>
+      </div>
+
+      <!-- อนุมัติการแก้ไขข้อมูล -->
+      <div class="action-card profile-approvals-card">
+        <div class="card-details">
+          <h4 class="card-title">อนุมัติการแก้ไขข้อมูลโปรไฟล์</h4>
+          <p class="card-subtitle">ตรวจสอบและอนุมัติคำขอเปลี่ยนยศ หรือเปลี่ยนชื่อของนักเรียน</p>
+        </div>
+
+        <button mat-raised-button class="btn-navigate btn-teal" routerLink="/admin/profile-approvals">
+          <mat-icon class="btn-icon">how_to_reg</mat-icon>
+          <span>จัดการคำร้องแก้ไขโปรไฟล์</span>
         </button>
       </div>
 

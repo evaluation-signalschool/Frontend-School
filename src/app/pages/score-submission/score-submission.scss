@@ -428,30 +428,37 @@ $icon-pending-color: #ff9800;  // สีส้ม
 
   body, html {
     background: white !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .print-layout {
     width: 100% !important;
+    height: 100% !important;
     color: black !important;
     font-family: 'Sarabun', sans-serif !important;
+    overflow: hidden !important;
+    line-height: 1.2 !important;
   }
 
   .print-title-bar {
     text-align: center;
-    font-size: 14pt;
+    font-size: calc(var(--dynamic-font-size, 10pt) + 4pt);
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 0.5em;
   }
 
   .print-compact-table, .print-summary-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 15px;
+    margin-bottom: 0.8em;
     
     th, td {
       border: 1px solid black !important;
-      padding: 4px 6px !important;
-      font-size: 10pt !important;
+      padding: 0.25em 0.4em !important;
+      font-size: var(--dynamic-font-size, 10pt) !important;
       color: black !important;
     }
     
@@ -491,14 +498,14 @@ $icon-pending-color: #ff9800;  // สีส้ม
 
   /* เลียนแบบช่อง Checkbox */
   .print-box-check {
-    width: 12px;
-    height: 12px;
+    width: 1em;
+    height: 1em;
     border: 1px solid black;
     margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10pt;
+    font-size: var(--dynamic-font-size, 10pt);
     line-height: 1;
   }
 
@@ -524,9 +531,9 @@ $icon-pending-color: #ff9800;  // สีส้ม
   }
 
   .print-footer-time {
-    margin-top: 20px;
+    margin-top: 0.5em;
     text-align: left;
-    font-size: 10pt;
+    font-size: var(--dynamic-font-size, 10pt);
     font-family: 'Sarabun', sans-serif;
   }
 }

@@ -9,6 +9,8 @@ import { StudentService } from '../../services/student.service';
 import { CourseService, CourseGroup, BatchItem } from '../../services/course.service';
 import Swal from 'sweetalert2';
 import { forkJoin } from 'rxjs';
+import * as ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 export interface Student {
   id: number;
@@ -22,6 +24,8 @@ export interface Student {
   rank_name?: string;
   first_name?: string;
   last_name?: string;
+  email?: string;
+  phone?: string;
   showPassword?: boolean; // สำหรับเปิดปิดตาดูรหัสในตาราง
 }
 
@@ -103,6 +107,12 @@ export class Addstudent implements OnInit {
         // 3. สังกัด
         newStudent.affiliation = columns[2]?.trim() || '';
         
+        // 4. อีเมล
+        newStudent.email = columns[3]?.trim() || '';
+
+        // 5. เบอร์โทรศัพท์
+        newStudent.phone = columns[4]?.trim() || '';
+        
         // เพิ่มข้อมูลลงใน array ถ้ามีชื่อ
         if (newStudent.firstName) {
           newForms.push(newStudent);
@@ -124,7 +134,7 @@ export class Addstudent implements OnInit {
         text: `ดึงข้อมูลสำเร็จ ${newForms.length} รายการ กรุณาตรวจสอบข้อมูลและกดบันทึก`
       });
     } else {
-      Swal.fire('ผิดพลาด', 'รูปแบบข้อมูลไม่ถูกต้อง กรุณาก๊อปปี้จากตาราง (รหัสผ่าน | ยศ-ชื่อ-สกุล | สังกัด)', 'error');
+      Swal.fire('ผิดพลาด', 'รูปแบบข้อมูลไม่ถูกต้อง กรุณาก๊อปปี้จากตาราง (รหัสผ่าน | ยศ-ชื่อ-สกุล | สังกัด | อีเมล | เบอร์โทรศัพท์)', 'error');
     }
   }
 
@@ -185,6 +195,8 @@ export class Addstudent implements OnInit {
             studentCode: s.student_code || s.studentCode || '',
             password: s.password || '',
             affiliation: s.affiliation || '',
+            email: s.email || '',
+            phone: s.phone || '',
             showPassword: false
           }));
           this.cdr.detectChanges();
@@ -227,6 +239,8 @@ export class Addstudent implements OnInit {
       studentCode: '',
       password: '',
       affiliation: '',
+      email: '',
+      phone: '',
     };
   }
 
@@ -291,6 +305,8 @@ export class Addstudent implements OnInit {
         first_name: form.firstName,
         last_name: form.lastName,
         affiliation: form.affiliation,
+        email: form.email,
+        phone: form.phone,
       };
 
       this.studentService.updateStudent(this.editingId, payload).subscribe({
@@ -333,6 +349,8 @@ export class Addstudent implements OnInit {
           first_name: form.firstName,
           last_name: form.lastName,
           affiliation: form.affiliation,
+          email: form.email,
+          phone: form.phone,
         };
 
         this.studentService.addStudent(payload).subscribe({
@@ -408,6 +426,63 @@ export class Addstudent implements OnInit {
         });
       }
     });
+  }
+
+  async exportToExcel() {
+    if (!this.students || this.students.length === 0) {
+      Swal.fire('แจ้งเตือน', 'ไม่มีข้อมูลนักเรียนให้ Export', 'warning');
+      return;
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('รายชื่อนักเรียน');
+    
+    worksheet.properties.defaultRowHeight = 25;
+
+    // สร้าง Header
+    const headers = ['ลำดับ', 'รหัสผ่าน', 'ยศ', 'ชื่อ', 'นามสกุล', 'สังกัด', 'อีเมล', 'เบอร์โทรศัพท์'];
+    const headerRow = worksheet.addRow(headers);
+    
+    headerRow.eachCell((cell) => {
+      cell.font = { name: 'Sarabun', size: 12, bold: true };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
+      cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+    });
+    
+    // สร้าง Data
+    this.students.forEach((student, index) => {
+      const rowData = [
+        student.studentCode,
+        student.password || '1234', // default ถ้าไม่มี
+        student.rank,
+        student.firstName,
+        student.lastName,
+        student.affiliation || '',
+        student.email || '',
+        student.phone || ''
+      ];
+      
+      const excelRow = worksheet.addRow(rowData);
+      excelRow.eachCell((cell, colNumber) => {
+        cell.font = { name: 'Sarabun', size: 11 };
+        cell.alignment = { vertical: 'middle', horizontal: colNumber === 4 || colNumber === 5 || colNumber === 6 ? 'left' : 'center' };
+        cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+      });
+    });
+
+    // ปรับขนาดคอลัมน์
+    worksheet.columns.forEach(column => {
+      column.width = 15;
+    });
+    worksheet.getColumn(4).width = 25; // ชื่อ
+    worksheet.getColumn(5).width = 25; // นามสกุล
+    worksheet.getColumn(6).width = 20; // สังกัด
+    worksheet.getColumn(7).width = 25; // อีเมล
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `รายชื่อนักเรียน_${this.selectedBatch || 'ทั้งหมด'}.xlsx`);
   }
 }
 

@@ -1,21 +1,17 @@
-<div class="teacher-page">
-  <div class="page-header">
-    <button mat-icon-button class="back-button" routerLink="/">
-      <mat-icon>chevron_left</mat-icon>
-    </button>
-    <h1 class="course-title">หลักสูตรชั้นนายพัน เหล่า ส. รุ่นที่ 63</h1>
+<div class="page-container">
+  <div class="header">
+    <h1>สำหรับครู-อาจารย์: {{ courseName || 'ทั้งหมด' }} {{ batchName }}</h1>
   </div>
-
-  <div class="alert-title-container">
-    <h2 class="alert-title">
-      สำหรับครู-อาจารย์ <mat-icon class="alert-icon">assignment</mat-icon>
-    </h2>
-  </div>
-
-  <div class="cards-grid">
-    <div class="course-card" (click)="openForm()">
-      <div class="card-text">แบบประเมินสำหรับครู/อาจารย์</div>
-      <!-- <div class="status-dot" [ngClass]="status"></div> -->
+</div>
+<div class="card-container">
+  <!-- Card 1 -->
+  <div class="info-card">
+    <div class="card-icon icon-boss" style="background-color: #3b82f6;">
+      <span class="material-icons">assignment_ind</span>
+    </div>
+    <div class="card-content">
+      <h3>แบบประเมินสำหรับครู/อาจารย์</h3>
+      <button class="card-btn" (click)="goToForm()">ประเมิน</button>
     </div>
   </div>
 </div>

@@ -32,6 +32,7 @@ $primary-focus: #8378ed; // สี Highlight ตอน Focus ช่องกร�
   /* Header Section */
   .header {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     margin-bottom: 32px;
@@ -44,6 +45,26 @@ $primary-focus: #8378ed; // สี Highlight ตอน Focus ช่องกร�
       margin: 0;
       text-align: center;
       letter-spacing: -0.5px;
+    }
+
+    .course-context {
+      margin-top: 16px;
+      padding: 12px 24px;
+      background: rgba(156, 146, 248, 0.15);
+      border-radius: 12px;
+      border: 1px solid rgba(156, 146, 248, 0.3);
+      width: 100%;
+      text-align: center;
+
+      p {
+        margin: 4px 0;
+        color: #4a4a4a;
+        font-size: 1rem;
+        
+        strong {
+          color: #7c3aed;
+        }
+      }
     }
   }
 
