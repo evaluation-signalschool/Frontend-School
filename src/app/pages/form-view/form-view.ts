@@ -1,13 +1,15 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import { GeneralEvaluationService } from '../../services/general-evaluation.service';
 import { CourseService } from '../../services/course.service';
 
 @Component({
   selector: 'app-form-view',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule],
   templateUrl: './form-view.html',
   styleUrl: './form-view.scss',
 })
@@ -22,7 +24,9 @@ export class FormView implements OnInit {
     { value: 'director', label: 'แบบประเมินอาจารย์กำกับหลักสูตร' },
     { value: 'course', label: 'แบบประเมินหลักสูตร' },
     { value: 'committee', label: 'แบบประเมินสำหรับคณะกำกับหลักสูตร' },
-    { value: 'followup', label: 'แบบประเมินติดตามผู้สำเร็จการศึกษา' },
+    { value: 'followup_commander', label: 'แบบประเมินผู้สำเร็จการฝึกอบรม (สำหรับ ผบช.)' },
+    { value: 'followup_self', label: 'แบบประเมินผู้สำเร็จการฝึกอบรม (ผู้ฝึกอบรมประเมินตนเอง)' },
+    { value: 'followup_colleague', label: 'แบบประเมินผู้สำเร็จการฝึกอบรม (สำหรับเพื่อนร่วมงาน)' },
   ];
   availableSubjects: any[] = [];
 
@@ -39,7 +43,8 @@ export class FormView implements OnInit {
   constructor(
     private evalService: GeneralEvaluationService,
     private courseService: CourseService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private location: Location
   ) {}
 
   ngOnInit(): void {
@@ -147,23 +152,32 @@ export class FormView implements OnInit {
       this.filteredForms = this.filteredForms.filter(f => f.evaluation_type === this.selectedFormType);
     }
 
-    if (this.selectedFormType === 'instructor' && this.selectedSubject) {
-      this.filteredForms = this.filteredForms.filter(f => f.subject_id == this.selectedSubject);
-    }
-
-    if (this.filteredForms.length === 1) {
-      const form = this.filteredForms[0];
-      this.selectedFormId = form.id;
-      // ทำให้ช่อง dropdown "รายวิชา" อัปเดตตามฟอร์มที่ถูกเลือกอัตโนมัติด้วย (ถ้าฟอร์มนั้นผูกกับรายวิชา)
-      if (form.subject_id) {
-        this.selectedSubject = form.subject_id;
+    if (this.selectedFormType === 'instructor') {
+      if (this.selectedSubject && this.filteredForms.length > 0) {
+        // ประเมินอาจารย์: ถ้าเลือกรายวิชาแล้ว ให้ดึงฟอร์มล่าสุดมาใช้และค้นหาเลย
+        const form = this.filteredForms[0];
+        this.selectedFormId = form.id;
+        this.onSearch();
+      } else {
+        // ถ้ายกเลิกการเลือกรายวิชา ให้เคลียร์ข้อมูล
+        this.selectedFormId = '';
+        this.submissions = [];
+        this.questions = [];
       }
-      // โหลดข้อมูลอัตโนมัติเมื่อเจอแบบฟอร์ม
-      this.onSearch();
     } else {
-      this.selectedFormId = '';
-      this.submissions = [];
-      this.questions = [];
+      // แบบประเมินประเภทอื่น
+      if (this.selectedFormType && this.filteredForms.length > 0) {
+        const form = this.filteredForms[0];
+        this.selectedFormId = form.id;
+        if (form.subject_id) {
+          this.selectedSubject = form.subject_id;
+        }
+        this.onSearch();
+      } else {
+        this.selectedFormId = '';
+        this.submissions = [];
+        this.questions = [];
+      }
     }
   }
 
@@ -172,7 +186,7 @@ export class FormView implements OnInit {
     this.isLoading = true;
     this.cdr.detectChanges(); // บังคับให้ UI โชว์คำว่ากำลังโหลดทันที
 
-    this.evalService.getFormSubmissions(this.selectedFormId).subscribe({
+    this.evalService.getFormSubmissions(this.selectedFormId, this.selectedSubject).subscribe({
       next: (res: any) => {
         if (res.success) {
           this.questions = res.data.questions;
@@ -193,5 +207,9 @@ export class FormView implements OnInit {
     if (this.submissions.length === 0) return;
     console.log('Exporting data...', this.submissions);
     alert('ระบบกำลังพัฒนาส่วน Export');
+  }
+
+  goBack(): void {
+    this.location.back();
   }
 }

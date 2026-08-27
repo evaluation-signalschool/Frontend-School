@@ -27,6 +27,7 @@ import { EvaluationFillComponent } from './main/student/evaluation-fill/evaluati
 
 import { Certificate } from './pages/certificate/certificate';
 import { EditProfile } from './pages/edit-profile/edit-profile';
+import { AdminProfileApprovals } from './pages/admin-profile-approvals/admin-profile-approvals';
 
 export const routes: Routes = [
   // หน้าแรก
@@ -70,6 +71,7 @@ export const routes: Routes = [
       {path:'score-submission',component: ScoreSubmission},
       {path:'form-view',component: FormView},
       { path: 'certificate', component: Certificate },
+      { path: 'profile-approvals', component: AdminProfileApprovals },
     ],
   },
 

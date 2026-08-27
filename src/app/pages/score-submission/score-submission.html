@@ -130,8 +130,8 @@
     <div class="bottom-action-bar">
         <div class="action-buttons">
             <button class="btn btn-pdf" (click)="exportToPDF()" [disabled]="gradeItems.length === 0">
-                <i class="material-icons">save_alt</i>
-                Export as PDF
+                <i class="material-icons">print</i>
+                พิมพ์
             </button>
             <button class="btn btn-cancel" (click)="cancelAllSelection()" [disabled]="gradeItems.length === 0">
                 <i class="material-icons">delete_sweep</i>
@@ -148,7 +148,7 @@
 <!-- ============================================== -->
 <!-- 🖨️ รูปแบบเฉพาะสำหรับ Print (แบบกะทัดรัด หน้าเดียว) -->
 <!-- ============================================== -->
-<div class="print-only print-layout">
+<div class="print-only print-layout" [style.--dynamic-font-size]="printFontSize">
     <div class="print-title-bar">
         รายชื่อวิชาหลักสูตร {{ selectedCourseName }} {{ selectedBatchText }}
     </div>

@@ -45,6 +45,18 @@ export class ScoreSubmission implements OnInit {
   selectedBatchText: string = '';
   exportTimestamp: string = '';
 
+  get printFontSize(): string {
+    const count = this.gradeItems?.length || 0;
+    if (count >= 40) return '5.5pt';
+    if (count >= 35) return '6pt';
+    if (count >= 32) return '7pt';
+    if (count >= 28) return '8pt';
+    if (count >= 24) return '9pt';
+    if (count >= 20) return '9.5pt';
+    if (count >= 15) return '10pt';
+    return '11pt';
+  }
+
   constructor(
     private location: Location,
     private courseService: CourseService,

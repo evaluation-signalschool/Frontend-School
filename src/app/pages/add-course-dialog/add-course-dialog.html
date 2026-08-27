@@ -132,7 +132,8 @@
               <th style="padding: 8px; border: 1px solid #ddd;">ปีการศึกษา</th>
               <th style="padding: 8px; border: 1px solid #ddd;">ชื่อรุ่น</th>
               <th style="padding: 8px; border: 1px solid #ddd;">วันที่เริ่ม-สิ้นสุด</th>
-              <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 140px;">การแสดงผล ({{ getActiveBatchCount() }}/3)</th>
+              <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 140px;">สถานะหลักสูตร</th>
+              <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 140px;">เปิดรับสมัคร</th>
               <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 100px;">จัดการ</th>
             </tr>
           </thead>
@@ -146,6 +147,12 @@
               <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
                 <label class="toggle-switch" style="display: inline-block; vertical-align: middle; margin: 0;">
                   <input type="checkbox" [checked]="batch.is_active" (change)="onToggleBatch(batch, $event)" />
+                  <span class="slider"></span>
+                </label>
+              </td>
+              <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
+                <label class="toggle-switch" style="display: inline-block; vertical-align: middle; margin: 0;">
+                  <input type="checkbox" [checked]="batch.is_registration_open" (change)="onToggleRegistration(batch, $event)" />
                   <span class="slider"></span>
                 </label>
               </td>
@@ -191,7 +198,7 @@
             <label>เลือกหลักสูตร</label>
             <div class="select-wrapper">
               <select [(ngModel)]="selectedCourseNameForGroup" name="selectedCourseNameForGroup"
-                (change)="selectedCourseIdForGroup = ''; groupForm.batch_id = ''">
+                (change)="selectedCourseIdForGroup = ''; selectedBatchForGroup = ''">
                 <option value="" disabled selected>-- เลือกหลักสูตร --</option>
                 <option *ngFor="let name of getUniqueCourseNames()" [value]="name">{{ name }}</option>
               </select>
@@ -201,7 +208,7 @@
             <label>เลือกปีการศึกษา</label>
             <div class="select-wrapper">
               <select [(ngModel)]="selectedCourseIdForGroup" name="selectedCourseIdForGroup"
-                (change)="groupForm.batch_id = ''" [disabled]="!selectedCourseNameForGroup">
+                (change)="selectedBatchForGroup = ''" [disabled]="!selectedCourseNameForGroup">
                 <option value="" disabled selected>-- เลือกปีการศึกษา --</option>
                 <option *ngFor="let c of getCoursesByName(selectedCourseNameForGroup)" [value]="c.id">{{
                   c.curriculum_year }}</option>
@@ -214,7 +221,7 @@
         <div class="form-group">
           <label>เลือกรุ่นที่ต้องการเพิ่มกลุ่มวิชา</label>
           <div class="select-wrapper">
-            <select [(ngModel)]="groupForm.batch_id" name="batch_id" [disabled]="!selectedCourseIdForGroup" required>
+            <select [(ngModel)]="selectedBatchForGroup" name="batch_id" [disabled]="!selectedCourseIdForGroup" required>
               <option value="" disabled selected>-- เลือกรุ่น --</option>
               <option *ngFor="let b of getBatchesForCourse(selectedCourseIdForGroup)" [value]="b.id">{{ b.batch_name }}
               </option>
@@ -222,24 +229,77 @@
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>รหัสกลุ่ม/ชื่อกลุ่มวิชา</label>
-            <input type="text" [(ngModel)]="groupForm.group_name" name="group_name" placeholder="เช่น M01" required>
-          </div>
-          <div class="form-group short-input">
-            <label>
-              หน่วยกิตรวม
-              <span style="color: #f44336; font-size: 13px; font-weight: normal; margin-left: 4px;">(*ถ้าเป็นกลุ่มวิชา S/U ให้ใส่ 0)</span>
-            </label>
-            <input type="number" step="0.5" [(ngModel)]="groupForm.credits" name="credits" placeholder="เช่น 2.0"
-              required>
+        <div class="dynamic-list-container">
+          <label>รายชื่อกลุ่มวิชา (เพิ่มได้หลายกลุ่ม)</label>
+          <div class="dynamic-row" *ngFor="let g of groupsList; let i = index; let isLast = last" style="align-items: center; gap: 16px;">
+            <div class="form-group mb-0" style="flex: 2;">
+              <input type="text" [(ngModel)]="g.group_name" name="group_name_{{i}}" placeholder="รหัสกลุ่ม/ชื่อกลุ่มวิชา เช่น M01" required>
+            </div>
+            <div class="form-group mb-0" style="flex: 1;">
+              <input type="number" min="0" step="0.5" [(ngModel)]="g.credits" name="credits_{{i}}" placeholder="หน่วยกิต (ถ้า S/U ใส่ 0)" required>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <button type="button" class="btn-icon-action btn-remove" *ngIf="groupsList.length > 1"
+                (click)="removeGroupField(i)" title="ลบกลุ่มวิชานี้">
+                <span class="material-icons">remove_circle</span>
+              </button>
+              
+              <button type="button" class="btn-icon-action btn-add" *ngIf="isLast"
+                (click)="addGroupField()" title="เพิ่มกลุ่มวิชา">
+                <span class="material-icons">add_circle</span>
+              </button>
+            </div>
           </div>
         </div>
+
         <div class="form-actions right">
-          <button type="submit" class="btn-submit">บันทึกกลุ่มวิชา</button>
+          <button type="submit" class="btn-submit">บันทึกกลุ่มวิชาทั้งหมด</button>
         </div>
       </form>
+
+      <!-- ส่วนจัดการกลุ่มวิชาที่มีอยู่แล้ว (Manage Existing Groups) -->
+      <div class="existing-groups" *ngIf="selectedBatchForGroup" style="margin-top: 24px; padding-top: 16px; border-top: 1px dashed #ccc;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 style="font-size: 14px; color: #673ab7; margin: 0; font-weight: 500;">
+            กลุ่มวิชาที่มีอยู่แล้วในรุ่นนี้
+          </h3>
+          <button type="button" mat-button (click)="showGroupsTable = !showGroupsTable" style="color: #673ab7; font-size: 13px;">
+            {{ showGroupsTable ? 'ซ่อนรายการ' : 'ดูกลุ่มวิชาทั้งหมด' }}
+          </button>
+        </div>
+        
+        <div *ngIf="getGroupsForBatch(selectedBatchForGroup).length === 0" style="color: #888; font-size: 13px;">
+          ยังไม่มีกลุ่มวิชาในรุ่นนี้
+        </div>
+        
+        <div *ngIf="showGroupsTable && getGroupsForBatch(selectedBatchForGroup).length > 0" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead style="position: sticky; top: 0; z-index: 1;">
+              <tr style="background-color: #f3e8ff; color: #4c1d95; text-align: left;">
+                <th style="padding: 8px; border: 1px solid #ddd; border-top: none;">ชื่อกลุ่มวิชา</th>
+                <th style="padding: 8px; border: 1px solid #ddd; border-top: none;">หน่วยกิตรวม</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 60px; border-top: none;">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let g of getGroupsForBatch(selectedBatchForGroup)">
+                <td style="padding: 8px; border: 1px solid #ddd;">
+                  <span [ngClass]="getGroupBadgeClass(g.group_name)" style="padding: 4px 8px; font-weight: 500; font-size: 12px; border-radius: 4px;">
+                    {{ g.group_name }}
+                  </span>
+                </td>
+                <td style="padding: 8px; border: 1px solid #ddd;">{{ g.credits }}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
+                  <button type="button" mat-icon-button (click)="deleteSubjectGroup(g)" style="color: #f44336; transform: scale(0.8);" title="ลบกลุ่มวิชา">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- 4. ส่วนเพิ่มรายวิชา -->
@@ -307,9 +367,11 @@
         <div class="form-group">
           <label>เลือกกลุ่มวิชา</label>
           <div class="select-wrapper">
-            <select [(ngModel)]="subjectForm.group_id" name="group_id" [disabled]="!selectedBatchForSubject" required>
+            <select [(ngModel)]="subjectForm.group_id" name="group_id" [disabled]="!selectedBatchForSubject" (ngModelChange)="onGroupChange()" required>
               <option value="" disabled selected>-- เลือกกลุ่มวิชา --</option>
-              <option *ngFor="let g of getGroupsForBatch(selectedBatchForSubject)" [value]="g.id">{{ getGroupLabel(g) }}</option>
+              <option *ngFor="let g of getGroupsForBatch(selectedBatchForSubject)" [value]="g.id" [ngStyle]="{'color': getGroupColor(g.group_name), 'font-weight': '500'}">
+                {{ getGroupLabel(g) }}
+              </option>
             </select>
           </div>
         </div>
@@ -343,6 +405,51 @@
           <button type="submit" class="btn-submit">บันทึกรายวิชาทั้งหมด</button>
         </div>
       </form>
+
+      <!-- ส่วนจัดการรายวิชาที่มีอยู่แล้ว (Manage Existing Subjects) -->
+      <div class="existing-subjects" *ngIf="subjectForm.group_id" style="margin-top: 24px; padding-top: 16px; border-top: 1px dashed #ccc;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 style="font-size: 14px; color: #673ab7; margin: 0; font-weight: 500;">
+            รายวิชาที่มีอยู่แล้วในกลุ่มวิชานี้
+          </h3>
+          <button type="button" mat-button (click)="showSubjectsTable = !showSubjectsTable" style="color: #673ab7; font-size: 13px;">
+            {{ showSubjectsTable ? 'ซ่อนรายการ' : 'ดูรายวิชาทั้งหมด' }}
+          </button>
+        </div>
+        
+        <div *ngIf="subjectsInGroup.length === 0 && !isLoadingSubjects" style="color: #888; font-size: 13px;">
+          ยังไม่มีรายวิชาในกลุ่มวิชานี้
+        </div>
+        <div *ngIf="isLoadingSubjects" style="color: #888; font-size: 13px;">
+          กำลังโหลด...
+        </div>
+        
+        <div *ngIf="showSubjectsTable && subjectsInGroup.length > 0 && !isLoadingSubjects" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead style="position: sticky; top: 0; z-index: 1;">
+              <tr style="background-color: #f3e8ff; color: #4c1d95; text-align: left;">
+                <th style="padding: 8px; border: 1px solid #ddd; border-top: none;">ชื่อวิชา</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 100px; border-top: none;">ประเมิน S/U</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 60px; border-top: none;">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let s of subjectsInGroup">
+                <td style="padding: 8px; border: 1px solid #ddd;">{{ s.subject_name }}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
+                  <span *ngIf="s.is_su" style="color: #4CAF50; font-weight: 500;">ใช่</span>
+                  <span *ngIf="!s.is_su" style="color: #9e9e9e;">ไม่ใช่</span>
+                </td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
+                  <button type="button" mat-icon-button (click)="deleteSubject(s)" style="color: #f44336; transform: scale(0.8);" title="ลบรายวิชา">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
   </div>

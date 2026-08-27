@@ -147,6 +147,72 @@
   }
 }
 
+/* Profile Card */
+.profile-card {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  padding: 1.5rem 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1.5rem;
+  border: 1px solid #eef2f5;
+
+  .profile-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #6a4caf;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1.5rem;
+    flex-shrink: 0;
+
+    .material-icons {
+      font-size: 36px;
+    }
+  }
+
+  .profile-details {
+    flex: 1;
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #2c3e50;
+      margin: 0 0 0.25rem 0;
+    }
+
+    p {
+      font-size: 0.95rem;
+      color: #666666;
+      margin: 0 0 0.5rem 0;
+    }
+
+    .edit-profile-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      color: #6a4caf;
+      background: #f3f0fc;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      font-family: 'Sarabun', sans-serif !important;
+
+      &:hover {
+        background: #e3daf5;
+      }
+    }
+  }
+}
+
 /* Filter Row */
 .filter-row {
   display: flex;
@@ -332,6 +398,8 @@
 /* Guest View Styles */
 .guest-welcome-container {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
   margin-bottom: 3rem;
   padding: 0 1rem;
@@ -366,6 +434,54 @@
     gap: 8px;
     background-color: white;
     color: #6c5ce7;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-family: inherit;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+    }
+  }
+}
+
+.registration-banner {
+  background: linear-gradient(135deg, #00b09b, #96c93d);
+  color: white;
+  padding: 2.5rem 3rem;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 10px 20px rgba(0, 176, 155, 0.2);
+  width: 100%;
+  max-width: 600px;
+  margin-top: 1.5rem;
+
+  h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    margin-top: 0;
+  }
+
+  p {
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    opacity: 0.9;
+  }
+
+  .register-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: white;
+    color: #00b09b;
     border: none;
     padding: 12px 24px;
     border-radius: 30px;

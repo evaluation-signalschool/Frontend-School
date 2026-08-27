@@ -19,6 +19,14 @@
           <mat-icon>login</mat-icon> เข้าสู่ระบบนักเรียน
         </button>
       </div>
+
+      <div class="registration-banner" *ngIf="isRegistrationOpen">
+        <h2>เปิดรับสมัครนักเรียนใหม่</h2>
+        <p>หลักสูตรนี้กำลังเปิดรับสมัคร หากยังไม่มีรหัสผู้ใช้งาน กรุณาลงทะเบียน</p>
+        <button class="register-action-btn" (click)="navigateToRegister()">
+          <mat-icon>app_registration</mat-icon> ลงทะเบียนเรียนรุ่นนี้
+        </button>
+      </div>
     </div>
 
     <div class="chart-container">
@@ -38,6 +46,21 @@
   <!-- ================= STUDENT HUB VIEW ================= -->
   <ng-container *ngIf="isLoggedIn">
     <div class="hub-container">
+      
+      <!-- Student Profile Card -->
+      <div class="profile-card" *ngIf="studentData">
+        <div class="profile-avatar">
+          <mat-icon>person</mat-icon>
+        </div>
+        <div class="profile-details">
+          <h3>{{ studentData.rank_name }}{{ studentData.first_name }} {{ studentData.last_name }}</h3>
+          <p>รหัสประจำตัว: {{ studentData.student_code }}</p>
+          <button class="edit-profile-btn" (click)="goToEditProfile()">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">edit</mat-icon> แก้ไขโปรไฟล์
+          </button>
+        </div>
+      </div>
+
       <!-- Hub Dashboard Actions -->
       <div class="hub-actions-container">
         <div class="action-card score-action" (click)="goToScore()">

@@ -5,7 +5,9 @@
     </button>
     <h1 class="page-title">บันทึกคะแนนดิบ</h1>
     <button class="header-btn" (click)="goToScorePage()">
-      <mat-icon style="font-size: 20px; width: 20px; height: 20px; margin-right: 4px">list_alt</mat-icon>
+      <mat-icon style="font-size: 20px; width: 20px; height: 20px; margin-right: 4px"
+        >list_alt</mat-icon
+      >
       ไปหน้า ประมวลผลการเรียน
     </button>
   </div>
@@ -13,330 +15,371 @@
   <div class="page-body">
     <!-- Main Content -->
     <div class="page-wrapper">
-    <!-- Section 1: Filters -->
-    <div>
-      <h2 class="card-heading">เลือกรายวิชาที่จะบันทึกคะแนน</h2>
-      <p class="card-desc">เลือกโครงสร้างหลักสูตร รุ่น และรายวิชาให้ครบก่อน เพื่อเริ่มกรอกคะแนน</p>
-    </div>
-
-    <div class="field-grid">
-      <div class="field">
-        <label>โครงสร้างหลักสูตร</label>
-        <select
-          class="custom-select"
-          [(ngModel)]="selectedCourse"
-          (ngModelChange)="onCourseChange()"
-        >
-          <option value="all">แสดงทั้งหมด</option>
-          @for (course of courses; track course.id) {
-            <option [value]="course.id">{{ course.course_name }}</option>
-          }
-        </select>
-      </div>
-
-      <div class="field">
-        <label>รุ่น</label>
-        <select
-          class="custom-select"
-          [(ngModel)]="selectedBatch"
-          (ngModelChange)="onBatchChange()"
-          [disabled]="selectedCourse === 'all' || !selectedCourse"
-        >
-          <option [value]="null">— เลือกรุ่น —</option>
-          @for (batch of batches; track batch.id) {
-            <option [value]="batch.id">{{ batch.batch_name }}</option>
-          }
-        </select>
-      </div>
-
-      <div class="field">
-        <label>รายวิชาในหลักสูตร</label>
-        <select
-          class="custom-select"
-          [(ngModel)]="selectedSubjectId"
-          (ngModelChange)="onSubjectChange()"
-          [disabled]="!selectedBatch"
-        >
-          <option [value]="null">— เลือกรายวิชา —</option>
-          @for (subject of subjects; track $index) {
-            <option [value]="subject?.subject_id">{{ subject?.subject_name }}</option>
-          }
-        </select>
-      </div>
-    </div>
-
-    <!-- Section 2: Max Score -->
-    <ng-container *ngIf="selectedSubjectId">
-      <hr style="border: none; border-top: 1px solid var(--line); margin: 32px 0" />
-
+      <!-- Section 1: Filters -->
       <div>
-        <h2 class="card-heading">กำหนดคะแนนเต็มของวิชานี้</h2>
-        <p class="card-desc">คะแนนเต็มจะเป็นฐานสำหรับคำนวณสัดส่วนคะแนน (เปอร์เซ็นต์) ในขั้นถัดไป</p>
+        <h2 class="card-heading">เลือกรายวิชาที่จะบันทึกคะแนน</h2>
+        <p class="card-desc">
+          เลือกโครงสร้างหลักสูตร รุ่น และรายวิชาให้ครบก่อน เพื่อเริ่มกรอกคะแนน
+        </p>
       </div>
 
-      <div class="maxscore-wrap">
-        <input
-          *ngIf="!isSU"
-          class="maxscore-input"
-          type="number"
-          min="1"
-          step="0.5"
-          [(ngModel)]="inputMaxScore"
-          (keyup.enter)="onMaxScoreConfirm()"
-          placeholder="0"
-          [disabled]="isMaxScoreSaved || isSU"
-        />
-        <div class="maxscore-hint" *ngIf="!isMaxScoreSaved && !isSU">
-          คะแนนเต็ม (กดปุ่มด้านล่าง หรือ Enter เพื่อยืนยัน)
+      <div class="field-grid">
+        <div class="field">
+          <label>โครงสร้างหลักสูตร</label>
+          <select
+            class="custom-select"
+            [(ngModel)]="selectedCourse"
+            (ngModelChange)="onCourseChange()"
+          >
+            <option value="all">แสดงทั้งหมด</option>
+            @for (course of courses; track course.id) {
+              <option [value]="course.id">{{ course.course_name }}</option>
+            }
+          </select>
         </div>
-        <div *ngIf="isSU" style="font-size: 24px; color: var(--primary); font-weight: 600; text-align: center; margin-bottom: 8px;">
-          S / U
+
+        <div class="field">
+          <label>รุ่น</label>
+          <select
+            class="custom-select"
+            [(ngModel)]="selectedBatch"
+            (ngModelChange)="onBatchChange()"
+            [disabled]="selectedCourse === 'all' || !selectedCourse"
+          >
+            <option [value]="null">— เลือกรุ่น —</option>
+            @for (batch of batches; track batch.id) {
+              <option [value]="batch.id">{{ batch.batch_name }}</option>
+            }
+          </select>
         </div>
-        
-        <div *ngIf="isSU" style="margin-top: 12px; display: flex; justify-content: center; align-items: center; gap: 8px;">
-          <mat-icon style="color: var(--primary); font-size: 20px; width: 20px; height: 20px;">info</mat-icon>
-          <span style="color: var(--text-dark); font-weight: 500;">วิชานี้ถูกกำหนดให้ประเมินผลแบบ S/U</span>
+
+        <div class="field">
+          <label>รายวิชาในหลักสูตร</label>
+          <select
+            class="custom-select"
+            [(ngModel)]="selectedSubjectId"
+            (ngModelChange)="onSubjectChange()"
+            [disabled]="!selectedBatch"
+          >
+            <option [value]="null">— เลือกรายวิชา —</option>
+            @for (subject of subjects; track $index) {
+              <option [value]="subject?.subject_id">{{ subject?.subject_name }}</option>
+            }
+          </select>
         </div>
       </div>
 
-      <div
-        class="actions"
-        style="justify-content: center; margin-top: 16px; margin-bottom: 32px"
-        *ngIf="!isMaxScoreSaved && !isSU"
-      >
-        <button class="btn btn-gold" (click)="onMaxScoreConfirm()">
-          <mat-icon>save</mat-icon> บันทึกคะแนนเต็ม
-        </button>
-      </div>
+      <!-- Section 2: Max Score -->
+      <ng-container *ngIf="selectedSubjectId">
+        <hr style="border: none; border-top: 1px solid var(--line); margin: 32px 0" />
 
-      <div
-        class="actions"
-        style="justify-content: center; margin-top: 16px; margin-bottom: 32px"
-        *ngIf="isMaxScoreSaved && !isSU"
-      >
-        <button class="btn btn-danger" (click)="enableMaxScoreEdit()">
-          <mat-icon>edit</mat-icon> แก้ไขคะแนนเต็ม
-        </button>
-      </div>
-    </ng-container>
-
-    <!-- Section 3: Student Table -->
-    <ng-container *ngIf="selectedSubjectId && isMaxScoreSaved">
-      <hr style="border: none; border-top: 1px solid var(--line); margin: 32px 0" />
-
-      <div
-        style="
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 16px;
-        "
-      >
         <div>
-          <h2 class="card-heading">กรอกคะแนนดิบรายบุคคล</h2>
-          <p class="card-desc" style="margin-bottom: 0">
-            แต่ละแถวจะแสดงสัดส่วนคะแนนเทียบกับคะแนนเต็มโดยอัตโนมัติ กรอกครบแล้วบันทึกได้ทันที
+          <h2 class="card-heading">กำหนดคะแนนเต็มของวิชานี้</h2>
+          <p class="card-desc">
+            คะแนนเต็มจะเป็นฐานสำหรับคำนวณสัดส่วนคะแนน (เปอร์เซ็นต์) ในขั้นถัดไป
           </p>
         </div>
-        <div style="display: flex; gap: 12px; align-items: center;">
-          <button *ngIf="!isSU && !isSaved" class="btn btn-gold" (click)="fillScoreForEveryone()">
-            <mat-icon>format_color_fill</mat-icon> กรอกคะแนนด่วน
-          </button>
-          <button *ngIf="isSaved" class="btn btn-danger" (click)="enableEditMode()">
-            <mat-icon>edit</mat-icon> แก้ไขคะแนนนักเรียน
-          </button>
-        </div>
-      </div>
 
-      <div class="subject-strip">
-        <div>
-          <div class="name">
-            <ng-container *ngFor="let s of subjects">
-              <span *ngIf="s.subject_id === selectedSubjectId">{{ s.subject_name }}</span>
-            </ng-container>
+        <div class="maxscore-wrap">
+          <input
+            *ngIf="!isSU"
+            class="maxscore-input"
+            type="number"
+            min="1"
+            step="0.5"
+            [(ngModel)]="inputMaxScore"
+            (keyup.enter)="onMaxScoreConfirm()"
+            placeholder="0"
+            [disabled]="isMaxScoreSaved || isSU"
+          />
+          <div class="maxscore-hint" *ngIf="!isMaxScoreSaved && !isSU">
+            คะแนนเต็ม (กดปุ่มด้านล่าง หรือ Enter เพื่อยืนยัน)
           </div>
-          <div class="meta">นักเรียน {{ studentList.length }} คน</div>
+          <div
+            *ngIf="isSU"
+            style="
+              font-size: 24px;
+              color: var(--primary);
+              font-weight: 600;
+              text-align: center;
+              margin-bottom: 8px;
+            "
+          >
+            S / U
+          </div>
+
+          <div
+            *ngIf="isSU"
+            style="
+              margin-top: 12px;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              gap: 8px;
+            "
+          >
+            <mat-icon style="color: var(--primary); font-size: 20px; width: 20px; height: 20px"
+              >info</mat-icon
+            >
+            <span style="color: var(--text-dark); font-weight: 500"
+              >วิชานี้ถูกกำหนดให้ประเมินผลแบบ S/U</span
+            >
+          </div>
         </div>
-        <div *ngIf="!isSU">
-          <div class="max">{{ inputMaxScore }}</div>
-          <div class="max-label">คะแนนเต็ม</div>
+
+        <div
+          class="actions"
+          style="justify-content: center; margin-top: 16px; margin-bottom: 32px"
+          *ngIf="!isMaxScoreSaved && !isSU"
+        >
+          <button class="btn btn-gold" (click)="onMaxScoreConfirm()">
+            <mat-icon>save</mat-icon> บันทึกคะแนนเต็ม
+          </button>
         </div>
-      </div>
 
-      <div style="overflow-x: auto">
-        <table>
-          <thead>
-            <tr>
-              <th class="col-idx">ลำดับ</th>
-              <th class="col-name">ยศ ชื่อ-นามสกุล</th>
-              <th class="col-score">{{ isSU ? 'ผลการประเมิน' : 'คะแนนดิบ (สัดส่วนต่อคะแนนเต็ม)' }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (student of studentList; track student.student_id; let i = $index) {
-              <tr
-                [class.row-filled]="student.raw_score !== null && student.raw_score !== undefined"
-                [class.failing-row]="showFailingHighlight && isFailingScore(student.raw_score)"
-              >
-                <td class="col-idx">{{ i + 1 }}</td>
+        <div
+          class="actions"
+          style="justify-content: center; margin-top: 16px; margin-bottom: 32px"
+          *ngIf="isMaxScoreSaved && !isSU"
+        >
+          <button class="btn btn-danger" (click)="enableMaxScoreEdit()">
+            <mat-icon>edit</mat-icon> แก้ไขคะแนนเต็ม
+          </button>
+        </div>
+      </ng-container>
 
-                <td class="col-name">
-                  {{ student.rank_name }} {{ student.first_name }} {{ student.last_name }}
-                </td>
-                <td class="col-score">
-                  <div class="score-cell">
-                    <!-- กรณีวิชาทั่วไป (กรอกตัวเลข) -->
-                    <input
-                      *ngIf="!isSU"
-                      class="score-input"
-                      [class.over]="isInvalidScore(student.raw_score)"
-                      [id]="'score-input-' + i"
-                      type="number"
-                      min="0"
-                      [max]="inputMaxScore"
-                      step="0.5"
-                      [(ngModel)]="student.raw_score"
-                      (ngModelChange)="onScoreChange(student, $event)"
-                      (keydown.enter)="focusNextInput(i, $event)"
-                      [disabled]="isSaved"
-                      placeholder="0"
-                    />
+      <!-- Section 3: Student Table -->
+      <ng-container *ngIf="selectedSubjectId && isMaxScoreSaved">
+        <hr style="border: none; border-top: 1px solid var(--line); margin: 32px 0" />
 
-                    <!-- กรณีวิชา S/U (เลือกผ่าน/ไม่ผ่าน) -->
-                    <select
-                      *ngIf="isSU"
-                      class="score-input score-input-su"
-                      [ngClass]="{
-                        'su-pass': student.raw_score === 1,
-                        'su-fail': student.raw_score === 0
-                      }"
-                      [id]="'score-input-' + i"
-                      [(ngModel)]="student.raw_score"
-                      (ngModelChange)="onScoreChange(student, $event)"
-                      (keydown.enter)="focusNextInput(i, $event)"
-                      [disabled]="isSaved"
-                    >
-                      <option [ngValue]="null" disabled selected>เลือก</option>
-                      <option [ngValue]="1">S (ผ่าน)</option>
-                      <option [ngValue]="0">U (ไม่ผ่าน)</option>
-                    </select>
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+          "
+        >
+          <div>
+            <h2 class="card-heading">กรอกคะแนนดิบรายบุคคล</h2>
+            <p class="card-desc" style="margin-bottom: 0">
+              แต่ละแถวจะแสดงสัดส่วนคะแนนเทียบกับคะแนนเต็มโดยอัตโนมัติ กรอกครบแล้วบันทึกได้ทันที
+            </p>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap">
+            <button
+              *ngIf="studentList.length > 0"
+              type="button"
+              class="btn btn-outline"
+              (click)="exportToExcel()"
+              style="color: #107c41; border-color: #107c41"
+            >
+              <mat-icon style="color: #107c41">file_download</mat-icon> Export Excel
+            </button>
+            <button *ngIf="!isSU && !isSaved" class="btn btn-gold" (click)="fillScoreForEveryone()">
+              <mat-icon>format_color_fill</mat-icon> กรอกคะแนนด่วน
+            </button>
+            <button *ngIf="isSaved" class="btn btn-danger" (click)="enableEditMode()">
+              <mat-icon>edit</mat-icon> แก้ไขคะแนนนักเรียน
+            </button>
+          </div>
+        </div>
 
-                    <div class="ratio-track" *ngIf="!isSU">
-                      <div
-                        class="ratio-fill"
+        <div class="subject-strip">
+          <div>
+            <div class="name">
+              <ng-container *ngFor="let s of subjects">
+                <span *ngIf="s.subject_id === selectedSubjectId">{{ s.subject_name }}</span>
+              </ng-container>
+            </div>
+            <div class="meta">นักเรียน {{ studentList.length }} คน</div>
+          </div>
+          <div *ngIf="!isSU">
+            <div class="max">{{ inputMaxScore }}</div>
+            <div class="max-label">คะแนนเต็ม</div>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto">
+          <table>
+            <thead>
+              <tr>
+                <th class="col-idx">ลำดับ</th>
+                <th class="col-name">ยศ ชื่อ-นามสกุล</th>
+                <th class="col-score">
+                  {{ isSU ? 'ผลการประเมิน' : 'คะแนนดิบ (สัดส่วนต่อคะแนนเต็ม)' }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (student of studentList; track student.student_id; let i = $index) {
+                <tr
+                  [class.row-filled]="student.raw_score !== null && student.raw_score !== undefined"
+                  [class.failing-row]="showFailingHighlight && isFailingScore(student.raw_score)"
+                >
+                  <td class="col-idx">{{ i + 1 }}</td>
+
+                  <td class="col-name">
+                    {{ student.rank_name }} {{ student.first_name }} {{ student.last_name }}
+                  </td>
+                  <td class="col-score">
+                    <div class="score-cell">
+                      <!-- กรณีวิชาทั่วไป (กรอกตัวเลข) -->
+                      <input
+                        *ngIf="!isSU"
+                        class="score-input"
                         [class.over]="isInvalidScore(student.raw_score)"
-                        [style.width.%]="
-                          student.raw_score !== null &&
-                          student.raw_score !== undefined &&
-                          inputMaxScore
-                            ? (student.raw_score / inputMaxScore) * 100 > 100
-                              ? 100
-                              : (student.raw_score / inputMaxScore) * 100
-                            : 0
-                        "
-                      ></div>
-                    </div>
-                    <div class="ratio-pct" *ngIf="!isSU">
-                      <ng-container
-                        *ngIf="
-                          student.raw_score !== null &&
-                          student.raw_score !== undefined &&
-                          student.raw_score.toString() !== '' &&
-                          inputMaxScore
-                        "
+                        [id]="'score-input-' + i"
+                        type="number"
+                        min="0"
+                        [max]="inputMaxScore"
+                        step="0.5"
+                        [(ngModel)]="student.raw_score"
+                        (ngModelChange)="onScoreChange(student, $event)"
+                        (keydown.enter)="focusNextInput(i, $event)"
+                        [disabled]="isSaved"
+                        placeholder="0"
+                      />
+
+                      <!-- กรณีวิชา S/U (เลือกผ่าน/ไม่ผ่าน) -->
+                      <select
+                        *ngIf="isSU"
+                        class="score-input score-input-su"
+                        [ngClass]="{
+                          'su-pass': student.raw_score === 1,
+                          'su-fail': student.raw_score === 0,
+                        }"
+                        [id]="'score-input-' + i"
+                        [(ngModel)]="student.raw_score"
+                        (ngModelChange)="onScoreChange(student, $event)"
+                        (keydown.enter)="focusNextInput(i, $event)"
+                        [disabled]="isSaved"
                       >
-                        {{
-                          ((student.raw_score / inputMaxScore) * 100 > 100
-                            ? 100
-                            : (student.raw_score / inputMaxScore) * 100
-                          ) | number: '1.0-0'
-                        }}%
-                      </ng-container>
-                      <ng-container
-                        *ngIf="
-                          !(
+                        <option [ngValue]="null" disabled selected>เลือก</option>
+                        <option [ngValue]="1">S</option>
+                        <option [ngValue]="0">U</option>
+                      </select>
+
+                      <div class="ratio-track" *ngIf="!isSU">
+                        <div
+                          class="ratio-fill"
+                          [class.over]="isInvalidScore(student.raw_score)"
+                          [style.width.%]="
+                            student.raw_score !== null &&
+                            student.raw_score !== undefined &&
+                            inputMaxScore
+                              ? (student.raw_score / inputMaxScore) * 100 > 100
+                                ? 100
+                                : (student.raw_score / inputMaxScore) * 100
+                              : 0
+                          "
+                        ></div>
+                      </div>
+                      <div class="ratio-pct" *ngIf="!isSU">
+                        <ng-container
+                          *ngIf="
                             student.raw_score !== null &&
                             student.raw_score !== undefined &&
                             student.raw_score.toString() !== '' &&
                             inputMaxScore
-                          )
-                        "
-                      >
-                        —
-                      </ng-container>
+                          "
+                        >
+                          {{
+                            ((student.raw_score / inputMaxScore) * 100 > 100
+                              ? 100
+                              : (student.raw_score / inputMaxScore) * 100
+                            ) | number: '1.0-0'
+                          }}%
+                        </ng-container>
+                        <ng-container
+                          *ngIf="
+                            !(
+                              student.raw_score !== null &&
+                              student.raw_score !== undefined &&
+                              student.raw_score.toString() !== '' &&
+                              inputMaxScore
+                            )
+                          "
+                        >
+                          —
+                        </ng-container>
+                      </div>
                     </div>
-                  </div>
-                </td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="4" class="empty-row">
-                  กรุณาเลือกรุ่นและรายวิชาเพื่อแสดงรายชื่อนักเรียน
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-
-      <div class="stats-bar">
-        <div
-          class="stat"
-          [class.complete]="filledCount === studentList.length && studentList.length > 0"
-        >
-          <div class="stat-label">กรอกแล้ว</div>
-          <div class="stat-value">{{ filledCount }} / {{ studentList.length }}</div>
-        </div>
-        <div class="stat" *ngIf="!isSU">
-          <div class="stat-label">เฉลี่ย</div>
-          <div class="stat-value">{{ averageScore }}</div>
-        </div>
-        <div class="stat" *ngIf="!isSU">
-          <div class="stat-label">สูงสุด</div>
-          <div class="stat-value">{{ maxScoreValue !== null ? maxScoreValue : '-' }}</div>
-        </div>
-        <div class="stat" *ngIf="!isSU">
-          <div class="stat-label">ต่ำสุด</div>
-          <div class="stat-value">{{ minScoreValue !== null ? minScoreValue : '-' }}</div>
-        </div>
-      </div>
-
-      <div class="save-error-msg" *ngIf="saveError">
-        <mat-icon>error_outline</mat-icon> {{ saveError }}
-      </div>
-
-      <div class="actions">
-        <div>
-          <button class="btn btn-ghost" (click)="onCancel()" [disabled]="isSaving || isLoading">
-            <mat-icon>refresh</mat-icon> เริ่มใหม่/ยกเลิก
-          </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4" class="empty-row">
+                    กรุณาเลือกรุ่นและรายวิชาเพื่อแสดงรายชื่อนักเรียน
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
         </div>
 
-        <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-end">
-          <button
-            *ngIf="hasPreviousSubject"
-            class="btn btn-outline"
-            (click)="goToPreviousSubject()"
+        <div class="stats-bar">
+          <div
+            class="stat"
+            [class.complete]="filledCount === studentList.length && studentList.length > 0"
           >
-            <mat-icon>arrow_back</mat-icon> วิชาก่อนหน้า
-          </button>
-
-          <button *ngIf="hasNextSubject && isSaved" class="btn btn-gold" (click)="goToNextSubject()">
-            วิชาถัดไป <mat-icon>arrow_forward</mat-icon>
-          </button>
-          <button
-            class="btn btn-primary"
-            (click)="onSaveScores()"
-            [disabled]="isSaving || isLoading || isSaved || studentList.length === 0"
-          >
-            <mat-icon>{{
-              isSaving ? 'hourglass_empty' : isSaved ? 'check_circle' : 'save'
-            }}</mat-icon>
-            {{ isSaving ? 'กำลังบันทึก...' : isSaved ? 'บันทึกแล้ว' : 'บันทึกคะแนนทั้งหมด' }}
-          </button>
+            <div class="stat-label">กรอกแล้ว</div>
+            <div class="stat-value">{{ filledCount }} / {{ studentList.length }}</div>
+          </div>
+          <div class="stat" *ngIf="!isSU">
+            <div class="stat-label">เฉลี่ย</div>
+            <div class="stat-value">{{ averageScore }}</div>
+          </div>
+          <div class="stat" *ngIf="!isSU">
+            <div class="stat-label">สูงสุด</div>
+            <div class="stat-value">{{ maxScoreValue !== null ? maxScoreValue : '-' }}</div>
+          </div>
+          <div class="stat" *ngIf="!isSU">
+            <div class="stat-label">ต่ำสุด</div>
+            <div class="stat-value">{{ minScoreValue !== null ? minScoreValue : '-' }}</div>
+          </div>
         </div>
-      </div>
-    </ng-container>
+
+        <div class="save-error-msg" *ngIf="saveError">
+          <mat-icon>error_outline</mat-icon> {{ saveError }}
+        </div>
+
+        <div class="actions">
+          <div>
+            <button class="btn btn-ghost" (click)="onCancel()" [disabled]="isSaving || isLoading">
+              <mat-icon>refresh</mat-icon> เริ่มใหม่/ยกเลิก
+            </button>
+          </div>
+
+          <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-end">
+            <button
+              *ngIf="hasPreviousSubject"
+              class="btn btn-outline"
+              (click)="goToPreviousSubject()"
+            >
+              <mat-icon>arrow_back</mat-icon> วิชาก่อนหน้า
+            </button>
+
+            <button
+              *ngIf="hasNextSubject && isSaved"
+              class="btn btn-gold"
+              (click)="goToNextSubject()"
+            >
+              วิชาถัดไป <mat-icon>arrow_forward</mat-icon>
+            </button>
+            <button
+              class="btn btn-primary"
+              (click)="onSaveScores()"
+              [disabled]="isSaving || isLoading || isSaved || studentList.length === 0"
+            >
+              <mat-icon>{{
+                isSaving ? 'hourglass_empty' : isSaved ? 'check_circle' : 'save'
+              }}</mat-icon>
+              {{ isSaving ? 'กำลังบันทึก...' : isSaved ? 'บันทึกแล้ว' : 'บันทึกคะแนนทั้งหมด' }}
+            </button>
+          </div>
+        </div>
+      </ng-container>
+    </div>
   </div>
-</div>
 </div>

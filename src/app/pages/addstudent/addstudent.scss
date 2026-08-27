@@ -603,6 +603,33 @@ $font-family-thai: 'Sarabun', sans-serif;
   }
 }
 
+.btn-excel {
+  background-color: #107c41;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(16, 124, 65, 0.2);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  &:hover {
+    background-color: #0b5e31;
+    box-shadow: 0 6px 16px rgba(16, 124, 65, 0.3);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
 /* ==========================================
    📊 Student List Table (ตารางพร้อมกรอบล้อมรอบ)
    ========================================== */

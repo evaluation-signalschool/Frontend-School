@@ -60,7 +60,9 @@ export class From implements OnInit {
       { value: 'committee', label: 'แบบประเมินสำหรับคณะกำกับหลักสูตร' },
     ],
     followup: [
-      { value: 'followup', label: 'แบบประเมินติดตามผู้สำเร็จการศึกษา' },
+      { value: 'followup_commander', label: 'แบบประเมินผู้สำเร็จการฝึกอบรม (สำหรับ ผบช.)' },
+      { value: 'followup_self', label: 'แบบประเมินผู้สำเร็จการฝึกอบรม (ผู้ฝึกอบรมประเมินตนเอง)' },
+      { value: 'followup_colleague', label: 'แบบประเมินผู้สำเร็จการฝึกอบรม (สำหรับเพื่อนร่วมงาน)' },
     ]
   };
 
@@ -409,6 +411,17 @@ export class From implements OnInit {
   // ส่วนสร้างและอัปเดตฟอร์ม (เรียก API)
   // ==========================================
 
+  isDuplicateForm(): boolean {
+    if (!this.formData.generationId || !this.formData.formType) return false;
+    
+    // ค้นหาว่ามีฟอร์มประเภทเดียวกันในรุ่นเดียวกันถูกสร้างไว้แล้วหรือไม่
+    const existingForm = this.formList.find(
+      (f) => f.generationId == this.formData.generationId && f.formType === this.formData.formType
+    );
+    
+    return !!existingForm;
+  }
+
   onCreateForm() {
     if (!this.formData.courseName || !this.formData.generationId || !this.formData.formType) {
       Swal.fire({
@@ -421,10 +434,7 @@ export class From implements OnInit {
       return;
     }
 
-    const existingForm = this.formList.find(
-      (f) => f.generationId == this.formData.generationId && f.formType === this.formData.formType
-    );
-    if (existingForm) {
+    if (this.isDuplicateForm()) {
       Swal.fire({
         icon: 'error',
         title: 'สร้างไม่ได้',

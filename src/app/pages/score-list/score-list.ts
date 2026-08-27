@@ -218,11 +218,75 @@ export class ScoreList implements OnInit {
   }
 
   exportToExcel(): void {
-    alert('ระบบกำลังดาวน์โหลดไฟล์ Excel...');
-  }
+    if (!this.students || this.students.length === 0) {
+      return;
+    }
 
-  printReport(): void {
-    window.print();
+    // 1. สร้าง Headers
+    const headers = ['ลำดับ', 'ยศ ชื่อ-นามสกุล'];
+    const subjects = this.groupSummary?.subjects || [];
+    
+    // เติมชื่อวิชา
+    subjects.forEach(subj => {
+      headers.push(subj.subject_name + (subj.is_su ? ' (S/U)' : ` (เต็ม ${subj.max_score})`));
+    });
+
+    // เติมคอลัมน์สรุป
+    headers.push('คิดเป็นร้อยละ', 'เกรด (ตัวอักษร)', 'เกรด (ตัวเลข)', 'ค่าประกอบ Index');
+
+    // 2. สร้างข้อมูลทีละแถว
+    const csvData = this.students.map((student, index) => {
+      const row = [
+        index + 1,
+        student.full_name || ''
+      ];
+
+      // เติมคะแนนแต่ละวิชา
+      subjects.forEach(subj => {
+        const score = student.subject_scores[subj.subject_id];
+        if (score !== undefined && score !== null) {
+          if (subj.is_su) {
+            row.push(score > 0 ? 'S' : 'U');
+          } else {
+            row.push(score);
+          }
+        } else {
+          row.push('-');
+        }
+      });
+
+      // เติมข้อมูลสรุป
+      row.push(
+        student.percent !== undefined ? student.percent + '%' : '-',
+        student.grade || '-',
+        student.grade_point !== undefined && student.grade_point !== null ? student.grade_point : '-',
+        student.index_value || '-'
+      );
+
+      return row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(',');
+    });
+
+    // 3. รวม Header กับ Data
+    const csvContent = [headers.map(h => `"${h}"`).join(','), ...csvData].join('\n');
+
+    // 4. เพิ่ม BOM สำหรับภาษาไทยใน Excel
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+    
+    // 5. สร้างลิ้งค์สำหรับดาวน์โหลด
+    const groupName = this.groupSummary?.group_name || 'ประมวลผลการเรียน';
+    const batchName = this.batches.find(b => b.id === this.selectedBatch)?.name || '';
+    const filename = `สรุปผล_${groupName}_${batchName}.csv`.replace(/\s+/g, '_');
+
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   private updateProcessedTime(): void {

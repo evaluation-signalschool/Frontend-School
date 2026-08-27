@@ -1,0 +1,98 @@
+<div class="admin-page">
+  <div class="page-header" style="display: flex; align-items: center; gap: 16px;">
+    <button (click)="goBack()" class="btn btn-outline-secondary" style="border: none; background: transparent; padding: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 50%;">
+      <mat-icon style="color: #555;">arrow_back</mat-icon>
+    </button>
+    <h2 class="page-title" style="margin: 0;">อนุมัติการแก้ไขข้อมูลโปรไฟล์</h2>
+  </div>
+
+  <div class="card-container">
+    <div class="card-header">
+      <h3>รายการคำร้องขอแก้ไขข้อมูลนักเรียน</h3>
+    </div>
+
+    <div *ngIf="isLoading" style="text-align: center; padding: 2rem;">
+      <p>กำลังโหลดข้อมูล...</p>
+    </div>
+
+    <div *ngIf="!isLoading && requests.length === 0" style="text-align: center; padding: 3rem; color: #666;">
+      <mat-icon style="font-size: 48px; height: 48px; width: 48px; margin-bottom: 1rem; color: #bdbdbd;">inbox</mat-icon>
+      <p>ไม่มีคำร้องขอแก้ไขข้อมูลในขณะนี้</p>
+    </div>
+
+    <div class="table-responsive" *ngIf="!isLoading && requests.length > 0">
+      <table class="table custom-table">
+        <thead>
+          <tr>
+            <th>วันที่ส่งคำร้อง</th>
+            <th style="text-align: center;">รหัสนักเรียน</th>
+            <th>ข้อมูลเดิม</th>
+            <th>ข้อมูลใหม่ที่ขอแก้ไข</th>
+            <th>เอกสารหลักฐาน</th>
+            <th>สถานะ</th>
+            <th class="text-center">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let req of paginatedRequests">
+            <td>{{ req.created_at | date:'dd/MM/yyyy HH:mm' }}</td>
+            <td style="text-align: center; vertical-align: middle;">
+              <strong>{{ req.student_code }}</strong><br>
+              <span class="text-muted" style="font-size: 0.85em;">
+                {{ req.course_name ? req.course_name + ' ' : '' }}
+                {{ req.batch_name ? '(' + req.batch_name + ')' : '(รุ่น ' + req.batch_id + ')' }}
+              </span>
+            </td>
+            <td>
+              <div class="data-block original">
+                <span>{{ req.original_rank }}{{ req.original_first_name }} {{ req.original_last_name }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="data-block new">
+                <span>{{ req.new_rank }}{{ req.new_first_name }} {{ req.new_last_name }}</span>
+              </div>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary" (click)="viewDocument(req.document_path)" [disabled]="!req.document_path">
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px;">description</mat-icon>
+                เปิดเอกสาร
+              </button>
+            </td>
+            <td>
+              <span class="status-badge" [ngClass]="req.status">
+                {{ req.status === 'pending' ? 'รออนุมัติ' : req.status === 'approved' ? 'อนุมัติแล้ว' : 'ไม่อนุมัติ' }}
+              </span>
+            </td>
+            <td class="text-center">
+              <div class="action-buttons">
+                <ng-container *ngIf="req.status === 'pending'">
+                  <button class="btn btn-sm btn-success" (click)="updateStatus(req.id, 'approved')" title="อนุมัติ">
+                    <mat-icon>check</mat-icon>
+                  </button>
+                  <button class="btn btn-sm btn-danger" (click)="updateStatus(req.id, 'rejected')" title="ไม่อนุมัติ">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </ng-container>
+                <button *ngIf="req.status !== 'pending'" class="btn btn-sm btn-outline-danger" (click)="deleteRequest(req.id)" title="ลบข้อมูลทิ้ง" style="border: none; background: transparent; padding: 4px; display: flex; align-items: center; justify-content: center;">
+                  <mat-icon style="color: #f44336;">delete</mat-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div class="pagination-controls" *ngIf="!isLoading && requests.length > pageSize" style="display: flex; justify-content: flex-end; align-items: center; padding: 16px; gap: 16px; border-top: 1px solid #eee;">
+      <span style="font-size: 14px; color: #666;">
+        หน้าที่ {{ currentPage }} จาก {{ totalPages }} (ทั้งหมด {{ requests.length }} รายการ)
+      </span>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-sm btn-outline-secondary" [disabled]="currentPage === 1" (click)="prevPage()" style="border-radius: 4px; padding: 4px 12px;">ก่อนหน้า</button>
+        <button class="btn btn-sm btn-outline-secondary" [disabled]="currentPage === totalPages" (click)="nextPage()" style="border-radius: 4px; padding: 4px 12px;">ถัดไป</button>
+      </div>
+    </div>
+  </div>
+</div>

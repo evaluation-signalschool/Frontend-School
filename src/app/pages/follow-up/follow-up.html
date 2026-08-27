@@ -1,9 +1,6 @@
 <div class="page-container">
   <div class="header">
-    <h1>แบบประเมินติดตามผู้สำเร็จ: {{ courseName || 'ทั้งหมด' }}</h1>
-  </div>
-  <div class="content">
-    <p>กำลังเตรียมข้อมูลสำหรับหน้าแบบประเมินติดตามผู้สำเร็จ...</p>
+    <h1>แบบประเมินติดตามผู้สำเร็จ: {{ courseName || 'ทั้งหมด' }} {{ batchName }}</h1>
   </div>
 </div>
 <div class="card-container">
@@ -14,7 +11,7 @@
     </div>
     <div class="card-content">
       <h3>แบบประเมินผู้สำเร็จการฝึกอบรม (สำหรับ ผบช.)</h3>
-      <button class="card-btn">เริ่มประเมิน</button>
+      <button class="card-btn" (click)="goToForm('followup_commander')">ประเมิน</button>
     </div>
   </div>
 
@@ -25,7 +22,7 @@
     </div>
     <div class="card-content">
       <h3>แบบประเมินผู้สำเร็จการฝึกอบรม (ผู้ฝึกอบรมประเมินตนเอง)</h3>
-      <button class="card-btn">เริ่มประเมิน</button>
+      <button class="card-btn" (click)="goToForm('followup_self')">ประเมิน</button>
     </div>
   </div>
 
@@ -36,7 +33,7 @@
     </div>
     <div class="card-content">
       <h3>แบบประเมินผู้สำเร็จการฝึกอบรม (สำหรับเพื่อนร่วมงาน)</h3>
-      <button class="card-btn">เริ่มประเมิน</button>
+      <button class="card-btn" (click)="goToForm('followup_colleague')">ประเมิน</button>
     </div>
   </div>
 </div>

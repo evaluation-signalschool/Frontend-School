@@ -48,4 +48,22 @@ export class StudentService {
   resequenceStudents(batchId: string): Observable<any> {
     return this.http.put<any>(`${environment.apiUrl}/students/resequence/${batchId}`, {});
   }
+
+  // --- Profile Edit Requests ---
+
+  submitProfileEditRequest(formData: FormData): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/edit-profile`, formData);
+  }
+
+  getProfileEditStatus(studentId: number): Observable<any> {
+    return this.http.get<any>(`${environment.apiUrl}/edit-profile/status/${studentId}`);
+  }
+
+  getProfileEditRequests(): Observable<any> {
+    return this.http.get<any>(`${environment.apiUrl}/edit-profile/requests`);
+  }
+
+  updateProfileEditRequestStatus(id: number, status: 'approved' | 'rejected'): Observable<any> {
+    return this.http.put<any>(`${environment.apiUrl}/edit-profile/requests/${id}`, { status });
+  }
 }

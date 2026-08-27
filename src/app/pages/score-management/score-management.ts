@@ -15,6 +15,8 @@ import { CourseService, CourseGroup } from '../../services/course.service';
 import { Location } from '@angular/common';
 import Swal from 'sweetalert2';
 import { finalize } from 'rxjs/operators';
+import * as ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 interface Course {
   id: number;
@@ -126,20 +128,21 @@ export class ScoreManagement implements OnInit {
 
     this.dropdownService.getSubjects(batchId).subscribe({
       next: (res) => {
-        // 2. กำหนดค่าข้อมูลตรงๆ ไม่ต้องใช้ setTimeout ครอบ
-        if (res && res.data) {
-          this.subjects = res.data;
-        } else {
-          this.subjects = [];
-        }
-
-        // 3. บังคับอัปเดต UI ทันที (แก้ปัญหาต้องคลิกก่อนข้อมูลถึงจะแสดง)
-        this.cdr.detectChanges();
+        this.ngZone.run(() => {
+          if (res && res.data) {
+            this.subjects = res.data;
+          } else {
+            this.subjects = [];
+          }
+          this.cdr.detectChanges();
+        });
       },
       error: (err) => {
-        console.error('Failed to load subjects', err);
-        this.subjects = [];
-        this.cdr.detectChanges();
+        this.ngZone.run(() => {
+          console.error('Failed to load subjects', err);
+          this.subjects = [];
+          this.cdr.detectChanges();
+        });
       },
     });
   }
@@ -149,90 +152,83 @@ export class ScoreManagement implements OnInit {
 
     this.scoreService.getAdminSubjectScores(batchId, subjectId).subscribe({
       next: (res) => {
-        if (res?.success && res.data) {
+        this.ngZone.run(() => {
+          if (res?.success && res.data) {
+            this.studentList = res.data.map((s: any) => ({
+              student_id: s.student_id,
+              student_code: s.student_code,
+              rank_name: s.rank_name || '',
+              first_name: s.first_name,
+              last_name: s.last_name,
+              raw_score: s.raw_score !== null && s.raw_score !== undefined ? Number(s.raw_score) : null,
+            })).sort((a: any, b: any) => {
+              return String(a.student_code || '').localeCompare(String(b.student_code || ''), undefined, { numeric: true });
+            });
 
-          this.studentList = res.data.map((s: any) => ({
-            student_id: s.student_id,
-            student_code: s.student_code,
-            rank_name: s.rank_name || '',
-            first_name: s.first_name,
-            last_name: s.last_name,
-            raw_score: s.raw_score !== null && s.raw_score !== undefined ? Number(s.raw_score) : null,
-          })).sort((a: any, b: any) => {
-            return String(a.student_code || '').localeCompare(String(b.student_code || ''), undefined, { numeric: true });
-          });
-
-
-          if (res.max_score !== undefined && res.max_score !== null && res.max_score > 0) {
-            this.inputMaxScore = res.max_score;
-            this.isMaxScoreSaved = true;
-          } else {
-            this.inputMaxScore = null;
-            this.isMaxScoreSaved = false;
-          }
-          if (res.is_su !== undefined && res.is_su !== null) {
-            this.isSU = !!res.is_su; // Load is_su from API if provided
-          } else {
-            // Find is_su from subjects list fallback (when API returns empty default response)
-            const subj = this.subjects.find((s: any) => Number(s.subject_id) === Number(this.selectedSubjectId));
-            this.isSU = subj?.is_su ?? false;
-          }
-          if (this.isSU && !this.isMaxScoreSaved) {
-            this.isMaxScoreSaved = true;
-            this.inputMaxScore = 1;
+            if (res.max_score !== undefined && res.max_score !== null && res.max_score > 0) {
+              this.inputMaxScore = res.max_score;
+              this.isMaxScoreSaved = true;
+            } else {
+              this.inputMaxScore = null;
+              this.isMaxScoreSaved = false;
+            }
             
-            this.scoreService.updateMaxScore({
-              batch_id: this.selectedBatch,
-              subject_id: this.selectedSubjectId,
-              max_score: 1
-            }).subscribe({
-              error: (err) => console.error("Auto-save SU max score failed", err)
-            });
-          }
+            if (res.is_su !== undefined && res.is_su !== null) {
+              this.isSU = !!res.is_su;
+            } else {
+              const subj = this.subjects.find((s: any) => Number(s.subject_id) === Number(this.selectedSubjectId));
+              this.isSU = subj?.is_su ?? false;
+            }
 
-          const hasScores = this.studentList.some((s) => s.raw_score !== null && s.raw_score !== undefined && s.raw_score.toString() !== '');
-          if (hasScores) {
-            this.isSaved = true;
-          }
+            if (this.isSU && !this.isMaxScoreSaved) {
+              this.isMaxScoreSaved = true;
+              this.inputMaxScore = 1;
+              
+              this.scoreService.updateMaxScore({
+                batch_id: this.selectedBatch,
+                subject_id: this.selectedSubjectId,
+                max_score: 1
+              }).subscribe({
+                error: (err) => console.error("Auto-save SU max score failed", err)
+              });
+            }
 
-          // กำหนดค่าเริ่มต้นเป็น "ผ่าน (S)" (raw_score = 1) สำหรับวิชา S/U หากยังไม่มีคะแนน
-          if (this.isSU) {
-            this.studentList.forEach(s => {
-              if (s.raw_score === null || s.raw_score === undefined) {
-                s.raw_score = 1;
-              }
-            });
-          }
+            const hasScores = this.studentList.some((s) => s.raw_score !== null && s.raw_score !== undefined && s.raw_score.toString() !== '');
+            if (hasScores) {
+              this.isSaved = true;
+            }
 
-          this.updateStats();
-        }
-        this.isLoading = false;
-        this.cdr.detectChanges(); // ให้ Angular อัปเดต UI ทันที
+            if (this.isSU) {
+              this.studentList.forEach(s => {
+                if (s.raw_score === null || s.raw_score === undefined) {
+                  s.raw_score = 1;
+                }
+              });
+            }
+
+            this.updateStats();
+          }
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        });
       },
       error: (err) => {
-        console.error('Failed to load students', err);
-        this.isLoading = false;
-        if (err.status === 404) {
-          this.studentList = [];
-          this.inputMaxScore = null; // ให้เป็น null เพื่อให้ขึ้น placeholder 0 แบบจางๆ
-          this.isMaxScoreSaved = false;
-          
-          // Find is_su from subjects list fallback
-          // Find is_su from subjects list fallback
-          // Find is_su from subjects list fallback
-          const subj = this.subjects.find((s: any) => Number(s.subject_id) === Number(this.selectedSubjectId));
-          console.log("Fallback search - selectedSubjectId:", this.selectedSubjectId);
-          console.log("Fallback search - subjects:", this.subjects);
-          console.log("Fallback search - found subj:", subj);
-          this.isSU = subj?.is_su ?? false;
-          console.log("Setting this.isSU to:", this.isSU);
-          
-          this.updateStats();
-          // ดึงข้อความ error จาก backend ถ้ามี
-          this.saveError =
-            err.error?.message || 'ไม่พบข้อมูลนักเรียนหรือยังไม่ได้ตั้งค่าวิชาในรุ่นที่เลือก';
-        }
-        this.cdr.detectChanges(); // ให้ Angular อัปเดต UI ทันที
+        this.ngZone.run(() => {
+          console.error('Failed to load students', err);
+          this.isLoading = false;
+          if (err.status === 404) {
+            this.studentList = [];
+            this.inputMaxScore = null;
+            this.isMaxScoreSaved = false;
+            
+            const subj = this.subjects.find((s: any) => Number(s.subject_id) === Number(this.selectedSubjectId));
+            this.isSU = subj?.is_su ?? false;
+            
+            this.updateStats();
+            this.saveError = err.error?.message || 'ไม่พบข้อมูลนักเรียนหรือยังไม่ได้ตั้งค่าวิชาในรุ่นที่เลือก';
+          }
+          this.cdr.detectChanges();
+        });
       },
     });
   }
@@ -386,7 +382,12 @@ export class ScoreManagement implements OnInit {
 
   onScoreChange(student: StudentScore, newScore?: any) {
     if (newScore !== undefined) {
-      student.raw_score = newScore;
+      if (newScore !== null && newScore !== '' && Number(newScore) < 0) {
+        // ออโต้แก้ให้เป็น 0 ถ้าพิมพ์ติดลบ
+        student.raw_score = 0;
+      } else {
+        student.raw_score = newScore;
+      }
     }
     this.onScoreInput(student);
   }
@@ -634,5 +635,82 @@ export class ScoreManagement implements OnInit {
   get hasNextSubject(): boolean {
     const currentIndex = this.subjects.findIndex((s) => s.subject_id == this.selectedSubjectId);
     return currentIndex >= 0 && currentIndex < this.subjects.length - 1;
+  }
+
+  async exportToExcel() {
+    if (!this.studentList || this.studentList.length === 0) {
+      Swal.fire('แจ้งเตือน', 'ไม่มีข้อมูลนักเรียนให้ Export', 'warning');
+      return;
+    }
+
+    const subjectName = this.subjects.find(s => s.subject_id === this.selectedSubjectId)?.subject_name || 'รายวิชา';
+    const batchName = this.batches.find(b => b.id === this.selectedBatch)?.batch_name || 'รุ่น';
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('คะแนนรายวิชา');
+    
+    worksheet.properties.defaultRowHeight = 25;
+
+    let headers: string[];
+    if (this.isSU) {
+      headers = ['ลำดับ', 'รหัสนักเรียน', 'ยศ', 'ชื่อ', 'นามสกุล', 'ผลการประเมิน'];
+    } else {
+      headers = ['ลำดับ', 'รหัสนักเรียน', 'ยศ', 'ชื่อ', 'นามสกุล', 'คะแนนดิบ', 'คะแนนเต็ม', 'คิดเป็นเปอร์เซ็นต์'];
+    }
+
+    // เพิ่มหัวตาราง
+    const headerRow = worksheet.addRow(headers);
+    headerRow.eachCell((cell) => {
+      cell.font = { name: 'Sarabun', size: 12, bold: true };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
+      cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+    });
+
+    // เพิ่มข้อมูลนักเรียน
+    this.studentList.forEach((student, index) => {
+      const rowData = [
+        index + 1,
+        student.student_code || '-',
+        student.rank_name || '',
+        student.first_name || '',
+        student.last_name || ''
+      ];
+
+      if (this.isSU) {
+        let suResult = 'ยังไม่ประเมิน';
+        if (student.raw_score === 1) suResult = 'S (ผ่าน)';
+        else if (student.raw_score === 0) suResult = 'U (ไม่ผ่าน)';
+        rowData.push(suResult);
+      } else {
+        const rawScore = student.raw_score !== null && student.raw_score !== undefined ? student.raw_score : 'ยังไม่กรอก';
+        const maxScore = this.inputMaxScore || '-';
+        let percentage = '-';
+        if (student.raw_score !== null && student.raw_score !== undefined && this.inputMaxScore) {
+           let pct = (student.raw_score / this.inputMaxScore) * 100;
+           if (pct > 100) pct = 100;
+           percentage = pct.toFixed(2) + '%';
+        }
+        rowData.push(rawScore, maxScore, percentage);
+      }
+
+      const excelRow = worksheet.addRow(rowData);
+      excelRow.eachCell((cell) => {
+        cell.font = { name: 'Sarabun', size: 11 };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+      });
+    });
+
+    // ปรับขนาดคอลัมน์
+    worksheet.columns.forEach(column => {
+      column.width = 15;
+    });
+    worksheet.getColumn(4).width = 20; // ชื่อ
+    worksheet.getColumn(5).width = 20; // นามสกุล
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `คะแนน_${subjectName}_${batchName}.xlsx`);
   }
 }
