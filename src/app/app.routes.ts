@@ -25,6 +25,7 @@ import { FormView } from './pages/form-view/form-view';
 
 import { EvaluationFillComponent } from './main/student/evaluation-fill/evaluation-fill.component';
 import { EditProfile } from './pages/edit-profile/edit-profile';
+import { Transcript } from './pages/transcript/transcript';
 
 export const routes: Routes = [
   // หน้าแรก
@@ -74,6 +75,8 @@ export const routes: Routes = [
   { path: 'register', component: Register },
 
   {path:'edit-profile',component: EditProfile},
+
+  {path:'transcript',component: Transcript},
 
 
   // ส่วนของคะแนน (ทั่วไป)
