@@ -11,12 +11,12 @@
   </div>
 
   <!-- Dialog Body (Printable Area) -->
-  <div class="dialog-body printable-area">
+  <div class="dialog-body printable-area" [style.--dynamic-font-size]="printFontSize">
     <!-- Student Profile Card -->
     <div class="student-info-card">
       <div class="info-row">
         <div class="info-item">
-          <span class="info-label">รหัสประจำตัว:</span>
+          <span class="info-label">ลำดับที่:</span>
           <span class="info-value text-bold">{{ data.student.code }}</span>
         </div>
         <div class="info-item">
@@ -76,13 +76,23 @@
             <td class="text-left font-medium">{{ subject.name }}</td>
             
             <ng-container *ngIf="subject.isFirstInGroup">
-              <td class="text-center" [attr.rowspan]="subject.rowspan">{{ subject.credit }}</td>
+              <td class="text-center" [attr.rowspan]="subject.rowspan">
+                <ng-container *ngIf="subject.is_su; else normalCredit">S/U</ng-container>
+                <ng-template #normalCredit>{{ subject.credit }}</ng-template>
+              </td>
             </ng-container>
 
-            <td class="text-center">{{ subject.rawScore !== undefined && subject.rawScore !== null ? subject.rawScore : '-' }}</td>
+            <td class="text-center">
+              <ng-container *ngIf="subject.is_su; else normalRawScore">
+                {{ subject.grade || 'S/U' }}
+              </ng-container>
+              <ng-template #normalRawScore>
+                {{ subject.rawScore !== undefined && subject.rawScore !== null ? subject.rawScore : '-' }}
+              </ng-template>
+            </td>
             
             <ng-container *ngIf="subject.isFirstInGroup">
-              <td class="text-center text-bold grade-text text-purple" [attr.rowspan]="subject.rowspan">{{ subject.grade || '-' }}</td>
+              <td class="text-center text-bold grade-text text-purple" [attr.rowspan]="subject.rowspan">{{ subject.letterGrade || subject.grade || '-' }}</td>
               <td class="text-center text-bold text-primary" [attr.rowspan]="subject.rowspan">{{ getNumericGrade(subject.grade) }}</td>
               <td class="text-center text-bold index-text" [attr.rowspan]="subject.rowspan">({{ subject.indexValue || '0.00' }})</td>
             </ng-container>

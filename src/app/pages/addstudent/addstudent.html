@@ -71,118 +71,152 @@
 
     <!-- 📌 แท็บ 1: กรอกทีละคน / แก้ไข / เพิ่มหลายคน -->
     <form *ngIf="activeTab === 'single'" class="modal-form" (ngSubmit)="onSubmitSingle()">
-      
       <div class="student-forms-container">
         <div *ngFor="let form of studentForms; let i = index" class="student-card-row">
-          
           <div class="card-row-header">
-            <h4>
-              <mat-icon>person_add</mat-icon> นักเรียนคนที่ {{ i + 1 }}
-            </h4>
-            <button *ngIf="!isEditing && studentForms.length > 1" type="button" class="btn-icon delete-row-btn" (click)="removeFormRow(i)" title="ลบรายการนี้">
+            <h4><mat-icon>person_add</mat-icon> นักเรียนคนที่ {{ i + 1 }}</h4>
+            <button
+              *ngIf="!isEditing && studentForms.length > 1"
+              type="button"
+              class="btn-icon delete-row-btn"
+              (click)="removeFormRow(i)"
+              title="ลบรายการนี้"
+            >
               <mat-icon>delete_outline</mat-icon>
             </button>
           </div>
 
-        <div class="form-row">
-          <div class="form-group short-input">
-            <label for="rank-{{i}}">ยศ</label>
-            <input
-              type="text"
-              id="rank-{{i}}"
-              name="rank-{{i}}"
-              class="form-control"
-              [(ngModel)]="form.rank"
-            />
-          </div>
-          <div class="form-group">
-            <label for="firstName-{{i}}">ชื่อ</label>
-            <input
-              type="text"
-              id="firstName-{{i}}"
-              name="firstName-{{i}}"
-              class="form-control"
-              [(ngModel)]="form.firstName"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label for="lastName-{{i}}">นามสกุล</label>
-            <input
-              type="text"
-              id="lastName-{{i}}"
-              name="lastName-{{i}}"
-              class="form-control"
-              [(ngModel)]="form.lastName"
-              required
-            />
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="studentCode-{{i}}">รหัสประจำตัวนักเรียน</label>
-            <input
-              type="text"
-              id="studentCode-{{i}}"
-              name="studentCode-{{i}}"
-              class="form-control"
-              [(ngModel)]="form.studentCode"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label for="password-{{i}}">รหัสผ่าน {{ isEditing ? '(เว้นว่างหากไม่เปลี่ยน)' : '' }}</label>
-            <div class="password-input-wrapper" style="position: relative;">
+          <div class="form-row">
+            <div class="form-group short-input">
+              <label for="rank-{{ i }}">ยศ</label>
               <input
-                [type]="showPassword ? 'text' : 'password'"
-                id="password-{{i}}"
-                name="password-{{i}}"
+                type="text"
+                id="rank-{{ i }}"
+                name="rank-{{ i }}"
                 class="form-control"
-                [(ngModel)]="form.password"
-                style="padding-right: 40px;"
+                [(ngModel)]="form.rank"
               />
-              <button
-                type="button"
-                class="toggle-password-btn"
-                (click)="togglePasswordVisibility()"
-                style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #666; padding: 0; display: flex; align-items: center;"
-                title="{{ showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน' }}"
-              >
-                <mat-icon style="font-size: 20px; width: 20px; height: 20px;">
-                  {{ showPassword ? 'visibility_off' : 'visibility' }}
-                </mat-icon>
-              </button>
+            </div>
+            <div class="form-group">
+              <label for="firstName-{{ i }}">ชื่อ</label>
+              <input
+                type="text"
+                id="firstName-{{ i }}"
+                name="firstName-{{ i }}"
+                class="form-control"
+                [(ngModel)]="form.firstName"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="lastName-{{ i }}">นามสกุล</label>
+              <input
+                type="text"
+                id="lastName-{{ i }}"
+                name="lastName-{{ i }}"
+                class="form-control"
+                [(ngModel)]="form.lastName"
+                required
+              />
             </div>
           </div>
-        </div>
 
-        <div class="form-group">
-          <label for="affiliation-{{i}}">สังกัด</label>
-          <input
-            type="text"
-            id="affiliation-{{i}}"
-            name="affiliation-{{i}}"
-            class="form-control"
-            [(ngModel)]="form.affiliation"
-          />
+          <div class="form-row">
+            <div class="form-group">
+              <label for="password-{{ i }}"
+                >รหัสผ่าน {{ isEditing ? '(เว้นว่างหากไม่เปลี่ยน)' : '' }}</label
+              >
+              <div class="password-input-wrapper" style="position: relative">
+                <input
+                  [type]="showPassword ? 'text' : 'password'"
+                  id="password-{{ i }}"
+                  name="password-{{ i }}"
+                  class="form-control"
+                  [(ngModel)]="form.password"
+                  style="padding-right: 40px"
+                />
+                <button
+                  type="button"
+                  class="toggle-password-btn"
+                  (click)="togglePasswordVisibility()"
+                  style="
+                    position: absolute;
+                    right: 10px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    color: #666;
+                    padding: 0;
+                    display: flex;
+                    align-items: center;
+                  "
+                  title="{{ showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน' }}"
+                >
+                  <mat-icon style="font-size: 20px; width: 20px; height: 20px">
+                    {{ showPassword ? 'visibility_off' : 'visibility' }}
+                  </mat-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="affiliation-{{ i }}">สังกัด</label>
+            <input
+              type="text"
+              id="affiliation-{{ i }}"
+              name="affiliation-{{ i }}"
+              class="form-control"
+              [(ngModel)]="form.affiliation"
+            />
+          </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="email-{{ i }}">อีเมล</label>
+                <input
+                  type="email"
+                  id="email-{{ i }}"
+                  name="email-{{ i }}"
+                  class="form-control"
+                  [(ngModel)]="form.email"
+                />
+              </div>
+              <div class="form-group">
+                <label for="phone-{{ i }}">เบอร์โทรศัพท์</label>
+                <input
+                  type="tel"
+                  id="phone-{{ i }}"
+                  name="phone-{{ i }}"
+                  class="form-control"
+                  [(ngModel)]="form.phone"
+                  pattern="[0-9]{9,10}"
+                />
+              </div>
+            </div>
         </div>
-      </div> <!-- ปิด student-card-row -->
-      </div> <!-- ปิด student-forms-container -->
+        <!-- ปิด student-card-row -->
+      </div>
+      <!-- ปิด student-forms-container -->
 
       <div *ngIf="!isEditing" class="bulk-actions-container">
         <div class="action-buttons-row">
           <button type="button" class="btn-add-row" (click)="addFormRow()">
             <mat-icon>add</mat-icon> เพิ่มแถว
           </button>
-          
+
           <button type="button" class="btn-paste-excel" (click)="togglePasteArea()">
             <mat-icon>content_paste</mat-icon> วางข้อมูลจาก Excel
           </button>
         </div>
 
         <div *ngIf="showPasteArea" class="paste-area-box">
-          <label>วางข้อความรายชื่อนักเรียนที่คัดลอกมาจาก Excel หรือ ตาราง (ลำดับ | รหัสผ่าน | ยศ-ชื่อ-สกุล | สังกัด)</label>
+          <label
+            >วางข้อความรายชื่อนักเรียนที่คัดลอกมาจาก Excel หรือ ตาราง (รหัสผ่าน | ยศ-ชื่อ-สกุล |
+            สังกัด | อีเมล | เบอร์โทรศัพท์)</label
+          >
           <textarea
             class="form-control textarea-code"
             rows="5"
@@ -192,7 +226,9 @@
           ></textarea>
           <div class="paste-actions">
             <button type="button" class="btn-gray" (click)="togglePasteArea()">ปิด</button>
-            <button type="button" class="btn-green" (click)="processPastedData()">นำเข้าข้อมูล</button>
+            <button type="button" class="btn-green" (click)="processPastedData()">
+              นำเข้าข้อมูล
+            </button>
           </div>
         </div>
       </div>
@@ -251,8 +287,20 @@
 
     <!-- 📊 ส่วนตารางรายชื่อนักเรียน (Student List Table) -->
     <div class="student-list-section">
-      <div class="section-header">
+      <div
+        class="section-header"
+        style="display: flex; justify-content: space-between; align-items: center"
+      >
         <h3>รายชื่อนักเรียนในระบบ ({{ students.length }} คน)</h3>
+        <button 
+          *ngIf="students.length > 0"
+          type="button" 
+          class="btn-excel" 
+          (click)="exportToExcel()"
+        >
+          <mat-icon style="font-size: 20px; width: 20px; height: 20px;">file_download</mat-icon>
+          Export Excel
+        </button>
       </div>
 
       <!-- ตารางแสดงเมื่อมีข้อมูล -->
@@ -262,7 +310,8 @@
             <tr>
               <th class="text-center" style="width: 60px">ลำดับ</th>
               <th>ยศ - ชื่อ - นามสกุล</th>
-              <th>รหัสประจำตัว</th>
+              <th>อีเมล</th>
+              <th>เบอร์โทรศัพท์</th>
               <th>รหัสผ่าน</th>
               <th>สังกัด</th>
               <th class="text-center" style="width: 100px">จัดการ</th>
@@ -273,27 +322,35 @@
               *ngFor="let student of students; let i = index"
               [class.highlight-row]="student.id === editingId"
             >
-              <td class="text-center font-weight-medium">{{ i + 1 }}</td>
+              <td class="text-center">
+                <span class="code-badge">{{ student.studentCode }}</span>
+              </td>
               <td>
                 <span class="font-weight-medium"
                   >{{ student.rank }} {{ student.firstName }} {{ student.lastName }}</span
                 >
               </td>
+              <td>{{ student.email || '-' }}</td>
+              <td>{{ student.phone || '-' }}</td>
               <td>
-                <span class="code-badge">{{ student.studentCode }}</span>
-              </td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="font-family: monospace; font-size: 14px;">
-                    {{ student.showPassword ? (student.password || '-') : '••••••••' }}
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <span style="font-family: monospace; font-size: 14px">
+                    {{ student.showPassword ? student.password || '-' : '••••••••' }}
                   </span>
-                  <button 
-                    type="button" 
-                    (click)="student.showPassword = !student.showPassword" 
-                    style="background: none; border: none; cursor: pointer; color: #666; padding: 0; display: flex;"
+                  <button
+                    type="button"
+                    (click)="student.showPassword = !student.showPassword"
+                    style="
+                      background: none;
+                      border: none;
+                      cursor: pointer;
+                      color: #666;
+                      padding: 0;
+                      display: flex;
+                    "
                     title="{{ student.showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน' }}"
                   >
-                    <mat-icon style="font-size: 18px; width: 18px; height: 18px;">
+                    <mat-icon style="font-size: 18px; width: 18px; height: 18px">
                       {{ student.showPassword ? 'visibility_off' : 'visibility' }}
                     </mat-icon>
                   </button>

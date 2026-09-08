@@ -1,8 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { GeneralEvaluationService } from '../../services/general-evaluation.service';
-import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-committee',
@@ -14,54 +13,37 @@ import { Subscription } from 'rxjs';
 export class Committee implements OnInit, OnDestroy {
   pageTitle: string = 'แบบประเมินสำหรับคณะกำกับหลักสูตร';
   currentBatchId: number | null = null;
-  formUrl: string = '';
-  isLoading: boolean = true;
-  private evaluationSub: Subscription | null = null;
+  courseName: string = '';
+  batchName: string = '';
 
   constructor(
-    private generalEvaluationService: GeneralEvaluationService,
     private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef,
+    private router: Router
   ) {}
 
   ngOnDestroy(): void {
-    if (this.evaluationSub) {
-      this.evaluationSub.unsubscribe();
-    }
   }
 
   ngOnInit(): void {
     this.route.queryParams.subscribe((params) => {
-      const batchId = params['batchId'];
-
-      if (batchId) {
-        this.currentBatchId = Number(batchId);
-        this.fetchEvaluationForm(this.currentBatchId);
-      } else {
-        this.isLoading = false;
-      }
+      this.currentBatchId = params['batchId'] ? Number(params['batchId']) : null;
+      this.courseName = params['courseName'] || params['title'] || '';
+      this.batchName = params['batchName'] || '';
     });
   }
 
-  fetchEvaluationForm(batchId: number): void {
-    this.isLoading = true;
-    
-    // ดึงข้อมูลฟอร์มประเมินสำหรับคณะกำกับหลักสูตร โดยใช้ type = 'committee' (หรือเปลี่ยนตาม backend)
-    this.evaluationSub = this.generalEvaluationService.getGeneralEvaluations(batchId, 'committee').subscribe({
-      next: (res) => {
-        if (res.success && res.data && res.data.length > 0) {
-          this.formUrl = res.data[0].form_url;
-        } else {
-          this.formUrl = '';
-        }
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('เกิดข้อผิดพลาดในการดึงข้อมูลแบบประเมิน:', err);
-        this.formUrl = '';
-        this.isLoading = false;
-        this.cdr.detectChanges();
+  goToForm(): void {
+    if (!this.currentBatchId) {
+      alert('ไม่พบข้อมูลรุ่น กรุณาเข้าสู่ระบบใหม่หรือเลือกรุ่นที่ต้องการประเมิน');
+      return;
+    }
+
+    this.router.navigate(['/student/fill-form'], {
+      queryParams: {
+        type: 'committee',
+        batchId: this.currentBatchId,
+        batchName: this.batchName,
+        courseTitle: this.courseName,
       }
     });
   }

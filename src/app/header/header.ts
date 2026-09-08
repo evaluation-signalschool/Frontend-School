@@ -114,18 +114,24 @@ export class Header implements OnInit {
     this.courseService.getCourses().subscribe({
       next: (response) => {
         if (response.success) {
+          // กรองเอาเฉพาะรุ่นที่ is_active เป็น true
+          const activeData = response.data.map((course: any) => ({
+            ...course,
+            batches: (course.batches || []).filter((b: any) => b.is_active !== false)
+          }));
+
           // หา index ของเมนูที่ชื่อ 'สำหรับผู้เรียน'
           const studentMenuIndex = this.menuData.findIndex((m) => m.title === 'สำหรับผู้เรียน');
           if (studentMenuIndex !== -1) {
             // เอาข้อมูลจาก API ยัดเข้าไปแทนที่
-            this.menuData[studentMenuIndex].submenus = response.data;
+            this.menuData[studentMenuIndex].submenus = activeData;
           }
 
           // หา index ของเมนูที่ชื่อ 'สำหรับครู-อาจารย์'
           const teacherMenuIndex = this.menuData.findIndex((m) => m.title === 'สำหรับครู-อาจารย์');
           if (teacherMenuIndex !== -1) {
             // เอาข้อมูลจาก API ยัดเข้าไปแทนที่
-            this.menuData[teacherMenuIndex].submenus = response.data;
+            this.menuData[teacherMenuIndex].submenus = activeData;
           }
 
           // 3. ใส่ข้อมูลให้เมนู "สำหรับคณะกับกำหลักสูตร"
@@ -133,7 +139,7 @@ export class Header implements OnInit {
             (m) => m.title === 'สำหรับคณะกับกำหลักสูตร',
           );
           if (committeeMenuIndex !== -1) {
-            this.menuData[committeeMenuIndex].submenus = response.data;
+            this.menuData[committeeMenuIndex].submenus = activeData;
           }
 
           // 4. ใส่ข้อมูลให้เมนู "แบบประเมินติดตามผู้สำเร็จฯ"
@@ -141,7 +147,7 @@ export class Header implements OnInit {
             (m) => m.title === 'แบบประเมินติดตามผู้สำเร็จฯ',
           );
           if (followUpMenuIndex !== -1) {
-            this.menuData[followUpMenuIndex].submenus = response.data;
+            this.menuData[followUpMenuIndex].submenus = activeData;
           }
 
           this.cdr.detectChanges();

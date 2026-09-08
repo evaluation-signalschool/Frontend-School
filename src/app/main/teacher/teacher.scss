@@ -1,123 +1,129 @@
-:host {
-  display: block;
-  min-height: 100vh;
-  background-image: url('/assets/image/bg.jpg');
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-}
-
-.teacher-page {
-  max-width: 1000px;
+.page-container {
+  padding: 20px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
-  font-family: 'Sarabun', sans-serif;
-  background-color: rgba(255, 255, 255, 0.9);
-  min-height: 100vh;
-}
 
-/* Header Section */
-.page-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 5rem;
-  
-  .back-button {
-    margin-right: 1rem;
-    mat-icon {
-      font-size: 2rem;
-      width: 2rem;
-      height: 2rem;
+  .header {
+    margin-bottom: 24px;
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      color: #333;
     }
   }
 
-  .course-title {
-    font-size: 1.5rem;
-    font-weight: 500;
-    margin: 0;
+  .content {
+    background: #fff;
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   }
 }
 
-/* Title Section */
-.alert-title-container {
+/* Container จัดเรียงการ์ดเป็นแนวตั้ง 3 ชั้น */
+.card-container {
   display: flex;
-  justify-content: center;
-  margin-bottom: 5rem;
-
-  .alert-title {
-    display: flex;
-    align-items: center;
-    color: #1976d2; /* Changed color to blue for distinction, or use student's red */
-    font-size: 36px;
-    font-weight: 600;
-    margin: 0;
-
-    .alert-icon {
-      margin-left: 0.5rem;
-      font-size: 1.8rem;
-      width: 1.8rem;
-      height: 1.8rem;
-    }
-  }
-}
-
-/* Grid Cards */
-.cards-grid {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 1.5rem;
-  padding: 0 2rem;
+  margin: 1.5rem auto;
+  max-width: 900px; /* จำกัดความกว้างไม่ให้ยืดเต็มจอเกินไป */
+  width: 100%;
+  box-sizing: border-box;
+}
 
-  .course-card {
-    width: 100%;
-    max-width: 350px;
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    border: 1px solid #eef0f5;
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.04);
-    border-radius: 16px;
-    padding: 1.5rem;
-    position: relative;
-    min-height: 140px;
+/* สไตล์ของการ์ดแต่ละใบ */
+.info-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #eef2f5;
+  display: flex;
+  flex-direction: row;
+  align-items: center; /* 👈 จัดให้อยู่กึ่งกลางแนวตั้ง */
+  justify-content: flex-start; 
+  text-align: left;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-family: 'Sarabun', sans-serif !important;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  }
+
+  /* ไอคอนประจำการ์ด */
+  .card-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
+    margin-right: 1.5rem; /* 👈 ระยะห่างจากข้อความ */
+    color: #ffffff;
+    flex-shrink: 0;
 
-    &:hover {
-      background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f5 100%);
-      transform: translateY(-4px);
-      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
-      border-color: #d1d5db;
+    .material-icons {
+      font-size: 30px;
+      line-height: 1;
     }
 
-    .card-text {
-      font-size: 1.1rem;
+    &.icon-boss {
+      background-color: #1e3a8a; 
+    }
+
+    &.icon-self {
+      background-color: #0284c7; 
+    }
+
+    &.icon-peer {
+      background-color: #0d9488; 
+    }
+  }
+
+  /* ส่วนเนื้อหาในการ์ด */
+  .card-content {
+    display: flex;
+    flex-direction: row;
+    align-items: center; 
+    justify-content: space-between;
+    flex: 1;
+    gap: 1.5rem;
+
+    h3 {
+      font-size: 1.15rem;
       font-weight: 600;
       color: #2c3e50;
-      line-height: 1.4;
-      word-break: break-word;
+      margin: 0;
+      text-align: left; 
+      flex: 1;
     }
 
-    .status-dot {
-      position: absolute;
-      top: 14px;
-      right: 14px;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    p {
+      display: none; /* ซ่อน P ไปก่อน เพราะเราไม่มี P ในโค้ด html */
+    }
+  }
 
-      &.green {
-        background-color: #4caf50;
-      }
+  /* ปุ่มกด */
+  .card-btn {
+    width: auto; 
+    min-width: 140px;
+    padding: 0.6rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    background-color: #f1f5f9;
+    color: #334155;
+    font-size: 0.95rem;
+    font-weight: 500;
+    font-family: 'Sarabun', sans-serif !important;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    margin-top: 0; 
+    flex-shrink: 0;
 
-      &.red {
-        background-color: #f44336;
-      }
+    &:hover {
+      background-color: #3f51b5;
+      color: #ffffff;
     }
   }
 }

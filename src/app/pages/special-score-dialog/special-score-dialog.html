@@ -15,7 +15,6 @@
         <thead>
           <tr>
             <th class="text-center" style="width: 60px;">ลำดับ</th>
-            <th class="text-center" style="width: 100px;">รหัสประจำตัว</th>
             <th class="text-left">ยศ-ชื่อ-นามสกุล</th>
             <th class="text-center" style="width: 120px;">ฝึกอบรม (100)</th>
             <th class="text-center" style="width: 120px;">เวลาสอบ (100)</th>
@@ -25,7 +24,7 @@
         <tbody>
           <tr *ngFor="let student of students; let i = index">
             <td class="text-center">{{ i + 1 }}</td>
-            <td class="text-center text-muted">{{ student.code }}</td>
+
             <td class="text-left font-medium">
               <span *ngIf="student.rank" style="font-weight: 500; font-size: 13px; color: #8e44ad; background-color: #f0e6f7; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">{{ student.rank }}</span>
               {{ student.name }}
@@ -41,7 +40,7 @@
             </td>
           </tr>
           <tr *ngIf="students.length === 0">
-            <td colspan="6" class="text-center text-muted py-4" style="padding: 30px;">ไม่พบรายชื่อนักเรียน</td>
+            <td colspan="5" class="text-center text-muted py-4" style="padding: 30px;">ไม่พบรายชื่อนักเรียน</td>
           </tr>
         </tbody>
       </table>

@@ -75,7 +75,7 @@ $text-dark: #2c3e50;
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 14px;
+    font-size: var(--dynamic-font-size, 14px);
 
     .info-label {
       color: #7f8c8d;
@@ -86,7 +86,7 @@ $text-dark: #2c3e50;
       color: $text-dark;
       &.primary-text {
         color: $primary-purple;
-        font-size: 16px;
+        font-size: calc(var(--dynamic-font-size, 14px) + 2px);
       }
       &.text-bold {
         font-weight: 600;
@@ -97,7 +97,7 @@ $text-dark: #2c3e50;
   .status-badge {
     padding: 4px 12px;
     border-radius: 12px;
-    font-size: 12px;
+    font-size: calc(var(--dynamic-font-size, 14px) - 2px);
     font-weight: 600;
     &.pass { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
     &.fail { background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
@@ -121,7 +121,7 @@ $text-dark: #2c3e50;
 
     th {
       padding: 12px 10px;
-      font-size: 14px;
+      font-size: var(--dynamic-font-size, 14px);
       font-weight: 600;
       color: $text-dark;
       border-right: 1px solid rgba($border-purple, 0.5);
@@ -136,8 +136,8 @@ $text-dark: #2c3e50;
     &:last-child { border-bottom: none; }
 
     td {
-      padding: 12px 10px;
-      font-size: 14px;
+      padding: 6px 10px;
+      font-size: var(--dynamic-font-size, 14px);
       color: $text-dark;
       border-right: 1px solid rgba($border-purple, 0.3);
       &:last-child { border-right: none; }
@@ -146,7 +146,7 @@ $text-dark: #2c3e50;
       &.text-left { text-align: left; padding-left: 14px; }
       &.font-medium { font-weight: 500; }
       &.text-bold { font-weight: 600; }
-      &.grade-text { color: $primary-purple; font-size: 15px; }
+      &.grade-text { color: $primary-purple; font-size: calc(var(--dynamic-font-size, 14px) + 1px); }
     }
   }
 
@@ -177,17 +177,17 @@ $text-dark: #2c3e50;
     gap: 8px;
 
     .sum-label {
-      font-size: 14px;
+      font-size: var(--dynamic-font-size, 14px);
       color: #555;
     }
 
     .sum-value {
-      font-size: 15px;
+      font-size: calc(var(--dynamic-font-size, 14px) + 1px);
       font-weight: 600;
       color: $text-dark;
 
       &.gpa-val {
-        font-size: 20px;
+        font-size: calc(var(--dynamic-font-size, 14px) + 6px);
         color: $primary-purple;
       }
       &.text-success { color: #2e7d32; }
@@ -230,18 +230,60 @@ $text-dark: #2c3e50;
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  html, body {
+    height: 100vh !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   body * {
     visibility: hidden;
   }
+
+  .grade-dialog-container {
+    box-shadow: none !important;
+    border: none !important;
+    max-height: none !important;
+    height: 100% !important;
+  }
+
   .printable-area, .printable-area * {
     visibility: visible;
   }
+
   .printable-area {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
+    height: 100%;
+    padding: 0 !important;
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Reduce gap slightly for print */
+    overflow: hidden; /* Enforce 1 page by hiding overflow */
   }
+
+  /* Adjust paddings for print to save space */
+  .student-info-card {
+    padding: 10px 15px;
+    gap: 6px;
+  }
+
+  .summary-box {
+    padding: 10px 15px;
+  }
+
+  .detail-grade-table th, .detail-grade-table td {
+    padding: 4px 6px; /* Tighter table for print */
+  }
+
   .no-print, .dialog-header {
     display: none !important;
   }

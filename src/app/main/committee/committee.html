@@ -1,17 +1,17 @@
-<div class="committee-container">
-  <div class="evaluation-box" *ngIf="!isLoading">
-    <h2>แบบประเมินสำหรับคณะกำกับหลักสูตร</h2>
-    
-    <ng-container *ngIf="formUrl; else noForm">
-      <a [href]="formUrl" target="_blank" class="evaluation-link">กดเพื่อทำแบบประเมิน</a>
-    </ng-container>
-    
-    <ng-template #noForm>
-      <p class="no-form-text">ยังไม่มีลิงก์แบบประเมินสำหรับรุ่นนี้</p>
-    </ng-template>
+<div class="page-container">
+  <div class="header">
+    <h1>แบบประเมินสำหรับคณะกำกับหลักสูตร: {{ courseName || 'ทั้งหมด' }} {{ batchName }}</h1>
   </div>
-  
-  <div class="loading-box" *ngIf="isLoading">
-    <p>กำลังโหลดข้อมูล...</p>
+</div>
+<div class="card-container">
+  <!-- Card 1 -->
+  <div class="info-card">
+    <div class="card-icon icon-boss">
+      <span class="material-icons">gavel</span>
+    </div>
+    <div class="card-content">
+      <h3>แบบประเมินสำหรับคณะกำกับหลักสูตร</h3>
+      <button class="card-btn" (click)="goToForm()">ประเมิน</button>
+    </div>
   </div>
 </div>

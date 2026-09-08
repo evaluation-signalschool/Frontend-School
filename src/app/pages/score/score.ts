@@ -84,6 +84,22 @@ export class Score implements OnInit {
     });
   }
 
+  goBack(): void {
+    const batchId = this.studentData?.batch_id || '';
+    const courseName = this.studentData?.course_name || '';
+    const batchName = this.studentData?.batch_name || '';
+    const title = (courseName && batchName) ? `${courseName} ${batchName}` : '';
+    
+    this.router.navigate(['/student'], { 
+      queryParams: { 
+        batchId: batchId, 
+        title: title,
+        courseName: courseName,
+        batchName: batchName
+      } 
+    });
+  }
+
   onLogout(): void {
     const batchId = this.studentData?.batch_id || '';
     const courseName = this.studentData?.course_name || '';

@@ -220,6 +220,39 @@ tbody tr.failing-row td.col-code { color: #e74c3c; }
 .score-input:focus { outline: none; border-color: $primary-purple; box-shadow: 0 0 0 3px rgba(142, 68, 173, 0.15); }
 .score-input.over { border-color: #c0392b; color: #c0392b; background: #fdedec; }
 
+.score-input-su {
+  width: 130px;
+  text-align: left;
+  padding-left: 12px;
+  padding-right: 28px;
+  font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%238e44ad' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+}
+
+.score-input-su.su-pass {
+  background-color: #eafaf1;
+  border-color: #27ae60;
+  color: #27ae60;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%2327ae60' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+.score-input-su.su-pass:focus {
+  box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.15);
+}
+
+.score-input-su.su-fail {
+  background-color: #fdedec;
+  border-color: #c0392b;
+  color: #c0392b;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%23c0392b' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+.score-input-su.su-fail:focus {
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.15);
+}
+
 .ratio-track { flex: 1; height: 8px; border-radius: 4px; background: $border-purple; position: relative; overflow: hidden; }
 .ratio-fill { height: 100%; border-radius: 4px; background: $primary-purple; transition: width .2s ease; }
 .ratio-fill.over { background: #c0392b; }

@@ -10,6 +10,8 @@ export interface BatchItem {
   batch_id: number;
   batch_name: string;
   start_date: string;
+  end_date?: string;
+  is_active: boolean;
 }
 
 export interface CourseGroup {
@@ -63,6 +65,14 @@ export class CourseService {
     return this.http.put<any>(`${environment.apiUrl}/batches/${id}`, data);
   }
 
+  toggleBatchActive(id: number | string, is_active: boolean): Observable<any> {
+    return this.http.put<any>(`${environment.apiUrl}/batches/${id}/toggle-active`, { is_active });
+  }
+
+  toggleRegistration(id: number | string, is_registration_open: boolean): Observable<any> {
+    return this.http.put<any>(`${environment.apiUrl}/batches/${id}/toggle-registration`, { is_registration_open });
+  }
+
   deleteBatch(id: number | string): Observable<any> {
     return this.http.delete<any>(`${environment.apiUrl}/batches/${id}`);
   }
@@ -77,5 +87,21 @@ export class CourseService {
 
   addSubject(data: any): Observable<any> {
     return this.http.post<any>(`${environment.apiUrl}/subjects`, data);
+  }
+
+  checkGroupScores(id: number | string): Observable<any> {
+    return this.http.get<any>(`${environment.apiUrl}/subject-groups/${id}/check-scores`);
+  }
+
+  deleteSubjectGroup(id: number | string): Observable<any> {
+    return this.http.delete<any>(`${environment.apiUrl}/subject-groups/${id}`);
+  }
+
+  checkSubjectScores(id: number | string): Observable<any> {
+    return this.http.get<any>(`${environment.apiUrl}/subjects/${id}/check-scores`);
+  }
+
+  deleteSubject(id: number | string): Observable<any> {
+    return this.http.delete<any>(`${environment.apiUrl}/subjects/${id}`);
   }
 }

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, ChangeDetectorRef, inject  } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,7 +9,6 @@ import { ScoreService } from '../../services/score.service';
 import { CourseService, CourseGroup } from '../../services/course.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
-
 
 interface Batch {
   id: number;
@@ -50,6 +49,7 @@ interface GroupSummary {
   total_max_score: number;
   subjects_list_text: string;
   subjects: SubjectColumn[]; // เก็บรายวิชาเพื่อเอาไปวนลูปสร้างคอลัมน์
+  is_su?: boolean;
 }
 
 @Component({
@@ -68,7 +68,6 @@ interface GroupSummary {
   styleUrl: './score-list.scss',
 })
 export class ScoreList implements OnInit {
-
   // Dropdown state
   courseGroups: CourseGroup[] = [];
   selectedCourse: any = 'all';
@@ -102,6 +101,7 @@ export class ScoreList implements OnInit {
       next: (res) => {
         if (res?.success && res.data) {
           this.courseGroups = res.data;
+          this.cdr.detectChanges();
         }
       },
       error: (err) => console.error('Failed to load courses', err),
@@ -128,6 +128,7 @@ export class ScoreList implements OnInit {
         }));
       }
     }
+    this.cdr.detectChanges();
   }
 
   onBatchChange(): void {
@@ -135,6 +136,7 @@ export class ScoreList implements OnInit {
     this.subjectsList = [];
     this.students = [];
     this.groupSummary = null;
+    this.cdr.detectChanges();
 
     if (this.selectedBatch) {
       this.loadSubjectsDropdown(this.selectedBatch);
@@ -150,6 +152,7 @@ export class ScoreList implements OnInit {
             subject_name: s.subject_name || s.name || 'ไม่มีชื่อวิชา', // 👈 ดักชื่อวิชาไว้
             group_id: s.group_id, // 👈 สำคัญมาก! ต้องเก็บ group_id ของวิชานี้ไว้ด้วย
           }));
+          this.cdr.detectChanges();
           console.log('โหลดรายวิชาสำเร็จ:', this.subjectsList); // แอบดูข้อมูลใน Console
         }
       },
@@ -160,7 +163,7 @@ export class ScoreList implements OnInit {
   onSubjectChange(): void {
     this.students = [];
     this.groupSummary = null;
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
 
     // ค้นหาวิชาที่ผู้ใช้เพิ่งกดเลือกจาก Dropdown
     const selectedSubj = this.subjectsList.find((s) => s.id === this.selectedSubjectId);
@@ -177,14 +180,18 @@ export class ScoreList implements OnInit {
     if (!this.selectedBatch || !groupId) return;
     this.isLoading = true;
     this.errorMsg = '';
+    this.cdr.detectChanges();
 
     this.scoreService.getProcessGroupScores(this.selectedBatch, groupId).subscribe({
       next: (res: any) => {
         if (res?.success) {
           this.students = res.data;
           this.groupSummary = res.summary;
+          if (this.groupSummary && this.groupSummary.subjects && this.groupSummary.subjects.length > 0) {
+            this.groupSummary.is_su = this.groupSummary.subjects.every(s => s.is_su);
+          }
           this.updateProcessedTime();
-        }else{
+        } else {
           this.students = [];
           this.groupSummary = null;
         }
@@ -195,6 +202,7 @@ export class ScoreList implements OnInit {
         console.error('Failed to load results', err);
         this.errorMsg = 'ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่';
         this.isLoading = false;
+        this.cdr.detectChanges();
       },
     });
   }
@@ -210,11 +218,75 @@ export class ScoreList implements OnInit {
   }
 
   exportToExcel(): void {
-    alert('ระบบกำลังดาวน์โหลดไฟล์ Excel...');
-  }
+    if (!this.students || this.students.length === 0) {
+      return;
+    }
 
-  printReport(): void {
-    window.print();
+    // 1. สร้าง Headers
+    const headers = ['ลำดับ', 'ยศ ชื่อ-นามสกุล'];
+    const subjects = this.groupSummary?.subjects || [];
+    
+    // เติมชื่อวิชา
+    subjects.forEach(subj => {
+      headers.push(subj.subject_name + (subj.is_su ? ' (S/U)' : ` (เต็ม ${subj.max_score})`));
+    });
+
+    // เติมคอลัมน์สรุป
+    headers.push('คิดเป็นร้อยละ', 'เกรด (ตัวอักษร)', 'เกรด (ตัวเลข)', 'ค่าประกอบ Index');
+
+    // 2. สร้างข้อมูลทีละแถว
+    const csvData = this.students.map((student, index) => {
+      const row = [
+        index + 1,
+        student.full_name || ''
+      ];
+
+      // เติมคะแนนแต่ละวิชา
+      subjects.forEach(subj => {
+        const score = student.subject_scores[subj.subject_id];
+        if (score !== undefined && score !== null) {
+          if (subj.is_su) {
+            row.push(score > 0 ? 'S' : 'U');
+          } else {
+            row.push(score);
+          }
+        } else {
+          row.push('-');
+        }
+      });
+
+      // เติมข้อมูลสรุป
+      row.push(
+        student.percent !== undefined ? student.percent + '%' : '-',
+        student.grade || '-',
+        student.grade_point !== undefined && student.grade_point !== null ? student.grade_point : '-',
+        student.index_value || '-'
+      );
+
+      return row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(',');
+    });
+
+    // 3. รวม Header กับ Data
+    const csvContent = [headers.map(h => `"${h}"`).join(','), ...csvData].join('\n');
+
+    // 4. เพิ่ม BOM สำหรับภาษาไทยใน Excel
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+    
+    // 5. สร้างลิ้งค์สำหรับดาวน์โหลด
+    const groupName = this.groupSummary?.group_name || 'ประมวลผลการเรียน';
+    const batchName = this.batches.find(b => b.id === this.selectedBatch)?.name || '';
+    const filename = `สรุปผล_${groupName}_${batchName}.csv`.replace(/\s+/g, '_');
+
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   private updateProcessedTime(): void {

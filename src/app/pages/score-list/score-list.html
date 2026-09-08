@@ -5,7 +5,9 @@
     </button>
     <h1 class="page-title">ประมวลผลการเรียน</h1>
     <button class="header-btn" routerLink="/admin/classoverview">
-      <mat-icon style="font-size: 20px; width: 20px; height: 20px; margin-right: 4px">assessment</mat-icon>
+      <mat-icon style="font-size: 20px; width: 20px; height: 20px; margin-right: 4px"
+        >assessment</mat-icon
+      >
       ภาพรวมผลการเรียนทั้งรุ่น
     </button>
   </div>
@@ -73,18 +75,15 @@
         <h3 class="summary-title">
           <mat-icon>assignment</mat-icon> ข้อมูลสรุปสัดส่วนคะแนน — {{ groupSummary.group_name }}
         </h3>
-        <div class="summary-grid">
-          <div class="summary-sub-item total-highlight">
-            <span class="label">คะแนนรวมทั้งหมด:</span>
-            <span class="points"
-              ><strong>{{ groupSummary.total_max_score }}</strong> คะแนน</span
-            >
-          </div>
+        <div class="summary-grid" style="grid-template-columns: 1fr;">
           <div class="summary-sub-item total-highlight">
             <span class="label">หน่วยกิต:</span>
-            <span class="points"
-              ><strong>{{ groupSummary.total_credit }}</strong> หน่วยกิต</span
-            >
+            <span class="points" *ngIf="!groupSummary.is_su">
+              <strong>{{ groupSummary.total_credit }}</strong> หน่วยกิต
+            </span>
+            <span class="points" *ngIf="groupSummary.is_su">
+              <strong>S/U</strong>
+            </span>
           </div>
         </div>
       </div>
@@ -108,9 +107,6 @@
         >
           <mat-icon>description</mat-icon> ส่งออก Excel
         </button>
-        <button class="btn-inline btn-print" (click)="printReport()" [disabled]="!students.length">
-          <mat-icon>print</mat-icon> พิมพ์รายงาน
-        </button>
       </div>
     </div>
 
@@ -130,7 +126,6 @@
         <thead>
           <tr>
             <th style="min-width: 60px">ลำดับ</th>
-            <th style="min-width: 100px">รหัสประจำตัว</th>
             <th style="min-width: 180px">ยศ ชื่อ-นามสกุล</th>
 
             <!-- 🌟 วนลูปสร้างคอลัมน์ "ชื่อวิชา" แทนที่คอลัมน์คะแนนรวม 🌟 -->
@@ -153,7 +148,7 @@
           @for (student of students; track student.student_id; let i = $index) {
             <tr>
               <td>{{ i + 1 }}</td>
-              <td>{{ student.student_code }}</td>
+
               <td class="text-left">{{ student.full_name }}</td>
 
               <!-- 🌟 วนลูปดึง "คะแนน" ของแต่ละวิชามาแสดงให้ตรงคอลัมน์ 🌟 -->
@@ -162,7 +157,11 @@
                   <!-- ถ้าไม่มีคะแนนให้แสดงเครื่องหมายขีด (-) -->
                   {{
                     student.subject_scores[subj.subject_id] !== undefined
-                      ? (subj.is_su ? (student.subject_scores[subj.subject_id] > 0 ? 'S' : 'U') : student.subject_scores[subj.subject_id])
+                      ? subj.is_su
+                        ? student.subject_scores[subj.subject_id] > 0
+                          ? 'S'
+                          : 'U'
+                        : student.subject_scores[subj.subject_id]
                       : '-'
                   }}
                 </td>

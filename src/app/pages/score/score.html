@@ -1,6 +1,9 @@
 <div class="score-page">
   <!-- Header -->
   <div class="page-header">
+    <button class="back-button" (click)="goBack()">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
     <h1 class="page-title">ผลการเรียนออนไลน์</h1>
     <button class="logout-btn" (click)="onLogout()">
       <mat-icon>logout</mat-icon>
@@ -12,7 +15,7 @@
   <div class="score-content" *ngIf="studentData">
     <div class="student-info-card-v2">
       <div class="info-row">
-        <span class="info-label">รหัสประจำตัว:</span>
+        <span class="info-label">ลำดับที่:</span>
         <span class="info-value">{{ studentData.student_code || '-' }}</span>
         <span class="info-label ml-4">ยศ - ชื่อ - นามสกุล:</span>
         <span class="info-value name-highlight"
@@ -76,7 +79,7 @@
                   <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                     <span class="text-muted" style="font-size: 0.9em; color: #ff9800;">ยังไม่ประเมินผู้สอน</span>
                     <button class="evaluate-btn" (click)="goToEvaluation(subject.subject_id)">
-                      ประเมินเลย
+                      ประเมิน
                     </button>
                   </div>
                 </ng-template>

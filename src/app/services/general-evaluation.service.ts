@@ -20,10 +20,12 @@ export class GeneralEvaluationService {
 
   constructor(private http: HttpClient) { }
 
-  getGeneralEvaluations(batchId: number, type: string): Observable<GeneralEvaluationResponse> { 
-    return this.http.get<GeneralEvaluationResponse>( 
-      `${environment.apiUrl}/general-evaluation/${batchId}?type=${type}` 
-    ); 
+  getGeneralEvaluations(batchId: number, type: string, targetGroup?: string): Observable<GeneralEvaluationResponse> { 
+    let url = `${environment.apiUrl}/general-evaluation/${batchId}?type=${type}`;
+    if (targetGroup) {
+      url += `&targetGroup=${targetGroup}`;
+    }
+    return this.http.get<GeneralEvaluationResponse>(url); 
   }
 
   createGeneralEvaluation(payload: any): Observable<any> {
@@ -58,7 +60,11 @@ export class GeneralEvaluationService {
     return this.http.post<any>(`${environment.apiUrl}/forms/submit`, payload);
   }
 
-  getFormSubmissions(formId: number | string): Observable<any> {
-    return this.http.get<any>(`${environment.apiUrl}/form-submissions/${formId}`);
+  getFormSubmissions(formId: number | string, subjectId?: string | number): Observable<any> {
+    let url = `${environment.apiUrl}/form-submissions/${formId}`;
+    if (subjectId) {
+      url += `?subjectId=${subjectId}`;
+    }
+    return this.http.get<any>(url);
   }
 }

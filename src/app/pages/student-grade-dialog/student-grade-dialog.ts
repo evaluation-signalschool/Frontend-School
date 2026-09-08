@@ -12,11 +12,13 @@ export interface SubjectScoreDetail {
   maxScore?: number;
   percentage?: number | null;
   grade?: string;
+  letterGrade?: string;
   gradePoint?: number;
   indexValue?: number | string | null;
   groupId?: number | string;
   rowspan?: number;
   isFirstInGroup?: boolean;
+  is_su?: boolean;
 }
 
 export interface StudentGradeDialogData {
@@ -95,6 +97,15 @@ export class StudentGradeDialog implements OnInit {
       case 'F': return '0.0';
       default: return g; // For S, U, etc.
     }
+  }
+
+  get printFontSize(): string {
+    const count = this.data.student.subjects?.length || 0;
+    if (count >= 25) return '10px';
+    if (count >= 20) return '11px';
+    if (count >= 15) return '12px';
+    if (count >= 10) return '13px';
+    return '14px';
   }
 
   getGradeDescription(score: number | string): string {

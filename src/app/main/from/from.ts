@@ -1,5 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -36,18 +38,41 @@ export class From implements OnInit {
   courseGroups: CourseGroup[] = [];
   availableBatches: BatchItem[] = [];
 
-  // ประเภทของฟอร์ม
-  formTypes = [
-    { value: 'instructor', label: 'ประเมินอาจารย์ผู้สอน' },
-    { value: 'director', label: 'แบบประเมินอาจารย์กำกับหลักสูตร' },
-    { value: 'course', label: 'แบบประเมินหลักสูตร' },
-    { value: 'committee', label: 'แบบประเมินสำหรับคณะกำกับหลักสูตร' },
-    { value: 'followup', label: 'แบบประเมินติดตามผู้สำเร็จการศึกษา' },
+  // กลุ่มผู้ประเมิน (Target Audience)
+  targetGroups = [
+    { value: 'student', label: 'สำหรับผู้เรียน (นักเรียน)' },
+    { value: 'teacher', label: 'สำหรับครู-อาจารย์' },
+    { value: 'committee', label: 'สำหรับคณะกำกับหลักสูตร' },
+    { value: 'followup', label: 'สำหรับติดตามผู้สำเร็จการศึกษา' },
   ];
+
+  // ประเภทของฟอร์ม (Form Types) แยกตาม Target Group
+  formTypesMap: { [key: string]: { value: string; label: string }[] } = {
+    student: [
+      { value: 'instructor', label: 'ประเมินอาจารย์ผู้สอน' },
+      { value: 'director', label: 'แบบประเมินอาจารย์กำกับหลักสูตร' },
+      { value: 'course', label: 'แบบประเมินหลักสูตร' },
+    ],
+    teacher: [
+      { value: 'teacher_course', label: 'แบบประเมินหลักสูตรโดยอาจารย์' },
+    ],
+    committee: [
+      { value: 'committee', label: 'แบบประเมินสำหรับคณะกำกับหลักสูตร' },
+    ],
+    followup: [
+      { value: 'followup_commander', label: 'แบบประเมินผู้สำเร็จการฝึกอบรม (สำหรับ ผบช.)' },
+      { value: 'followup_self', label: 'แบบประเมินผู้สำเร็จการฝึกอบรม (ผู้ฝึกอบรมประเมินตนเอง)' },
+      { value: 'followup_colleague', label: 'แบบประเมินผู้สำเร็จการฝึกอบรม (สำหรับเพื่อนร่วมงาน)' },
+    ]
+  };
+
+  // ตัวแปรสำหรับเก็บประเภทแบบฟอร์มแบบ Custom ที่ผู้ใช้กดเพิ่มเอง
+  customFormTypes: { value: string; label: string; targetGroup: string }[] = [];
 
   // โครงสร้างตัวแปรสำหรับผูกข้อมูลกับทุกช่องกรอกในฟอร์ม (ปรับใหม่ให้มี questions)
   formData = {
     courseName: '',
+    targetGroup: '',
     formType: '',
     formName: '',
     generationId: '',
@@ -106,18 +131,20 @@ export class From implements OnInit {
               }
             }
 
-            const typeObj = this.formTypes.find((t) => t.value === item.evaluation_type);
+            const typeLabel = this.getFormTypeLabel(item.evaluation_type);
+            const tg = item.target_group || 'student';
 
-            // ถ้าเป็นประเภทแบบฟอร์มที่แอดมินสร้างใหม่ (ไม่มีใน list พื้นฐาน) ให้เพิ่มเข้าไปใน formTypes อัตโนมัติ
-            if (!typeObj && item.evaluation_type && item.evaluation_type.trim() !== '') {
-              this.formTypes.push({ value: item.evaluation_type, label: item.evaluation_type });
+            // ถ้าเป็นประเภทแบบฟอร์มที่แอดมินสร้างใหม่ (ไม่มีใน list พื้นฐาน) ให้เพิ่มเข้าไปใน customFormTypes อัตโนมัติ
+            const existsInBase = Object.values(this.formTypesMap).flat().find(t => t.value === item.evaluation_type);
+            const existsInCustom = this.customFormTypes.find(t => t.value === item.evaluation_type);
+            if (!existsInBase && !existsInCustom && item.evaluation_type && item.evaluation_type.trim() !== '') {
+              this.customFormTypes.push({ value: item.evaluation_type, label: item.evaluation_type, targetGroup: tg });
             }
-
-            const typeLabel = typeObj ? typeObj.label : item.evaluation_type || 'ไม่ระบุ';
 
             return {
               id: item.id,
               courseName: cName,
+              targetGroup: tg,
               generationId: item.batch_id,
               generationName: gName,
               formType: item.evaluation_type,
@@ -132,18 +159,19 @@ export class From implements OnInit {
           this.formList = [...mappedData];
           this.generateTableData();
 
-          if (this.cdr) {
           this.cdr.detectChanges();
-        }
+
         } else {
           this.formList = [];
           this.generateTableData();
+          this.cdr.detectChanges();
         }
       },
       error: (err) => {
         console.error('เกิดข้อผิดพลาดในการดึงข้อมูลแบบฟอร์ม:', err);
         this.formList = [];
         this.generateTableData();
+        this.cdr.detectChanges();
       },
     });
   }
@@ -202,7 +230,93 @@ export class From implements OnInit {
     }
   }
 
+  // ใช้เป็นตัวเลือกแสดงใน Dropdown "ประเภทแบบฟอร์ม" ตาม targetGroup ที่เลือก
+  get availableFormTypes(): { value: string; label: string }[] {
+    if (!this.formData.targetGroup) return [];
+    
+    // แบบฟอร์มพื้นฐาน
+    const baseTypes = this.formTypesMap[this.formData.targetGroup] || [];
+    // แบบฟอร์มที่เพิ่มใหม่
+    const customTypes = this.customFormTypes
+      .filter((t) => t.targetGroup === this.formData.targetGroup)
+      .map((t) => ({ value: t.value, label: t.label }));
+      
+    return [...baseTypes, ...customTypes];
+  }
+
+  // รวมประเภทฟอร์มทั้งหมดสำหรับใช้ในตัวกรองตาราง
+  get allFormTypesFlat(): { value: string; label: string }[] {
+    const baseTypes = Object.values(this.formTypesMap).flat();
+    const customTypes = this.customFormTypes.map(t => ({ value: t.value, label: t.label }));
+    
+    // กรองตัวที่ซ้ำกันออก
+    const all = [...baseTypes, ...customTypes];
+    const unique = [];
+    const seen = new Set();
+    for (const item of all) {
+      if (!seen.has(item.value)) {
+        seen.add(item.value);
+        unique.push(item);
+      }
+    }
+    return unique;
+  }
+
+  getFormTypeLabel(value: string): string {
+    if (!value) return 'ไม่ระบุ';
+    const allTypes = this.allFormTypesFlat;
+    const found = allTypes.find(t => t.value === value);
+    return found ? found.label : value;
+  }
+
+  onTargetGroupChange(): void {
+    // รีเซ็ตฟอร์มย่อยเมื่อเปลี่ยนเป้าหมาย
+    this.formData.formType = '';
+    this.formData.subjectId = '';
+  }
+
+  isCustomFormType(typeValue: string): boolean {
+    return this.customFormTypes.some((t) => t.targetGroup === this.formData.targetGroup && t.value === typeValue);
+  }
+
+  async removeCustomFormType() {
+    if (!this.formData.formType) return;
+
+    const result = await Swal.fire({
+      title: 'ยืนยันการลบ',
+      text: `คุณต้องการลบประเภทแบบประเมินนี้ใช่หรือไม่?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f44336',
+      cancelButtonColor: '#999',
+      confirmButtonText: 'ใช่, ลบเลย',
+      cancelButtonText: 'ยกเลิก',
+    });
+
+    if (result.isConfirmed) {
+      this.customFormTypes = this.customFormTypes.filter((t) => !(t.targetGroup === this.formData.targetGroup && t.value === this.formData.formType));
+      this.formData.formType = '';
+      this.onTypeChange();
+      Swal.fire({
+        icon: 'success',
+        title: 'ลบสำเร็จ',
+        showConfirmButton: false,
+        timer: 1500,
+      });
+    }
+  }
+
   async addNewFormType() {
+    if (!this.formData.targetGroup) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'แจ้งเตือน',
+        text: 'กรุณาเลือกกลุ่มเป้าหมาย (Target Group) ก่อนเพิ่มประเภทใหม่',
+        confirmButtonText: 'ตกลง',
+      });
+      return;
+    }
+
     const { value: newTypeLabel } = await Swal.fire({
       title: 'เพิ่มประเภทแบบประเมินใหม่',
       input: 'text',
@@ -215,8 +329,12 @@ export class From implements OnInit {
         if (!value || !value.trim()) {
           return 'กรุณาระบุชื่อประเภทแบบประเมิน!';
         }
-        if (this.formTypes.find((t) => t.label === value.trim() || t.value === value.trim())) {
-          return 'ประเภทแบบประเมินนี้มีอยู่แล้ว!';
+        
+        const existingBase = this.formTypesMap[this.formData.targetGroup]?.find((t) => t.label === value.trim() || t.value === value.trim());
+        const existingCustom = this.customFormTypes.find((t) => t.targetGroup === this.formData.targetGroup && (t.label === value.trim() || t.value === value.trim()));
+        
+        if (existingBase || existingCustom) {
+          return 'ประเภทแบบประเมินนี้มีอยู่แล้วในกลุ่มนี้!';
         }
         return null;
       },
@@ -224,7 +342,7 @@ export class From implements OnInit {
 
     if (newTypeLabel) {
       const newValue = newTypeLabel.trim();
-      this.formTypes.push({ value: newValue, label: newValue });
+      this.customFormTypes.push({ value: newValue, label: newValue, targetGroup: this.formData.targetGroup });
       this.formData.formType = newValue;
       this.onTypeChange();
 
@@ -238,29 +356,6 @@ export class From implements OnInit {
     }
   }
 
-  isCustomFormType(value: string): boolean {
-    if (!value) return false;
-    const baseTypes = ['instructor', 'director', 'course', 'committee', 'followup'];
-    return !baseTypes.includes(value);
-  }
-
-  removeCustomFormType() {
-    Swal.fire({
-      title: 'ลบประเภทฟอร์มนี้?',
-      text: `คุณต้องการลบประเภท "${this.formData.formType}" ออกจากรายการใช่หรือไม่? (หากมีแบบฟอร์มที่ใช้ประเภทนี้บันทึกอยู่ มันจะกลับมาอีกครั้งเมื่อรีเฟรชหน้าจอ)`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'ลบเลย',
-      cancelButtonText: 'ยกเลิก',
-      confirmButtonColor: '#f44336',
-    }).then((result) => {
-      if (result.isConfirmed) {
-        this.formTypes = this.formTypes.filter((t) => t.value !== this.formData.formType);
-        this.formData.formType = '';
-        this.onTypeChange();
-      }
-    });
-  }
 
   // ==========================================
   // ส่วนจัดการคำถาม (Dynamic Form Builder)
@@ -271,9 +366,9 @@ export class From implements OnInit {
       question_text: '',
       question_type: 'choice',
       choices: [
-        { choice_text: '', score_value: 5 },
-        { choice_text: '', score_value: 3 },
-        { choice_text: '', score_value: 1 },
+        { choice_text: 'มาก', score_value: 5 },
+        { choice_text: 'ปานกลาง', score_value: 3 },
+        { choice_text: 'น้อย', score_value: 1 },
       ],
     });
   }
@@ -316,6 +411,17 @@ export class From implements OnInit {
   // ส่วนสร้างและอัปเดตฟอร์ม (เรียก API)
   // ==========================================
 
+  isDuplicateForm(): boolean {
+    if (!this.formData.generationId || !this.formData.formType) return false;
+    
+    // ค้นหาว่ามีฟอร์มประเภทเดียวกันในรุ่นเดียวกันถูกสร้างไว้แล้วหรือไม่
+    const existingForm = this.formList.find(
+      (f) => f.generationId == this.formData.generationId && f.formType === this.formData.formType
+    );
+    
+    return !!existingForm;
+  }
+
   onCreateForm() {
     if (!this.formData.courseName || !this.formData.generationId || !this.formData.formType) {
       Swal.fire({
@@ -324,6 +430,17 @@ export class From implements OnInit {
         text: 'กรุณาเลือกหลักสูตร รุ่น และประเภทแบบฟอร์มให้ครบถ้วน',
         confirmButtonText: 'ตกลง',
         confirmButtonColor: '#673ab7',
+      });
+      return;
+    }
+
+    if (this.isDuplicateForm()) {
+      Swal.fire({
+        icon: 'error',
+        title: 'สร้างไม่ได้',
+        text: 'มีการสร้างแบบฟอร์มประเภทนี้สำหรับรุ่นนี้ไปแล้ว ไม่สามารถสร้างซ้ำได้',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#f44336',
       });
       return;
     }
@@ -367,6 +484,7 @@ export class From implements OnInit {
           });
           this.resetForm();
           this.fetchAllForms();
+          this.cdr.detectChanges();
         } else {
           Swal.fire({
             icon: 'error',
@@ -397,6 +515,7 @@ export class From implements OnInit {
     // Load header first
     this.formData = {
       courseName: item.courseName || '',
+      targetGroup: item.targetGroup || 'student',
       formType: item.formType || '',
       formName: item.formName || '',
       generationId: item.generationId || '',
@@ -410,31 +529,32 @@ export class From implements OnInit {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     // Fetch real questions
-   this.generalEvaluationService.getFormById(item.id).subscribe({
-    next: (res: any) => {
 
-        const rawQuestions = res.data?.questions || res.data || [];
-
-        if (res.success && Array.isArray(rawQuestions) && rawQuestions.length > 0) {
-        const mappedQuestions = rawQuestions.map((q: any) => ({
-          question_text: q.question_text || q.questionText || q.title || q.question || '',
-          question_type: q.question_type || q.questionType || q.type || 'choice',
-          choices: Array.isArray(q.choices)
-            ? q.choices.map((c: any) => ({
-                choice_text: c.choice_text || c.choiceText || c.text || '',
-                score_value: c.score_value ?? c.scoreValue ?? c.score ?? 0,
-              }))
-            : [],
-        }));
-
-        this.formData.questions = [...mappedQuestions];
+    this.generalEvaluationService.getFormById(item.id).subscribe({
+      next: (res) => {
+        if (res.success && res.data && res.data.questions) {
+          const qs = res.data.questions;
+          qs.forEach((q: any) => {
+            if (q.question_type === 'choice' && q.choices) {
+              q.choices.forEach((c: any) => {
+                if (!c.choice_text || c.choice_text.trim() === '') {
+                  if (c.score_value == 5) c.choice_text = 'มาก';
+                  else if (c.score_value == 3) c.choice_text = 'ปานกลาง';
+                  else if (c.score_value == 1) c.choice_text = 'น้อย';
+                }
+              });
+            }
+          });
+          this.formData.questions = qs;
+          if (this.formData.questions.length === 0) {
+            this.addQuestion(); // fallback if DB has empty questions
+          }
+        } else {
+          this.addQuestion(); // fallback
+        }
         this.cdr.detectChanges();
+      },
 
-      } else {
-        console.warn('ไม่พบคำถามเดิม หรือโครงสร้างไม่ตรง');
-        this.addQuestion();
-      }
-    },
       error: (err) => {
         console.error('Error fetching questions:', err);
         Swal.fire({
@@ -507,6 +627,11 @@ export class From implements OnInit {
             // เลื่อนหน้าจอกลับขึ้นไปด้านบนหน้ารายการ (ถ้าจำเป็น)
             window.scrollTo({ top: 0, behavior: 'smooth' });
           });
+
+          this.resetForm();
+          this.fetchAllForms();
+          this.cdr.detectChanges();
+
         } else {
           Swal.fire({
             icon: 'error',
@@ -603,6 +728,7 @@ export class From implements OnInit {
     this.selectedFormId = null;
     this.formData = {
       courseName: '',
+      targetGroup: '',
       formType: '',
       formName: '',
       generationId: '',
@@ -624,7 +750,7 @@ export class From implements OnInit {
 
   filterCourse: string = '';
   filterGeneration: string = '';
-  filterType: string = 'instructor';
+  filterType: string = '';
 
   filterBatches: BatchItem[] = [];
   displayTableData: any[] = [];
@@ -652,38 +778,40 @@ export class From implements OnInit {
   }
 
   generateTableData() {
-    if (!this.filterCourse || !this.filterGeneration || !this.filterType) {
+    if (!this.filterCourse || !this.filterGeneration) {
       this.displayTableData = [];
       return;
     }
 
-    const matchedForms = this.formList.filter(
-      (f) => f.generationId == this.filterGeneration && f.formType === this.filterType,
-    );
+    this.displayTableData = [];
 
-    if (this.filterType === 'instructor') {
-      // เปลี่ยนจากแสดงทุกวิชา เป็นแสดงแค่แถวเดียว สำหรับใช้กับทุกวิชาในรุ่น
-      const form = matchedForms.length > 0 ? matchedForms[0] : null;
-      this.displayTableData = [
-        {
-          isSubjectMode: false,
-          subjectId: null,
-          subjectName: 'ประเมินอาจารย์ (ใช้ร่วมกันทุกวิชาในรุ่น)',
-          hasForm: !!form,
-          formDetails: form || null,
-        },
-      ];
+    // Determine which types to show
+    let typesToShow: { value: string; label: string }[] = [];
+    if (this.filterType) {
+      const foundType = this.allFormTypesFlat.find(t => t.value === this.filterType);
+      if (foundType) {
+        typesToShow = [foundType];
+      }
     } else {
+      typesToShow = this.allFormTypesFlat;
+    }
+
+    // Build rows for each type
+    for (const t of typesToShow) {
+      const matchedForms = this.formList.filter(
+        (f) => f.generationId == this.filterGeneration && f.formType === t.value
+      );
+      
       const form = matchedForms.length > 0 ? matchedForms[0] : null;
-      this.displayTableData = [
-        {
-          isSubjectMode: false,
-          subjectId: null,
-          subjectName: '-',
-          hasForm: !!form,
-          formDetails: form || null,
-        },
-      ];
+      
+      this.displayTableData.push({
+        isSubjectMode: false,
+        subjectId: null,
+        subjectName: t.label, // use the label of the type as the row title
+        hasForm: !!form,
+        formDetails: form || null,
+        formType: t.value // keep track of the type for the "Add" button
+      });
     }
   }
 
@@ -694,12 +822,26 @@ export class From implements OnInit {
     this.formData.generationId = this.filterGeneration;
     this.onGenerationChange(false);
 
-    this.formData.formType = this.filterType;
-    if (this.formData.formType !== 'instructor') {
-      this.formData.subjectId = '';
-    } else {
-      this.formData.subjectId = row.subjectId;
+    // หา Target Group ของฟอร์มประเภทนี้ เพื่อให้ Dropdown ทำงานได้ถูกต้อง
+    const targetType = this.allFormTypesFlat.find(t => t.value === row.formType);
+    if (targetType) {
+      for (const group of this.targetGroups) {
+        const typesInGroup = this.formTypesMap[group.value] || [];
+        if (typesInGroup.find(t => t.value === row.formType)) {
+          this.formData.targetGroup = group.value;
+          break;
+        }
+      }
+      if (!this.formData.targetGroup) {
+         const customType = this.customFormTypes.find(t => t.value === row.formType);
+         if (customType) {
+           this.formData.targetGroup = customType.targetGroup;
+         }
+      }
     }
+
+    this.formData.formType = row.formType;
+    this.formData.subjectId = '';
 
     this.formData.formName = '';
     this.isEditMode = false;
