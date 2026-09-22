@@ -16,10 +16,26 @@
       </div>
       <form (ngSubmit)="onSubmitCourse()" class="custom-form">
         <div class="form-row">
-          <div class="form-group">
+          <div class="form-group" style="flex: 2;">
             <label>ชื่อหลักสูตร</label>
-            <input type="text" [(ngModel)]="courseForm.course_name" name="course_name"
-              placeholder="เช่น ชั้นนายพัน เหล่า ส." required>
+            
+            <!-- โหมดเลือกหลักสูตรที่มีอยู่ -->
+            <div class="select-wrapper" *ngIf="!isNewCourse">
+              <select [(ngModel)]="courseForm.course_name" name="course_name_select" required (change)="onCourseSelectChange($event)">
+                <option value="" disabled selected>-- เลือกหลักสูตรที่มีอยู่ --</option>
+                <option *ngFor="let name of getUniqueCourseNames()" [value]="name">{{ name }}</option>
+                <option value="NEW_COURSE" style="font-weight: bold; color: #673ab7; background-color: #f3e8ff;">+ สร้างชื่อหลักสูตรใหม่</option>
+              </select>
+            </div>
+
+            <!-- โหมดพิมพ์ชื่อหลักสูตรใหม่ -->
+            <div *ngIf="isNewCourse" style="display: flex; gap: 8px;">
+              <input type="text" [(ngModel)]="courseForm.course_name" name="course_name_input"
+                placeholder="พิมพ์ชื่อหลักสูตรใหม่ เช่น ชั้นนายพัน เหล่า ส." required style="flex: 1;">
+              <button type="button" (click)="cancelNewCourse()" style="padding: 0 12px; border-radius: 4px; border: 1px solid #ccc; background: #f5f5f5; cursor: pointer; color: #555; font-size: 13px; display: flex; align-items: center;">
+                <span class="material-icons" style="font-size: 16px; margin-right: 4px;">close</span> ยกเลิก
+              </button>
+            </div>
           </div>
           <div class="form-group short-input">
             <label>ปีหลักสูตร</label>
@@ -43,26 +59,46 @@
           </button>
         </div>
         
-        <table *ngIf="showCoursesTable" style="width: 100%; border-collapse: collapse; font-size: 13px;">
-          <thead>
-            <tr style="background-color: #f3e8ff; color: #4c1d95; text-align: left;">
-              <th style="padding: 8px; border: 1px solid #ddd;">ปีการศึกษา</th>
-              <th style="padding: 8px; border: 1px solid #ddd;">ชื่อหลักสูตร</th>
-              <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 60px;">จัดการ</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let c of courses; trackBy: trackByCourseId">
-              <td style="padding: 8px; border: 1px solid #ddd;">{{ c.curriculum_year }}</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">{{ c.course_name }}</td>
-              <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
-                <button type="button" mat-icon-button (click)="deleteCourse(c)" style="color: #f44336; transform: scale(0.8);" title="ลบหลักสูตร">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div *ngIf="showCoursesTable">
+          <!-- ตัวกรองค้นหา -->
+          <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+            <div style="flex: 1;">
+              <select [(ngModel)]="filterCourseYear" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                <option value="">-- ทุกปีการศึกษา --</option>
+                <option *ngFor="let year of getUniqueCourseYears()" [value]="year">{{ year }}</option>
+              </select>
+            </div>
+            <div style="flex: 2;">
+              <input type="text" [(ngModel)]="filterCourseName" placeholder="ค้นหาชื่อหลักสูตร..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+            </div>
+          </div>
+
+          <div style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead style="position: sticky; top: 0; z-index: 1;">
+                <tr style="background-color: #f3e8ff; color: #4c1d95; text-align: left;">
+                  <th style="padding: 8px; border: 1px solid #ddd; border-top: none;">ปีการศึกษา</th>
+                  <th style="padding: 8px; border: 1px solid #ddd; border-top: none;">ชื่อหลักสูตร</th>
+                  <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 60px; border-top: none;">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let c of getFilteredCourses(); trackBy: trackByCourseId">
+                  <td style="padding: 8px; border: 1px solid #ddd;">{{ c.curriculum_year }}</td>
+                  <td style="padding: 8px; border: 1px solid #ddd;">{{ c.course_name }}</td>
+                  <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
+                    <button type="button" mat-icon-button (click)="deleteCourse(c)" style="color: #f44336; transform: scale(0.8);" title="ลบหลักสูตร">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="getFilteredCourses().length === 0">
+                  <td colspan="3" style="padding: 16px; text-align: center; color: #888;">ไม่พบข้อมูลหลักสูตรที่ค้นหา</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -104,11 +140,11 @@
           </div>
           <div class="form-group">
             <label>วันที่เริ่มต้น</label>
-            <input type="date" [(ngModel)]="batchForm.start_date" name="start_date">
+            <app-thai-datepicker [(ngModel)]="batchForm.start_date" name="start_date"></app-thai-datepicker>
           </div>
           <div class="form-group">
             <label>วันที่สิ้นสุด</label>
-            <input type="date" [(ngModel)]="batchForm.end_date" name="end_date">
+            <app-thai-datepicker [(ngModel)]="batchForm.end_date" name="end_date"></app-thai-datepicker>
           </div>
         </div>
         <div class="form-actions right">
@@ -233,7 +269,11 @@
           <label>รายชื่อกลุ่มวิชา (เพิ่มได้หลายกลุ่ม)</label>
           <div class="dynamic-row" *ngFor="let g of groupsList; let i = index; let isLast = last" style="align-items: center; gap: 16px;">
             <div class="form-group mb-0" style="flex: 2;">
-              <input type="text" [(ngModel)]="g.group_name" name="group_name_{{i}}" placeholder="รหัสกลุ่ม/ชื่อกลุ่มวิชา เช่น M01" required>
+              <input type="text" [(ngModel)]="g.group_name" name="group_name_{{i}}" 
+                placeholder="รหัสกลุ่ม/ชื่อกลุ่มวิชา เช่น M01" 
+                (input)="onGroupNameInput(g, $event)"
+                autocomplete="off"
+                required>
             </div>
             <div class="form-group mb-0" style="flex: 1;">
               <input type="number" min="0" step="0.5" [(ngModel)]="g.credits" name="credits_{{i}}" placeholder="หน่วยกิต (ถ้า S/U ใส่ 0)" required>
@@ -283,7 +323,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let g of getGroupsForBatch(selectedBatchForGroup)">
+              <tr *ngFor="let g of getGroupsForBatch(selectedBatchForGroup); trackBy: trackByGroupId">
                 <td style="padding: 8px; border: 1px solid #ddd;">
                   <span [ngClass]="getGroupBadgeClass(g.group_name)" style="padding: 4px 8px; font-weight: 500; font-size: 12px; border-radius: 4px;">
                     {{ g.group_name }}
@@ -355,7 +395,7 @@
           <label>เลือกรุ่น</label>
           <div class="select-wrapper">
             <select [(ngModel)]="selectedBatchForSubject" name="selectedBatchForSubject"
-              (change)="subjectForm.group_id = ''" [disabled]="!selectedCourseIdForSubject">
+              (change)="onBatchSelectedForSubject()" [disabled]="!selectedCourseIdForSubject">
               <option value="" disabled selected>-- เลือกรุ่น --</option>
               <option *ngFor="let b of getBatchesForCourse(selectedCourseIdForSubject)" [value]="b.id">{{ b.batch_name
                 }}</option>
@@ -406,48 +446,80 @@
         </div>
       </form>
 
-      <!-- ส่วนจัดการรายวิชาที่มีอยู่แล้ว (Manage Existing Subjects) -->
-      <div class="existing-subjects" *ngIf="subjectForm.group_id" style="margin-top: 24px; padding-top: 16px; border-top: 1px dashed #ccc;">
+      <!-- ส่วนจัดการรายวิชาที่มีอยู่แล้วในรุ่นนี้ (Manage Existing Subjects) -->
+      <div class="existing-subjects" *ngIf="selectedBatchForSubject" style="margin-top: 24px; padding-top: 16px; border-top: 1px dashed #ccc;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
           <h3 style="font-size: 14px; color: #673ab7; margin: 0; font-weight: 500;">
-            รายวิชาที่มีอยู่แล้วในกลุ่มวิชานี้
+            รายวิชาที่มีอยู่แล้วในรุ่นนี้
           </h3>
           <button type="button" mat-button (click)="showSubjectsTable = !showSubjectsTable" style="color: #673ab7; font-size: 13px;">
             {{ showSubjectsTable ? 'ซ่อนรายการ' : 'ดูรายวิชาทั้งหมด' }}
           </button>
         </div>
         
-        <div *ngIf="subjectsInGroup.length === 0 && !isLoadingSubjects" style="color: #888; font-size: 13px;">
-          ยังไม่มีรายวิชาในกลุ่มวิชานี้
-        </div>
-        <div *ngIf="isLoadingSubjects" style="color: #888; font-size: 13px;">
+        <div *ngIf="isLoadingBatchSubjects" style="color: #888; font-size: 13px;">
           กำลังโหลด...
         </div>
+
+        <div *ngIf="!isLoadingBatchSubjects && batchSubjectsList.length === 0" style="color: #888; font-size: 13px;">
+          ยังไม่มีรายวิชาในรุ่นนี้
+        </div>
         
-        <div *ngIf="showSubjectsTable && subjectsInGroup.length > 0 && !isLoadingSubjects" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-            <thead style="position: sticky; top: 0; z-index: 1;">
-              <tr style="background-color: #f3e8ff; color: #4c1d95; text-align: left;">
-                <th style="padding: 8px; border: 1px solid #ddd; border-top: none;">ชื่อวิชา</th>
-                <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 100px; border-top: none;">ประเมิน S/U</th>
-                <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 60px; border-top: none;">จัดการ</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let s of subjectsInGroup">
-                <td style="padding: 8px; border: 1px solid #ddd;">{{ s.subject_name }}</td>
-                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
-                  <span *ngIf="s.is_su" style="color: #4CAF50; font-weight: 500;">ใช่</span>
-                  <span *ngIf="!s.is_su" style="color: #9e9e9e;">ไม่ใช่</span>
-                </td>
-                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
-                  <button type="button" mat-icon-button (click)="deleteSubject(s)" style="color: #f44336; transform: scale(0.8);" title="ลบรายวิชา">
-                    <mat-icon>delete</mat-icon>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div *ngIf="showSubjectsTable && !isLoadingBatchSubjects && batchSubjectsList.length > 0">
+          <!-- แถบค้นหาและกรองกลุ่มวิชา -->
+          <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 180px;">
+              <select [(ngModel)]="filterSubjectGroupId" style="width: 100%; height: 36px; padding: 0 10px; font-size: 13px; border: 1px solid #ddd; border-radius: 6px; outline: none; background: #fff;">
+                <option value="">-- ทุกกลุ่มวิชา ({{ batchSubjectsList.length }} วิชา) --</option>
+                <option *ngFor="let g of getGroupsForBatch(selectedBatchForSubject)" [value]="g.id">
+                  {{ g.group_name }} ({{ getSubjectsCountInGroup(g.group_name) }} วิชา)
+                </option>
+              </select>
+            </div>
+            <div style="flex: 1; min-width: 180px;">
+              <input type="text" [(ngModel)]="filterSubjectName" placeholder="ค้นหาชื่อวิชา..." 
+                style="width: 100%; height: 36px; padding: 0 10px; font-size: 13px; border: 1px solid #ddd; border-radius: 6px; outline: none; box-sizing: border-box;">
+            </div>
+          </div>
+
+          <div style="max-height: 280px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead style="position: sticky; top: 0; z-index: 1;">
+                <tr style="background-color: #f3e8ff; color: #4c1d95; text-align: left;">
+                  <th style="padding: 8px; border: 1px solid #ddd; border-top: none; width: 110px;">กลุ่มวิชา</th>
+                  <th style="padding: 8px; border: 1px solid #ddd; border-top: none;">ชื่อวิชา</th>
+                  <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 100px; border-top: none;">ประเมิน S/U</th>
+                  <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 60px; border-top: none;">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let s of getFilteredBatchSubjects(); trackBy: trackBySubjectId">
+                  <td style="padding: 8px; border: 1px solid #ddd;">
+                    <span [ngClass]="getGroupBadgeClass(s.group_name)" style="padding: 3px 8px; font-weight: 500; font-size: 12px; border-radius: 4px; display: inline-block;">
+                      {{ s.group_name }}
+                    </span>
+                  </td>
+                  <td style="padding: 8px; border: 1px solid #ddd; font-weight: 500; color: #333;">
+                    {{ s.subject_name }}
+                  </td>
+                  <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
+                    <span *ngIf="s.is_su" style="color: #4CAF50; font-weight: 500;">ใช่</span>
+                    <span *ngIf="!s.is_su" style="color: #9e9e9e;">ไม่ใช่</span>
+                  </td>
+                  <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
+                    <button type="button" mat-icon-button (click)="deleteSubject(s)" style="color: #f44336; transform: scale(0.8);" title="ลบรายวิชา">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="getFilteredBatchSubjects().length === 0">
+                  <td colspan="4" style="text-align: center; padding: 16px; color: #888;">
+                    ไม่พบรายวิชาที่ตรงกับเงื่อนไข
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

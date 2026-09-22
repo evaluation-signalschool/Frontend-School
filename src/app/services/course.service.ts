@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, timeout } from 'rxjs';
 // 1. Import environment เข้ามา (อย่าลืมเช็ค path โฟลเดอร์ให้ถูกต้องนะครับ)
 import { environment } from '../../environments/environment';
 
@@ -35,6 +35,33 @@ export class CourseService {
 
   getCourses(): Observable<ApiResponse> {
     return this.http.get<ApiResponse>(this.apiUrl);
+  }
+
+  getTrainingSummary(courseId?: number, courseName?: string): Observable<any> {
+    const queryParts: string[] = [];
+    if (courseName) {
+      queryParts.push(`courseName=${encodeURIComponent(courseName)}`);
+    }
+    if (courseId) {
+      queryParts.push(`courseId=${courseId}`);
+    }
+    const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+    return this.http.get<any>(`${environment.apiUrl}/training-summary${queryString}`);
+  }
+
+  generateAiSummary(payload: any): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/training-summary/ai-generate`, payload).pipe(
+      timeout(12000)
+    );
+  }
+
+  saveTrainingSummary(payload: any): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/training-summary/save-summary`, payload);
+  }
+
+  getSavedTrainingSummary(courseName: string, cohortKey: string): Observable<any> {
+    const query = `courseName=${encodeURIComponent(courseName)}&cohortKey=${encodeURIComponent(cohortKey)}`;
+    return this.http.get<any>(`${environment.apiUrl}/training-summary/get-summary?${query}`);
   }
 
   getSubjectsByBatch(batchId: string | number): Observable<any> {

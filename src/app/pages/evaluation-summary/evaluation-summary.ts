@@ -46,12 +46,12 @@ export interface EvaluationResult {
 export interface StudentEvalItem {
   courseName: string;
   curriculumId: string;
-  score1: number;
-  score2: number;
-  score3: number;
-  score4: number;
-  score5: number;
-  avgScore: number;
+  score1: number | string;
+  score2: number | string;
+  score3: number | string;
+  score4: number | string;
+  score5: number | string;
+  avgScore: number | string;
   level: string;
 }
 
@@ -69,6 +69,7 @@ export class EvaluationSummaryComponent implements OnInit, AfterViewInit, OnDest
   totalCount: number = 0;
   totalUsers: number = 0;
   isChartExpanded: boolean = false;
+  isResultsExpanded: boolean = false;
   courseName: string = '';
   batches: BatchItem[] = [];
   selectedBatch: BatchItem | null = null;
@@ -114,12 +115,62 @@ export class EvaluationSummaryComponent implements OnInit, AfterViewInit, OnDest
   allPendingUsers: PendingUser[] = [];
   allEvaluationResults: EvaluationResult[] = [];
   studentEvalData: StudentEvalItem[] = [];
-  courseEvalData: any[] = []; // หรือ type ที่ตรง
+  courseEvalData: any = null;
 
-  studentEvalSummary = {
-    avg1: 4.20, avg2: 4.16, avg3: 4.23, avg4: 4.13, avg5: 4.43,
-    totalAvg: 4.23, totalLevel: 'มาก'
-  };
+  courseEvalPart1: any = { formName: '', topics: [], scores: [], levels: [], hasData: false };
+  courseEvalPart2: any = { formName: '', topics: [], scores: [], levels: [], hasData: false };
+  courseEvalPart3: any = { formName: '', topics: [], scores: [], levels: [], hasData: false };
+
+  get studentEvalSummary() {
+    const data = this.displayStudentEvalData.filter((d: any) => d.avgScore && d.avgScore !== '-');
+    const totalSubjects = this.displayStudentEvalData.length;
+    const evaluatedSubjects = data.length;
+
+    if (data.length === 0) {
+      return {
+        totalText: `ทั้งหมด 0 วิชา จาก ${totalSubjects}`,
+        avg1: '-', avg2: '-', avg3: '-', avg4: '-', avg5: '-',
+        totalAvg: '-', totalLevel: '-'
+      };
+    }
+
+    const sum1 = data.reduce((acc: number, d: any) => acc + (typeof d.score1 === 'number' ? d.score1 : 0), 0);
+    const sum2 = data.reduce((acc: number, d: any) => acc + (typeof d.score2 === 'number' ? d.score2 : 0), 0);
+    const sum3 = data.reduce((acc: number, d: any) => acc + (typeof d.score3 === 'number' ? d.score3 : 0), 0);
+    const sum4 = data.reduce((acc: number, d: any) => acc + (typeof d.score4 === 'number' ? d.score4 : 0), 0);
+    const sum5 = data.reduce((acc: number, d: any) => acc + (typeof d.score5 === 'number' ? d.score5 : 0), 0);
+
+    const c1 = data.filter((d: any) => typeof d.score1 === 'number').length;
+    const c2 = data.filter((d: any) => typeof d.score2 === 'number').length;
+    const c3 = data.filter((d: any) => typeof d.score3 === 'number').length;
+    const c4 = data.filter((d: any) => typeof d.score4 === 'number').length;
+    const c5 = data.filter((d: any) => typeof d.score5 === 'number').length;
+
+    const avg1 = c1 > 0 ? (sum1 / c1) : '-';
+    const avg2 = c2 > 0 ? (sum2 / c2) : '-';
+    const avg3 = c3 > 0 ? (sum3 / c3) : '-';
+    const avg4 = c4 > 0 ? (sum4 / c4) : '-';
+    const avg5 = c5 > 0 ? (sum5 / c5) : '-';
+
+    const totalSum = data.reduce((acc: number, d: any) => acc + (typeof d.avgScore === 'number' ? d.avgScore : 0), 0);
+    const totalAvg = data.length > 0 ? (totalSum / data.length) : '-';
+
+    let totalLevel = 'ปรับปรุง';
+    if (typeof totalAvg === 'number') {
+      if (totalAvg >= 4.51) totalLevel = 'มากที่สุด';
+      else if (totalAvg >= 3.51) totalLevel = 'มาก';
+      else if (totalAvg >= 2.51) totalLevel = 'ปานกลาง';
+      else if (totalAvg >= 1.51) totalLevel = 'พอใช้';
+    } else {
+      totalLevel = '-';
+    }
+
+    return {
+      totalText: `ทั้งหมด ${evaluatedSubjects} วิชา จาก ${totalSubjects}`,
+      avg1, avg2, avg3, avg4, avg5,
+      totalAvg, totalLevel
+    };
+  }
 
   selectedSubjectForPendingList: string | null = null;
 
@@ -132,11 +183,21 @@ export class EvaluationSummaryComponent implements OnInit, AfterViewInit, OnDest
 
   ngOnInit(): void {
     this.route.queryParams.subscribe((params) => {
+      // รีเซ็ตเฉพาะข้อมูลที่แสดงผล ไม่แตะ batches (จะถูก reset ใน loadBatches แทน)
+      this.selectedBatch = null;
+      this.overviewData = [];
+      this.allEvaluationResults = [];
+      this.studentEvalData = [];
+      this.courseEvalData = [];
+      this.totalUsers = 0;
+      
       if (params['course']) {
         const rawCourse = params['course'];
         this.courseName = decodeURIComponent(rawCourse).trim();
         this.selectedCourseNameSelect = 'ALL';
         this.selectedCurriculum = 'ALL';
+      } else {
+        this.courseName = '';
       }
       // Always load batches regardless of whether a course was specified
       this.loadBatches();
@@ -162,23 +223,18 @@ export class EvaluationSummaryComponent implements OnInit, AfterViewInit, OnDest
 
   loadBatches(): void {
     this.isLoading = true;
-    console.log('loadBatches() called. this.courseName:', this.courseName);
     this.courseService.getCourses().subscribe({
       next: (response) => {
-        console.log('getCourses response:', response);
         if (response.success && response.data) {
           if (this.courseName) {
             const matchTerm = this.courseName.replace(/[\s\(\)\-\.]/g, '').toLowerCase();
             const courseGroup = response.data.find((c: any) => {
               if (!c.course_name) return false;
               const cName = c.course_name.replace(/[\s\(\)\-\.]/g, '').toLowerCase();
-              return cName.includes(matchTerm) || matchTerm.includes(cName);
+              return cName === matchTerm;
             });
-            console.log(`Searching for "${matchTerm}", found:`, courseGroup);
-            
             if (courseGroup && courseGroup.batches) {
               this.batches = courseGroup.batches.filter((b: any) => b.is_active !== false);
-              console.log('Active batches:', this.batches);
             } else {
               this.batches = [];
             }
@@ -200,9 +256,10 @@ export class EvaluationSummaryComponent implements OnInit, AfterViewInit, OnDest
               }
             });
             this.batches = Array.from(uniqueBatches.values());
-            console.log('All active batches:', this.batches);
           }
           this.selectedBatch = null;
+          // บังคับให้ Angular อัปเดตหน้าจอทันทีหลังจากโหลด batches เสร็จ
+          this.cdr.detectChanges();
           this.onBatchChange();
         }
         this.isLoading = false;
@@ -221,7 +278,10 @@ export class EvaluationSummaryComponent implements OnInit, AfterViewInit, OnDest
       this.overviewData = [];
       this.allEvaluationResults = [];
       this.studentEvalData = [];
-      this.courseEvalData = [];
+      this.courseEvalData = null;
+      this.courseEvalPart1 = { formName: '', topics: [], scores: [], levels: [], hasData: false };
+      this.courseEvalPart2 = { formName: '', topics: [], scores: [], levels: [], hasData: false };
+      this.courseEvalPart3 = { formName: '', topics: [], scores: [], levels: [], hasData: false };
       this.totalUsers = 0;
       setTimeout(() => this.renderOverviewChart(), 100);
       return;
@@ -254,7 +314,30 @@ export class EvaluationSummaryComponent implements OnInit, AfterViewInit, OnDest
 
           this.allEvaluationResults = data.teacherResults || [];
           this.studentEvalData = data.studentResults || [];
-          this.courseEvalData = data.courseResults || [];
+          this.courseEvalData = data.courseResults || null;
+
+          if (data.courseResults) {
+            const sanitizePart = (part: any) => {
+              if (!part || !part.topics) return part;
+              const validIndices: number[] = [];
+              part.topics.forEach((t: string, idx: number) => {
+                if (!t.includes('ตำแหน่ง') && !t.includes('ความรับผิดชอบ')) {
+                  validIndices.push(idx);
+                }
+              });
+              return {
+                ...part,
+                topics: validIndices.map((i) => part.topics[i]),
+                scores: validIndices.map((i) => part.scores[i]),
+                percentages: validIndices.map((i) => (part.percentages ? part.percentages[i] : '-')),
+                levels: validIndices.map((i) => part.levels[i]),
+              };
+            };
+
+            this.courseEvalPart1 = sanitizePart(data.courseResults.part1) || { formName: '', topics: [], scores: [], levels: [], hasData: false };
+            this.courseEvalPart2 = sanitizePart(data.courseResults.part2) || { formName: '', topics: [], scores: [], levels: [], hasData: false };
+            this.courseEvalPart3 = sanitizePart(data.courseResults.part3) || { formName: '', topics: [], scores: [], levels: [], hasData: false };
+          }
           
           this.cdr.detectChanges();
           setTimeout(() => this.renderOverviewChart(), 100);
@@ -410,8 +493,23 @@ export class EvaluationSummaryComponent implements OnInit, AfterViewInit, OnDest
   }
 
   get selectedCourseName(): string {
-    if (this.selectedCourseNameSelect === 'ALL') return '';
-    return this.selectedCourseNameSelect;
+    if (this.selectedCourseNameSelect !== 'ALL' && this.selectedCourseNameSelect) {
+      return this.selectedCourseNameSelect;
+    }
+    return this.courseName || '';
+  }
+
+  get currentBatchName(): string {
+    return this.selectedBatch?.batch_name ? `(${this.selectedBatch.batch_name})` : '';
+  }
+
+  getScorePercent(score: number | string | null | undefined): string {
+    if (score === '-' || score === null || score === undefined || isNaN(Number(score))) {
+      return '-';
+    }
+    const num = Number(score);
+    const percent = ((num / 5) * 100).toFixed(2);
+    return `${percent}%`;
   }
 
   get displayStudentEvalData(): StudentEvalItem[] {
@@ -471,11 +569,12 @@ export class EvaluationSummaryComponent implements OnInit, AfterViewInit, OnDest
 
   get overallLevel(): string {
     const avg = parseFloat(this.overallAverage);
-    if (avg >= 4.5) return 'มากที่สุด';
-    if (avg >= 3.5) return 'มาก';
-    if (avg >= 2.5) return 'ปานกลาง';
-    if (avg >= 1.5) return 'น้อย';
-    return 'น้อยที่สุด';
+    if (isNaN(avg)) return '-';
+    if (avg >= 4.51) return 'มากที่สุด';
+    if (avg >= 3.51) return 'มาก';
+    if (avg >= 2.51) return 'ปานกลาง';
+    if (avg >= 1.51) return 'พอใช้';
+    return 'ปรับปรุง';
   }
 
   get evaluatedCount(): number {
@@ -555,48 +654,6 @@ export class EvaluationSummaryComponent implements OnInit, AfterViewInit, OnDest
       el.scrollLeft += event.deltaY;
     }
   }
-
-  // ตารางที่ 1 (7 หัวข้อ)
-courseEvalPart1 = {
-  topics: [
-    'ด้านวัคถุประสงค์และเนื้อหาวิชาต่างๆ',
-    'ด้านความสอดคล้องของเนื้อหาวิชาในหลักสูตร',
-    'ด้านนำความรู้ไปใช้ประโยชน์',
-    'ด้ารการจัดกิจกรรมต่างๆ ในหลักสูตร',
-    'ด้านความพร้อมในการผ่านสื่อ',
-    'ด้านระบบสารสนเทศ',
-    'ข้อเสนอแนะอื่นๆ'
-  ],
-  scores: [4.80, 4.55, 4.40, 4.25, 3.90, 4.10 , 4.20],
-  levels: ['ดีมากที่สุด', 'ดีมาก', 'ดีมาก', 'ดีมาก', 'ดี', 'ดีมาก', 'ดีมาก']
-};
-
-// ตารางที่ 2 (5 หัวข้อ)
-courseEvalPart2 = {
-  topics: [
-    'ด้านการให้คำแนะนำ',
-    'ด้านการพัฒนาผู้เรียน',
-    'ด้านการให้คำแนะนำเกี่ยวกับระเบียบข้อบังคับ แก่ผู้เรียน',
-    'ด้านมนุษยสัมพันธ์',
-    'ข้อเสนอแนะอื่นๆ'
-  ],
-  scores: [4.30, 4.15, 3.85, 4.00, 4.23],
-  levels: ['ดีมาก', 'ดีมาก', 'ดี', 'ดีมาก', 'ดีมาก']
-};
-
-// ตารางที่ 3 (6 หัวข้อ)
-courseEvalPart3 = {
-  topics: [
-    'ด้านการจัดการเรียนรู้',
-    'ด้านเนื้อหารายวิชา',
-    'ด้านกิจกรรมเสริมเพื่อเพิ่มทักษะ',
-    'ด้านทรัพยากรที่ใช้ในหลักสูตร',
-    'ด้านการปฏิบัติตามกฏระเบียบของโรงเรียนความมีวินัยและการตรงต่อเวลาของผู้เรียน',
-    'ข้อเสนอแนะอื่นๆ'
-  ],
-  scores: [4.60, 4.50, 4.35, 4.10, 3.95, 4.00 ],
-  levels: ['ดีมากที่สุด', 'ดีมาก', 'ดีมาก', 'ดีมาก', 'ดี', 'ดีมาก']
-};
 
   exportExcel(): void {
     let elementToExport: HTMLElement | null = null;

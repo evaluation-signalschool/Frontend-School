@@ -18,28 +18,32 @@
 
     <div *ngIf="!isLoading && formDetails" class="form-wrapper">
       <div class="form-header-card top-border-purple">
-        <h2 class="form-main-title">แบบประเมิน {{ courseTitle }} {{ batchName }} : {{ formDetails.form_name }}</h2>
-        <p class="subtitle">คำอธิบาย : แบบประเมินชุดนี้สำหรับผู้เรียน ประเมินคณะครู-อาจารย์กำกับหลักสูตรประจำหลักสูตร</p>
+        <h2 class="form-main-title">{{ getFormMainTitle() }}</h2>
+        <p class="subtitle">{{ getFormSubtitle() }}</p>
         
         <hr class="divider">
         
-        <div class="instructions">
+        <!-- คำชี้แจง / วัตถุประสงค์ (ถ้าแอดมินกรอกไว้ จะแสดงอันนั้น ถ้าไม่มีจะแสดงข้อความมาตรฐาน) -->
+        <div class="instructions" *ngIf="formDetails.form_description" style="white-space: pre-line; line-height: 1.6; color: #374151;">
+          {{ formDetails.form_description }}
+        </div>
+        <div class="instructions" *ngIf="!formDetails.form_description">
           <strong>วัตถุประสงค์ :</strong> เพื่อนำผลการประเมินไปใช้ในการปรับปรุง แก้ไข และพัฒนาในการดำเนินการกำกับดูแลบริหารหลักสูตรของคณะทำงานให้ดียิ่งขึ้นในครั้งต่อไป<br>
           <strong>คำชี้แจง :</strong> กรุณาทำเครื่องหมาย (/) ลงในช่องว่างที่ตรงตามความคิดเห็นของท่านมากที่สุด ดังนี้.-
         </div>
 
         <!-- ถ้ารูปแบบประเมินเป็นอาจารย์ผู้สอน ให้กรอกชื่ออาจารย์ -->
         <div class="instructor-input-group" *ngIf="type === 'instructor'">
-          <label>ชื่อ-นามสกุล อาจารย์ผู้สอน <span class="required">*</span></label>
+          <label>ยศ.- ชื่อ - สกุล ผู้สอน <span class="required">*</span></label>
           <input type="text" class="custom-input" placeholder="ระบุชื่ออาจารย์ที่ท่านต้องการประเมิน" [(ngModel)]="instructorName">
         </div>
       </div>
 
       <div class="questions-list">
-        <div class="question-card" *ngFor="let q of questions; let i = index">
+        <div class="question-card" *ngFor="let q of displayedQuestions; let i = index">
           <div class="question-text">
-            <span class="q-num">{{ i + 1 }}.</span> {{ q.question_text }}
-            <span class="required" *ngIf="q.question_type === 'choice'">*</span>
+            {{ q.question_text }}
+            <span class="required" *ngIf="q.question_type === 'choice' || q.question_type === 'dropdown'">*</span>
           </div>
 
           <!-- แบบหลายตัวเลือก (Choice) -->
@@ -51,6 +55,24 @@
                      [(ngModel)]="q.answer_score">
               <span class="radio-text">{{ c.choice_text }}</span>
             </label>
+          </div>
+
+          <!-- ✅ แบบดรอปดาวน์ที่แอดมินพิมพ์ตัวเลือกเอง (Dropdown Custom) -->
+          <div class="dropdown-group" *ngIf="q.question_type === 'dropdown'" style="margin-top: 10px;">
+            <select class="custom-input" [(ngModel)]="q.answer_comment" 
+              style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1.5px solid #d1d5db; font-size: 15px; outline: none; appearance: auto; cursor: pointer; background: #fff;">
+              <option value="">— กรุณาเลือกตัวเลือก —</option>
+              <option *ngFor="let c of q.choices" [value]="c.choice_text">{{ c.choice_text }}</option>
+            </select>
+          </div>
+
+          <!-- ✅ แบบดรอปดาวน์เลือกรายวิชาอัตโนมัติ (Dropdown Subject) -->
+          <div class="dropdown-group" *ngIf="q.question_type === 'dropdown_subject'" style="margin-top: 10px;">
+            <select class="custom-input" [(ngModel)]="q.answer_comment" 
+              style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1.5px solid #d1d5db; font-size: 15px; outline: none; appearance: auto; cursor: pointer; background: #fff;">
+              <option value="">— กรุณาเลือกรายวิชา —</option>
+              <option *ngFor="let sub of availableSubjects" [value]="sub.name">{{ sub.name }}</option>
+            </select>
           </div>
 
           <!-- แบบพิมพ์ข้อความ (Text) -->

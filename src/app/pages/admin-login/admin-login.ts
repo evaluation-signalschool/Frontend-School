@@ -25,7 +25,7 @@ import { AuthService } from '../../services/auth.service';
 })
 export class AdminLogin {
   hidePassword = true;
-  email: string = ''; // 👈 เปลี่ยนจาก username เป็น email ให้ตรงกับ Database และ Service
+  username: string = '';
   password: string = '';
   isLoading: boolean = false;
   errorMessage: string = '';
@@ -36,8 +36,8 @@ export class AdminLogin {
   ) {}
 
   onLogin(): void {
-    if (!this.email || !this.password) {
-      this.errorMessage = 'กรุณากรอกอีเมลและรหัสผ่านให้ครบ';
+    if (!this.username.trim() || !this.password) {
+      this.errorMessage = 'กรุณากรอกชื่อผู้ใช้และรหัสผ่านให้ครบ';
       return;
     }
 
@@ -45,7 +45,8 @@ export class AdminLogin {
     this.errorMessage = '';
 
     const payload = {
-      email: this.email, // 👈 ส่งเป็น email แทน
+      username: this.username.trim(),
+      email: this.username.trim(),
       password: this.password,
     };
 
@@ -56,7 +57,7 @@ export class AdminLogin {
           // 1. บันทึก Token
           this.authService.saveAdminToken(res.token);
 
-          // 2. บันทึกข้อมูลแอดมิน (ถ้ามีส่งกลับมา) 👈 เพิ่มส่วนนี้เข้ามา
+          // 2. บันทึกข้อมูลแอดมิน (ถ้ามีส่งกลับมา)
           if (res.adminData) {
             this.authService.saveAdminData(res.adminData);
           }
@@ -64,12 +65,12 @@ export class AdminLogin {
           // นำทางไปยังหน้าแอดมินปกติหลังจากล็อกอินสำเร็จ
           this.router.navigate(['/admin']);
         } else {
-          this.errorMessage = res.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+          this.errorMessage = res.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
         }
       },
       error: (err) => {
         this.isLoading = false;
-        this.errorMessage = 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง';
+        this.errorMessage = err.error?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง';
         console.error('Admin login failed:', err);
       },
     });

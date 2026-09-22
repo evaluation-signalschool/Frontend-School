@@ -674,6 +674,18 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
       background-color: #ddd6fe !important;
       color: #5b21b6 !important;
     }
+
+    &.level-low,
+    &.level-purple-fair {
+      background-color: #fef08a !important;
+      color: #854d0e !important;
+    }
+
+    &.level-lowest,
+    &.level-purple-low {
+      background-color: #fee2e2 !important;
+      color: #991b1b !important;
+    }
   }
 
   tfoot,
@@ -773,7 +785,7 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
     tr.score-row td {
       padding: 0.85rem 0.75rem;
       font-size: 0.95rem;
-      font-weight: 400; // ปรับเป็นตัวเลขปกติ
+      font-weight: 500;
       color: #4c1d95;
       background-color: #faf5ff;
       border-right: 1px solid #f1f5f9;
@@ -783,7 +795,31 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
       &.highlight-score {
         background-color: #ede9fe;
         color: #4c1d95;
-        font-weight: 600; // หากต้องการเน้นคอลัมน์เฉลี่ยให้หนาขึ้นนิดนึง (หรือปรับเป็น 400 ให้ปกติทั้งหมดได้ครับ)
+        font-weight: 600;
+      }
+
+      &:last-child {
+        border-right: none;
+      }
+    }
+
+    // แถวแสดงคิดเป็นร้อยละ (%)
+    tr.percent-row td {
+      padding: 0.75rem 0.5rem;
+      background-color: #fcfaff;
+      border-right: 1px solid #f1f5f9;
+      border-bottom: 1px solid #f1f5f9;
+
+      .percent-tag {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        background-color: #f3e8ff;
+        color: #7e22ce;
+        border: 1px solid #e9d5ff;
+        letter-spacing: 0.3px;
       }
 
       &:last-child {
@@ -826,5 +862,60 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
 
 .text-center {
   text-align: center !important;
+}
+
+// ปุ่ม ขยายเต็มจอ / ย่อขนาด
+.btn-expand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Sarabun', sans-serif;
+  border: 1.5px solid #6366f1;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  white-space: nowrap;
+
+  &:hover {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.45);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+  }
+}
+
+// Fullscreen overlay สำหรับตาราง (แยกออกจาก layout หลัก)
+.results-fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1200;
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.results-fullscreen-panel {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+  padding: 24px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 }

@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { GeneralEvaluationService } from '../../../services/general-evaluation.service';
+import { CourseService } from '../../../services/course.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -20,10 +21,14 @@ export class EvaluationFillComponent implements OnInit {
   questions: any[] = [];
 
   batchId: number = 0;
-  batchName: string = ''; // 👈 เพิ่มตัวแปรสำหรับเก็บชื่อรุ่น
+  batchName: string = '';
   subjectId: string = '';
   type: string = '';
   courseTitle: string = '';
+
+  // ✅ รายวิชาในรุ่นนั้นๆ สำหรับ Dropdown
+  availableSubjects: { id: any; name: string }[] = [];
+  selectedSubjectId: string = ''; // subject ที่ผู้กรอกเลือก
 
   // สำหรับฟอร์ม
   instructorName: string = '';
@@ -32,9 +37,54 @@ export class EvaluationFillComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private generalEvaluationService: GeneralEvaluationService,
+    private courseService: CourseService,
     private location: Location,
-    private cdr: ChangeDetectorRef, // 👈 Inject ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
   ) {}
+
+  getFormSubtitle(): string {
+    switch (this.type) {
+      case 'instructor':
+        return 'คำอธิบาย : แบบประเมินชุดนี้สำหรับผู้เรียน ประเมินอาจารย์ผู้สอน';
+      case 'teacher_course':
+        return 'คำอธิบาย : แบบประเมินชุดนี้สำหรับครู-อาจารย์ผู้สอน ประเมินผู้เรียนในรายวิชา';
+      case 'director':
+        return 'คำอธิบาย : แบบประเมินชุดนี้สำหรับผู้เรียน ประเมินอาจารย์กำกับหลักสูตร';
+      case 'committee':
+        return 'คำอธิบาย : แบบประเมินชุดนี้สำหรับคณะกำกับหลักสูตร';
+      case 'course':
+        return 'คำอธิบาย : แบบประเมินชุดนี้สำหรับผู้เรียน ประเมินหลักสูตร';
+      case 'followup_commander':
+        return 'คำอธิบาย : แบบประเมินผู้สำเร็จการฝึกอบรม (สำหรับ ผบช.)';
+      case 'followup_self':
+        return 'คำอธิบาย : แบบประเมินผู้สำเร็จการฝึกอบรม (ผู้ฝึกอบรมประเมินตนเอง)';
+      case 'followup_colleague':
+        return 'คำอธิบาย : แบบประเมินผู้สำเร็จการฝึกอบรม (สำหรับเพื่อนร่วมงาน)';
+      default:
+        return 'คำอธิบาย : แบบประเมินในระบบ';
+    }
+  }
+
+  getFormMainTitle(): string {
+    if (!this.formDetails) return '';
+
+    const formName = (this.formDetails.form_name || 'แบบประเมิน').trim();
+    let batch = '';
+    if (this.batchName) {
+      const formattedBatch = this.batchName.startsWith('รุ่นที่') ? this.batchName : `รุ่นที่ ${this.batchName}`;
+      if (!formName.includes(formattedBatch)) {
+        batch = ` ${formattedBatch}`;
+      }
+    }
+
+    if (this.courseTitle && this.courseTitle !== 'ทำแบบประเมิน' && !formName.includes(this.courseTitle)) {
+      const trimmedCourse = this.courseTitle.trim();
+      const subject = trimmedCourse.startsWith('วิชา') ? trimmedCourse : `วิชา${trimmedCourse}`;
+      return `${formName}${batch} : ${subject}`;
+    }
+
+    return `${formName}${batch}`;
+  }
 
   ngOnInit() {
     this.route.queryParams.subscribe((params) => {
@@ -76,6 +126,33 @@ export class EvaluationFillComponent implements OnInit {
                 answer_score: null,
                 answer_comment: '',
               }));
+
+              // ✅ โหลดรายวิชาของรุ่นนี้มาเตรียมไว้สำหรับ Dropdown
+              this.courseService.getSubjectsByBatch(this.batchId).subscribe({
+                next: (subRes: any) => {
+                  if (subRes.success && subRes.data) {
+                    let allSubjects: { id: any; name: string }[] = [];
+                    subRes.data.forEach((group: any) => {
+                      if (group.subjects && Array.isArray(group.subjects)) {
+                        group.subjects.forEach((s: any) => {
+                          allSubjects.push({
+                            id: s.id || s.subject_id || s.subjectId,
+                            name: s.subject_name || s.name || 'ไม่ระบุชื่อวิชา',
+                          });
+                        });
+                      }
+                    });
+                    // กรองวิชาซ้ำ ออก
+                    this.availableSubjects = allSubjects.filter(
+                      (s, idx, self) => idx === self.findIndex(t => t.id === s.id)
+                    );
+                    if (this.subjectId) {
+                      this.selectedSubjectId = String(this.subjectId);
+                    }
+                    this.cdr.detectChanges();
+                  }
+                }
+              });
             }
           } catch (e) {
             console.error('เกิดข้อผิดพลาดในการจัดการข้อมูล:', e);
@@ -93,11 +170,31 @@ export class EvaluationFillComponent implements OnInit {
       });
   }
 
+  // ✅ กรองคำถามตามรายวิชาที่กดเข้ามา (คำถามทั่วไป + คำถามเฉพาะวิชานั้น)
+  get displayedQuestions(): any[] {
+    if (!this.questions) return [];
+    return this.questions.filter((q) => {
+      // ถ้าคำถามนี้ไม่ได้ผูกเฉพาะวิชา (เป็นคำถามทั่วไป) -> แสดงทุกวิชา
+      if (!q.subject_for || q.subject_for === '' || q.subject_for === 'all') {
+        return true;
+      }
+      // ถ้าคำถามนี้เจาะจงเฉพาะวิชา -> แสดงเฉพาะเมื่อวิชาตรงกับที่กดเข้ามา
+      const currentSubject = this.subjectId || this.selectedSubjectId;
+      if (currentSubject) {
+        return String(q.subject_for) === String(currentSubject);
+      }
+      return true;
+    });
+  }
+
   onSubmit() {
-    // Validate ว่าตอบครบทุกข้อที่เป็น choice หรือไม่
-    const unanswered = this.questions.find((q) => q.question_type === 'choice' && !q.answer_score);
+    // Validate ว่าตอบครบทุกข้อที่แสดงอยู่ (displayedQuestions)
+    const unanswered = this.displayedQuestions.find(
+      (q) => (q.question_type === 'choice' && !q.answer_score) || 
+             ((q.question_type === 'dropdown' || q.question_type === 'dropdown_subject') && (!q.answer_comment || q.answer_comment.trim() === ''))
+    );
     if (unanswered) {
-      Swal.fire({ icon: 'warning', title: 'แจ้งเตือน', text: 'กรุณาตอบคำถามแบบตัวเลือกให้ครบทุกข้อครับ', confirmButtonText: 'ตกลง' });
+      Swal.fire({ icon: 'warning', title: 'แจ้งเตือน', text: 'กรุณาตอบคำถามให้ครบทุกข้อครับ', confirmButtonText: 'ตกลง' });
       return;
     }
 
@@ -106,10 +203,10 @@ export class EvaluationFillComponent implements OnInit {
       return;
     }
 
-    const answers = this.questions.map((q) => ({
+    const answers = this.displayedQuestions.map((q) => ({
       question_id: q.id,
       score_value: q.question_type === 'choice' ? q.answer_score : null,
-      comment: q.question_type === 'text' ? q.answer_comment : null,
+      comment: (q.question_type === 'text' || q.question_type === 'dropdown' || q.question_type === 'dropdown_subject') ? q.answer_comment : null,
     }));
 
     const studentDataStr = localStorage.getItem('student_data');
@@ -118,7 +215,7 @@ export class EvaluationFillComponent implements OnInit {
     const payload = {
       studentId: studentId,
       formId: this.formDetails.form_id,
-      subjectId: this.subjectId,
+      subjectId: this.selectedSubjectId || this.subjectId, // ✅ ใช้วิชาที่เลือกจาก Dropdown
       instructorName: this.instructorName,
       answers: answers,
     };
@@ -138,7 +235,8 @@ export class EvaluationFillComponent implements OnInit {
       },
       error: (err: any) => {
         console.error('Submit error', err);
-        Swal.fire({ icon: 'error', title: 'ข้อผิดพลาด', text: 'เกิดข้อผิดพลาดในการส่งข้อมูล', confirmButtonText: 'ตกลง' });
+        const msg = err.error?.message || 'เกิดข้อผิดพลาดในการส่งข้อมูล';
+        Swal.fire({ icon: 'error', title: 'ข้อผิดพลาด', text: msg, confirmButtonText: 'ตกลง' });
       },
     });
   }

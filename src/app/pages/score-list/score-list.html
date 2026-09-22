@@ -23,7 +23,7 @@
             <select [(ngModel)]="selectedCourse" (change)="onCourseChange()">
               <option value="all">แสดงทั้งหมด</option>
               @for (cg of courseGroups; track cg.course_name) {
-                <option [value]="cg.batches?.[0]?.course_id || cg.course_name">
+                <option [value]="cg.batches[0]?.course_id || cg.course_name">
                   {{ cg.course_name }}
                 </option>
               }

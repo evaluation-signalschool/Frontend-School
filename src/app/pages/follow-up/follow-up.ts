@@ -30,7 +30,7 @@ export class FollowUpComponent implements OnInit {
       return;
     }
 
-    this.router.navigate(['/student/fill-form'], {
+    this.router.navigate(['/follow-up/fill-form'], {
       queryParams: {
         type: formType,
         batchId: this.batchId,

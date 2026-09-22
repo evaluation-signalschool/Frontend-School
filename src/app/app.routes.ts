@@ -11,9 +11,7 @@ import { ScoreList } from './pages/score-list/score-list';
 import { ClassOverview } from './pages/class-overview/class-overview';
 import { AdminLogin } from './pages/admin-login/admin-login';
 import { Addstudent } from './pages/addstudent/addstudent';
-import { TrainingStatistics } from './pages/training-statistics/training-statistics';
 import { TrainingSummary } from './pages/training-summary/training-summary';
-import { TrainingResults } from './pages/training-results/training-results';
 import { Register } from './pages/register/register';
 import { ScoreSubmission } from './pages/score-submission/score-submission';
 import { EvaluationSummaryComponent } from './pages/evaluation-summary/evaluation-summary';
@@ -28,6 +26,10 @@ import { EvaluationFillComponent } from './main/student/evaluation-fill/evaluati
 import { Certificate } from './pages/certificate/certificate';
 import { EditProfile } from './pages/edit-profile/edit-profile';
 import { AdminProfileApprovals } from './pages/admin-profile-approvals/admin-profile-approvals';
+import { NewsManagement } from './main/admin/news-management/news-management';
+import { StudentRanking } from './pages/student-ranking/student-ranking';
+import { AdminUsersComponent } from './pages/admin-users/admin-users.component';
+import { AdminLogsComponent } from './pages/admin-logs/admin-logs.component';
 
 export const routes: Routes = [
   // หน้าแรก
@@ -43,18 +45,42 @@ export const routes: Routes = [
       { path: 'score', component: Score }, // เข้าด้วย /student/score
     ],
   },
-  //สรุปผลสถิติ
+  // สรุปผลและสถิติการฝึกอบรม
   {
     path: 'training-results',
     children: [
-      { path: '', component: TrainingResults },
-      { path: 'training-statistics', component: TrainingStatistics },
+      { path: '', component: TrainingSummary },
+      { path: 'training-statistics', component: TrainingSummary },
       { path: 'training-summary', component: TrainingSummary },
     ],
   },
 
   // ส่วนของครู
-  { path: 'teacher', component: Teacher },
+  {
+    path: 'teacher',
+    children: [
+      { path: '', component: Teacher },
+      { path: 'fill-form', component: EvaluationFillComponent },
+    ],
+  },
+
+  // ส่วนของคณะกำกับหลักสูตร
+  {
+    path: 'committee',
+    children: [
+      { path: '', component: Committee },
+      { path: 'fill-form', component: EvaluationFillComponent },
+    ],
+  },
+
+  // ส่วนของแบบประเมินติดตามผู้สำเร็จฯ
+  {
+    path: 'follow-up',
+    children: [
+      { path: '', component: FollowUpComponent },
+      { path: 'fill-form', component: EvaluationFillComponent },
+    ],
+  },
 
   // ส่วนของแอดมิน
   {
@@ -69,9 +95,15 @@ export const routes: Routes = [
       { path: 'addstudent', component: Addstudent },
       { path: 'addcourse', component: AddCourse },
       {path:'score-submission',component: ScoreSubmission},
-      {path:'form-view',component: FormView},
+      { path: 'form-view', component: FormView },
       { path: 'certificate', component: Certificate },
       { path: 'profile-approvals', component: AdminProfileApprovals },
+      { path: 'news-management', component: NewsManagement },
+      { path: 'training-summary', component: TrainingSummary },
+      { path: 'ranking', component: StudentRanking },
+      { path: 'student-ranking', component: StudentRanking },
+      { path: 'users', component: AdminUsersComponent },
+      { path: 'logs', component: AdminLogsComponent },
     ],
   },
 
@@ -86,8 +118,6 @@ export const routes: Routes = [
 
   // หน้าใหม่ที่เพิ่มเข้ามา
   { path: 'evaluation-summary', component: EvaluationSummaryComponent },
-  { path: 'follow-up', component: FollowUpComponent },
-  { path: 'committee', component: Committee },
 
   // กรณีพิมพ์ URL ผิดให้เด้งกลับหน้าแรก
   { path: '**', redirectTo: '' },

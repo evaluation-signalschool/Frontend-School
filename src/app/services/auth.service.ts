@@ -104,6 +104,24 @@ export class AuthService {
     return data ? JSON.parse(data) : null;
   }
 
+  // ตรวจสอบว่าเป็น Super Admin หรือไม่
+  isSuperAdmin(): boolean {
+    const data = this.getAdminData();
+    return data?.role === 'superadmin';
+  }
+
+  // ดึง Role ของ Admin
+  getAdminRole(): string {
+    const data = this.getAdminData();
+    return data?.role || 'admin';
+  }
+
+  // ดึงชื่อของ Admin
+  getAdminName(): string {
+    const data = this.getAdminData();
+    return data?.name || data?.username || data?.email || 'ผู้ดูแลระบบ';
+  }
+
   // ตรวจสอบว่า Admin Login อยู่หรือไม่
   isAdminLoggedIn(): boolean {
     return !!this.getAdminToken();
@@ -111,6 +129,15 @@ export class AuthService {
 
   // ออกจากระบบ Admin
   adminLogout(): void {
+    const token = this.getAdminToken();
+    if (token) {
+      try {
+        this.http.post(`${environment.apiUrl}/admin/logout`, {}).subscribe({
+          next: () => {},
+          error: () => {},
+        });
+      } catch (_) {}
+    }
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_data');
   }

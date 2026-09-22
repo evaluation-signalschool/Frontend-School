@@ -200,7 +200,8 @@ export class ClassOverview implements OnInit {
                    gradeDisplay = gResult.grade;
                  } else {
                    const gp = Number(gResult.index_value) / Number(sub.credit);
-                   gradeDisplay = !isNaN(gp) ? gp.toFixed(2) : gResult.grade;
+                   const safeGp = !isNaN(gp) ? Math.min(4.0, Math.max(0, gp)) : null;
+                   gradeDisplay = safeGp !== null ? safeGp.toFixed(2) : gResult.grade;
                  }
                  indexValue = gResult.index_value;
                  originalLetterGrade = gResult.grade;
@@ -220,7 +221,8 @@ export class ClassOverview implements OnInit {
               };
             });
 
-            const gpa = st.gpa || "0.00";
+            const numGpa = Number(st.gpa);
+            const gpa = !isNaN(numGpa) ? Math.min(4.0, Math.max(0, numGpa)).toFixed(2) : "0.00";
 
             return {
               ...st,
@@ -231,7 +233,10 @@ export class ClassOverview implements OnInit {
               isPassed: Number(gpa) >= 2.0,
               subjects: mappedSubjects,
               totalCredit: res.summary.total_credit || 0,
-              totalScore: st.total_raw_score || 0,
+              totalScore:
+                st.total_raw_score !== null && st.total_raw_score !== undefined
+                  ? Number(Number(st.total_raw_score).toFixed(4))
+                  : 0,
               group_results: st.group_results || {},
               trainingTimeScore: st.training_time_score ?? st.trainingTimeScore ?? null,
               examTimeScore: st.exam_time_score ?? st.examTimeScore ?? null,
@@ -459,7 +464,7 @@ export class ClassOverview implements OnInit {
         student.trainingTimeScore !== null && student.trainingTimeScore !== undefined ? student.trainingTimeScore : '-',
         student.examTimeScore !== null && student.examTimeScore !== undefined ? student.examTimeScore : '-',
         student.behaviorScore !== null && student.behaviorScore !== undefined ? student.behaviorScore : '-',
-        student.totalScore !== undefined && student.totalScore !== null ? student.totalScore : '-',
+        student.totalScore !== undefined && student.totalScore !== null ? this.formatTotalScore(student.totalScore) : '-',
         student.gpa || '0.00',
         student.isPassed ? 'ผ่าน' : 'ไม่ผ่าน'
       );
@@ -551,6 +556,27 @@ export class ClassOverview implements OnInit {
     if (numScore >= 2.5) return "ดี";
     if (numScore >= 2.0) return "พอใช้";
     return ""; 
+  }
+
+  formatTotalScore(score: any): string {
+    if (score === null || score === undefined || score === '' || isNaN(Number(score))) {
+      return '-';
+    }
+    const num = Number(score);
+    // ปัดเศษทศนิยมไม่เกิน 4 ตำแหน่ง เพื่อแก้เศษขยะ float เช่น .1100000000001
+    const rounded = Number(num.toFixed(4));
+    const parts = rounded.toString().split('.');
+    const integerPart = parts[0];
+    const decimalPart = parts[1] || '';
+
+    // ถ้าไม่มีทศนิยมให้ขึ้น .00 ถ้ามี 1 ตำแหน่งให้เติม 0 (เช่น .50) และถ้ามี 2-4 ตำแหน่งให้แสดงตามจริง
+    if (decimalPart.length === 0) {
+      return `${integerPart}.00`;
+    } else if (decimalPart.length === 1) {
+      return `${integerPart}.${decimalPart}0`;
+    } else {
+      return `${integerPart}.${decimalPart}`;
+    }
   }
 
   openSpecialScoreModal(): void {

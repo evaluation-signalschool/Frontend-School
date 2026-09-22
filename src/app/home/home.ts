@@ -9,8 +9,7 @@ import { ChangeDetectorRef, inject } from '@angular/core';
 import { Chart, registerables, ChartType, ChartDataset } from 'chart.js';
 import { FormsModule } from '@angular/forms';
 import { MatSelectModule } from '@angular/material/select';
-
-
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-home',
@@ -75,10 +74,10 @@ export class Home {
 
   sections = [
     { id: 'sec-home', key: 'home' },
+    { id: 'sec-news', key: 'news' },
     { id: 'sec-dashboard', key: 'dashboard' },
     { id: 'sec-about', key: 'about' },
     { id: 'sec-forms', key: 'forms' }
-
   ];
   scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
@@ -192,6 +191,7 @@ export class Home {
       });
 
     this.startAutoPlay();
+    this.fetchNews();
   }
 
   // ✅ เหลือแค่ get แบบเดียว ไม่ต้องประกาศ staffGroups แยก
@@ -226,4 +226,41 @@ export class Home {
       window.open(url, '_blank');
     }
   }
+
+  // ── News List ─────────────────────────────────────
+  newsList: any[] = [];
+
+  getTypeLabel(type: string): string {
+    switch(type) {
+      case 'announce': return '📣 ประกาศ';
+      case 'news': return '📰 ข่าวสาร';
+      case 'activity': return '🎓 กิจกรรม';
+      default: return '📣 ประกาศ';
+    }
+  }
+
+  fetchNews() {
+    this.http.get<any>(`${environment.apiUrl}/news`).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.newsList = res.data;
+          this.cdr.detectChanges();
+        }
+      },
+      error: (err) => console.error('Failed to fetch news', err)
+    });
+  }
+
+  getBackendUrl() {
+    return environment.apiUrl.replace(/\/api\/?$/, '');
+  }
+
+  getFileUrl(url: string): string {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return this.getBackendUrl() + url;
+  }
 }
+

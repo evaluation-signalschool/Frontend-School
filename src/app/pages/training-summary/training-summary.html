@@ -1,221 +1,641 @@
-
 <div class="training-summary-container">
 
-  <!-- Header Section -->
+  <!-- ================= Preview Banner (เมื่อแอดมินอยู่ในโหมด Preview) ================= -->
+  <div class="preview-banner" *ngIf="isAdmin && isPreviewMode">
+    <div class="preview-banner-text">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      <span>กำลังแสดงตัวอย่างหน้าเว็บจริง (Public Preview Mode) สำหรับหลักสูตร <strong>{{ courseTitle }}</strong></span>
+    </div>
+    <button class="btn-exit-preview" (click)="togglePreview()">
+      ✏️ กลับสู่โหมดแก้ไข & AI
+    </button>
+  </div>
+
+  <!-- ================= Header Section ================= -->
   <header class="page-header">
-    <div class="header-title-group">
-      <h1>📊 สรุปผลการฝึกอบรม - ภาพรวมและกราฟสถิติ</h1>
-      <p class="subtitle">รายงานสถิติการเรียนรู้ รายวิชาที่มีพัฒนาการ ประเด็นเฝ้าระวัง และข้อเสนอแนะเชิงลึก</p>
+    <div class="header-left">
+      <button class="back-btn" (click)="goBack()" title="ย้อนกลับ">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      <div class="header-title-group">
+        <div class="admin-tag-badge" *ngIf="isAdmin">
+          ⚙️ ส่วนจัดการของผู้ดูแลระบบ (Admin Management)
+        </div>
+        <h1>
+          <ng-container *ngIf="!isAdmin">สรุปผลและสถิติการจัดการฝึกอบรม</ng-container>
+          <ng-container *ngIf="isAdmin">จัดการบทสรุปผลการฝึกอบรม (AI Summary & Editor)</ng-container>
+        </h1>
+        <p class="subtitle" *ngIf="courseTitle">
+          {{ courseTitle }}
+        </p>
+      </div>
     </div>
 
-    <!-- Display คะแนนเฉลี่ย (คำนวณเฉลี่ย 2 รุ่นจาก 12 วิชา) -->
-    <div class="badge-avg">
-      เฉลี่ยรวม 2 รุ่น: <strong>75.2 คะแนน</strong>
+    <!-- Header Actions -->
+    <div class="header-right-group">
+      <!-- ปุ่มสลับโหมด Preview สำหรับ Admin -->
+      <button class="admin-preview-btn" *ngIf="isAdmin && isActive && subjects.length > 0" (click)="togglePreview()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+        <span>{{ isPreviewMode ? '✏️ โหมดแก้ไข & AI' : '👁️ ดูตัวอย่างหน้าเว็บจริง (Preview)' }}</span>
+      </button>
+
+      <!-- คะแนนเฉลี่ยรวมระดับหลักสูตร -->
+      <div class="badge-avg" *ngIf="isActive && subjects.length > 0">
+        <span class="avg-label">คะแนนเฉลี่ยรวม</span>
+        <span class="avg-value">{{ totalAvg | number:'1.2-2' }}</span>
+        <span class="avg-unit">คะแนน</span>
+      </div>
     </div>
   </header>
 
-  <!-- Filter Bar Section -->
-  <div class="filter-bar-card">
-    <span class="filter-label">มุมมองรุ่นการฝึกอบรม: ภาพรวมเปรียบเทียบ (2 รุ่น)</span>
-    <div class="cohort-selector">
-      <mat-select class="cohort-dropdown" panelClass="purple-dropdown-panel"
+  <!-- ================= Filter Bar Section ================= -->
+  <!-- โหมดแอดมิน: เลือกได้ทั้งหลักสูตรและรุ่น -->
+  <div class="filter-bar-card admin-filter-card" *ngIf="isAdmin && availableCourses.length > 0">
+    <div class="admin-filters-grid">
+      <div class="filter-group">
+        <label class="filter-label">1. เลือกหลักสูตรที่ต้องการจัดการ:</label>
+        <mat-select class="formal-dropdown" panelClass="formal-dropdown-panel"
+                    [(ngModel)]="selectedCourseName" (selectionChange)="onAdminCourseChange()">
+          <mat-option *ngFor="let c of availableCourses" [value]="c.course_name">
+            {{ c.course_name }}
+          </mat-option>
+        </mat-select>
+      </div>
+
+      <div class="filter-group" *ngIf="isActive && batches.length > 0">
+        <label class="filter-label">2. เลือกมุมมองรุ่น / คู่รุ่น:</label>
+        <mat-select class="formal-dropdown" panelClass="formal-dropdown-panel"
+                    [(ngModel)]="selectedCohort" (selectionChange)="onCohortChange()">
+          <mat-option value="all" *ngIf="batches.length > 1">ภาพรวมเปรียบเทียบทุกรุ่น</mat-option>
+          <mat-optgroup label="เปรียบเทียบคู่รุ่น" *ngIf="pairwiseComparisons.length > 0">
+            <mat-option *ngFor="let p of pairwiseComparisons" [value]="p.key">{{ p.label }}</mat-option>
+          </mat-optgroup>
+          <mat-optgroup label="ผลการเรียนเฉพาะรุ่น">
+            <mat-option *ngFor="let b of batches" [value]="'single:' + b.id">{{ b.name }}</mat-option>
+          </mat-optgroup>
+        </mat-select>
+      </div>
+    </div>
+  </div>
+
+  <!-- โหมดผู้ใช้ทั่วไป: เลือกรุ่นเท่านั้น -->
+  <div class="filter-bar-card" *ngIf="!isAdmin && isActive && batches.length > 0">
+    <div class="filter-group">
+      <label class="filter-label">มุมมองการแสดงผล:</label>
+      <mat-select class="formal-dropdown" panelClass="formal-dropdown-panel"
                   [(ngModel)]="selectedCohort" (selectionChange)="onCohortChange()">
-        <mat-option value="all">ภาพรวมเปรียบเทียบ (2 รุ่น)</mat-option>
-        <mat-option value="1">เฉพาะ รุ่นที่ 62</mat-option>
-        <mat-option value="2">เฉพาะ รุ่นที่ 63</mat-option>
+        <mat-option value="all" *ngIf="batches.length > 1">
+          ภาพรวมเปรียบเทียบทุกรุ่น
+        </mat-option>
+        <mat-optgroup label="เปรียบเทียบคู่รุ่น" *ngIf="pairwiseComparisons.length > 0">
+          <mat-option *ngFor="let p of pairwiseComparisons" [value]="p.key">
+            {{ p.label }}
+          </mat-option>
+        </mat-optgroup>
+        <mat-optgroup label="ผลการเรียนเฉพาะรุ่น">
+          <mat-option *ngFor="let b of batches" [value]="'single:' + b.id">
+            {{ b.name }}
+          </mat-option>
+        </mat-optgroup>
       </mat-select>
     </div>
   </div>
 
-  <!-- Section 1: Main Chart Card -->
-  <section class="card chart-card">
-    <div class="chart-header">
-      <h2 class="chart-title">📊 กราฟแสดงผลการเรียนรายวิชา</h2>
-      <div class="chart-toggle-buttons">
-        <button class="toggle-btn" [class.active]="chartType === 'bar'" (click)="switchChartType('bar')">
-          📊 กราฟแท่ง (Bar)
-        </button>
-        <button class="toggle-btn" [class.active]="chartType === 'line'" (click)="switchChartType('line')">
-          📈 กราฟเส้น (Line)
-        </button>
-      </div>
+  <!-- กรณีหลักสูตรปิดใช้งาน หรือยังไม่มีรุ่นที่เปิด (Inactive / Closed State) -->
+  <div class="inactive-card" *ngIf="!isActive">
+    <div class="inactive-icon">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <div class="inactive-info">
+      <h3>หลักสูตรนี้ปิดใช้งาน หรือยังไม่มีข้อมูลรุ่นในระบบ</h3>
+      <p>{{ inactiveMessage }}</p>
+      <p class="hint">ท่านสามารถเลือกดูหลักสูตรอื่นได้จากตัวเลือกด้านบน</p>
+    </div>
+  </div>
+
+  <!-- เนื้อหาหลักสูตรเมื่อเปิดใช้งาน -->
+  <ng-container *ngIf="isActive">
+    <!-- กรณีไม่มีรายวิชาในหลักสูตร -->
+    <div class="empty-data-card" *ngIf="subjects.length === 0">
+      <p>ยังไม่มีข้อมูลรายวิชาหรือผลการเรียนที่บันทึกไว้ในหลักสูตรนี้</p>
+      <p class="hint" *ngIf="isAdmin">แอดมินสามารถเพิ่มรายวิชาและกรอกคะแนนได้จากเมนูจัดการหลักสูตรและรายวิชา</p>
     </div>
 
-    <div class="chart-body">
-      <canvas id="mainChart"></canvas>
-    </div>
+    <!-- กรณีมีข้อมูลครบถ้วน -->
+    <ng-container *ngIf="subjects.length > 0">
 
-    <!-- Legend (เหลือ 2 รุ่น) -->
-    <div class="chart-legend">
-      <span class="legend-item light-blue"><span class="square"></span> รุ่นที่ 62</span>
-      <span class="legend-item blue"><span class="square"></span> รุ่นที่ 63</span>
-    </div>
-  </section>
+      <!-- ================= Admin AI & Editor Panel (โหมดแก้ไขสำหรับ Admin) ================= -->
+      <section class="card admin-editor-panel" *ngIf="isAdmin && !isPreviewMode">
+        <div class="admin-panel-title">
+          <div class="title-with-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7e22ce" stroke-width="2">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+            </svg>
+            <h3>แผงจัดการบทสรุปและ AI อัจฉริยะ (สำหรับ {{ currentCohortDisplayLabel }})</h3>
+          </div>
+          <div class="title-right-actions">
+            <button type="button" class="btn-api-key-toggle" (click)="showApiKeyInput = !showApiKeyInput" title="ใส่ Gemini API Key เพื่อให้ AI ประมวลผลแบบสด">
+              🔑 {{ geminiApiKey ? 'API Key: มีการเชื่อมต่อแล้ว' : 'ตั้งค่า Gemini API Key' }}
+            </button>
+            <span class="badge-status-tag" [ngClass]="{'published': hasSavedSummary}">
+              {{ hasSavedSummary ? '✓ เผยแพร่แล้ว' : '⚠️ ใช้บทวิเคราะห์เริ่มต้น' }}
+            </span>
+          </div>
+        </div>
 
-  <!-- Section 2: Section Analysis & Suggestions (ตรงตามรูปภาพ) -->
-  <section class="card summary-card">
-    <h3 class="summary-title">📌 วิเคราะห์เชิงลึกและข้อเสนอแนะ</h3>
-    
-    <div class="summary-grid">
-      <!-- จุดแข็ง (3 อันดับสูงสุด) -->
-      <div class="summary-box strengths">
-        <div class="box-title">💪 จุดแข็ง (3 อันดับสูงสุด)</div>
-        <ul class="ranking-list">
-          <li>1. การยิงปืนประจำกาย (89.5 คะแนน)</li>
-          <li>2. ยุทธวิธีระดับหมวด (84.5 คะแนน)</li>
-          <li>3. ระเบียบแถวและวินัย (85.5 คะแนน)</li>
+        <!-- API Key Input Section (เมื่อกดเปิด) -->
+        <div class="api-key-config-box" *ngIf="showApiKeyInput">
+          <div class="api-key-input-row">
+            <label>Google Gemini API Key:</label>
+            <input type="password" [(ngModel)]="geminiApiKey" placeholder="วาง API Key เช่น AIzaSy..." class="key-input" />
+            <button class="btn-save-key" (click)="saveApiKey()">บันทึก Key</button>
+            <button class="btn-cancel-key" (click)="showApiKeyInput = false">ปิด</button>
+          </div>
+          <p class="key-hint">💡 หากระบุ Key ระบบจะส่งคำขอไปยัง Gemini 2.0 / 2.5 Flash ทันที หากเว้นว่างไว้จะใช้ Intelligent Fallback Engine ในระบบครับ</p>
+        </div>
+
+        <!-- AI Trigger Banner with Style Selector -->
+        <div class="ai-banner">
+          <div class="ai-banner-main">
+            <div class="ai-banner-info">
+              <h4>✨ ให้ AI ช่วยวิเคราะห์สถิติจริงและร่างบทสรุปอัตโนมัติ</h4>
+              <p>ระบบจะส่งตัวเลขสถิติจริงทั้งหมด คะแนนรายวิชา และค่าผลต่างของ <strong>{{ courseTitle }}</strong> ให้ AI ประมวลผลเชิงวิชาการ</p>
+            </div>
+
+            <!-- Style Selector -->
+            <div class="ai-style-selector">
+              <span class="style-label">สไตล์การวิเคราะห์:</span>
+              <div class="style-pills">
+                <button type="button" class="style-pill-btn" [class.active]="selectedAiStyle === 'comprehensive'" (click)="onSelectStyle('comprehensive')">
+                  🎓 รายงานประกันคุณภาพ (ละเอียด)
+                </button>
+                <button type="button" class="style-pill-btn" [class.active]="selectedAiStyle === 'executive'" (click)="onSelectStyle('executive')">
+                  ⚡ สรุปเชิงผู้บริหาร (กระชับ)
+                </button>
+                <button type="button" class="style-pill-btn" [class.active]="selectedAiStyle === 'action'" (click)="onSelectStyle('action')">
+                  🎯 เน้นแผนแก้ปัญหา (เชิงรุก)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button class="generate-btn" [disabled]="isAiGenerating" (click)="generateWithAi('generate')">
+            <span *ngIf="!isAiGenerating">✨ ให้ AI วิเคราะห์อัตโนมัติ</span>
+            <span *ngIf="isAiGenerating">⏳ กำลังประมวลผลด้วย AI...</span>
+          </button>
+        </div>
+
+        <!-- AI Assistant Quick Tools -->
+        <div class="ai-quick-tools" *ngIf="adminExecutiveSummary">
+          <span class="tools-label">เครื่องมือช่วยขัดเกลาข้อความ AI:</span>
+          <div class="tools-btn-group">
+            <button type="button" class="btn-ai-tool" [disabled]="isAiGenerating" (click)="generateWithAi('refine_formal')" title="ปรับสำนวนให้เป็นภาษาราชการทหารระดับสูง">
+              ✨ ปรับสำนวนให้ทางการขึ้น
+            </button>
+            <button type="button" class="btn-ai-tool" [disabled]="isAiGenerating" (click)="generateWithAi('summarize_short')" title="สรุปย่อให้กระชับสำหรับผู้บริหาร">
+              ⚡ สรุปย่อให้กระชับลง
+            </button>
+            <button type="button" class="btn-ai-tool" [disabled]="isAiGenerating" (click)="generateWithAi('generate')" title="วิเคราะห์ใหม่ตามสไตล์ที่เลือก">
+              🔄 สร้างบทวิเคราะห์ใหม่
+            </button>
+          </div>
+        </div>
+
+        <!-- Success Alert -->
+        <div class="alert-success" *ngIf="saveSuccessMessage">
+          ✓ {{ saveSuccessMessage }}
+        </div>
+
+        <!-- Editor 1: Executive Summary -->
+        <div class="form-group">
+          <label class="form-label">
+            บทวิเคราะห์เชิงลึก (Executive Summary):
+            <span class="label-hint">แอดมินสามารถพิมพ์ ปรับแก้ หรือเพิ่มเติมข้อความได้อิสระ</span>
+          </label>
+          <textarea class="form-textarea" rows="5" [(ngModel)]="adminExecutiveSummary" placeholder="ระบุบทวิเคราะห์สรุปผลการประเมิน..."></textarea>
+        </div>
+
+        <!-- Editor 2: Action Plan -->
+        <div class="form-group">
+          <label class="form-label">
+            แนวทางการส่งเสริมและพัฒนาการจัดการเรียนการสอน (Action Plan):
+            <span class="label-hint">ระบุข้อเสนอแนะ 1 ข้อ ต่อ 1 บรรทัด</span>
+          </label>
+          <textarea class="form-textarea" rows="5" [(ngModel)]="adminActionPlanText" placeholder="1. [ด้านหลักสูตร] ...&#10;2. [ด้านการจัดการเรียนการสอน] ...&#10;3. [ด้านการฝึกปฏิบัติและเครื่องมือ] ...&#10;4. [ด้านการวัดและประเมินผล] ..."></textarea>
+        </div>
+
+        <div class="editor-actions">
+          <button class="btn-preview-secondary" (click)="togglePreview()">
+            👁️ ดูตัวอย่างหน้าเว็บจริง (Preview)
+          </button>
+          <button class="btn-save" [disabled]="isSavingSummary" (click)="saveAdminSummary()">
+            <span *ngIf="!isSavingSummary">💾 บันทึกและเผยแพร่สู่หน้ารายงาน</span>
+            <span *ngIf="isSavingSummary">⏳ กำลังบันทึก...</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= 1. KPI Stats Summary Cards Row ================= -->
+      <section class="kpi-grid">
+        <!-- กรณี 1: โหมดเปรียบเทียบคู่รุ่น (Pairwise) -->
+        <ng-container *ngIf="isPairwiseCompare && currentPair">
+          <!-- Card 1: คะแนนเฉลี่ยรุ่นก่อนหน้า -->
+          <div class="kpi-card">
+            <div class="kpi-header">คะแนนเฉลี่ยรวม {{ currentPair.prevBatchName }}</div>
+            <div class="kpi-body">
+              <span class="kpi-main-number">{{ prevBatchAvg | number:'1.2-2' }}</span>
+            </div>
+          </div>
+
+          <!-- Card 2: คะแนนเฉลี่ยรุ่นหลัง พร้อมผลต่าง -->
+          <div class="kpi-card">
+            <div class="kpi-header">คะแนนเฉลี่ยรวม {{ currentPair.currBatchName }}</div>
+            <div class="kpi-body">
+              <span class="kpi-main-number">{{ currBatchAvg | number:'1.2-2' }}</span>
+              <span class="kpi-diff-badge" [ngClass]="{'up': pairAvgDiff >= 0, 'down': pairAvgDiff < 0}">
+                <ng-container *ngIf="pairAvgDiff >= 0">↗ +{{ pairAvgDiff | number:'1.2-2' }}</ng-container>
+                <ng-container *ngIf="pairAvgDiff < 0">↘ {{ pairAvgDiff | number:'1.2-2' }}</ng-container>
+              </span>
+            </div>
+          </div>
+
+          <!-- Card 3: วิชาที่คะแนนเพิ่มขึ้น -->
+          <div class="kpi-card">
+            <div class="kpi-header">วิชาที่คะแนนเพิ่มขึ้น ({{ currentPair.currBatchName }})</div>
+            <div class="kpi-body">
+              <div class="kpi-number-with-icon text-success">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                  <polyline points="17 6 23 6 23 12"></polyline>
+                </svg>
+                <span class="kpi-main-number">{{ increasedSubjectCount }}</span>
+                <span class="kpi-unit">วิชา</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: วิชาที่คะแนนลดลง -->
+          <div class="kpi-card">
+            <div class="kpi-header">วิชาที่คะแนนลดลง ({{ currentPair.currBatchName }})</div>
+            <div class="kpi-body">
+              <div class="kpi-number-with-icon text-danger">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+                  <polyline points="17 18 23 18 23 12"></polyline>
+                </svg>
+                <span class="kpi-main-number">{{ decreasedSubjectCount }}</span>
+                <span class="kpi-unit">วิชา</span>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- กรณี 2: โหมดเฉพาะรุ่น (Single View) -->
+        <ng-container *ngIf="isSingleView && displayedBatches.length === 1">
+          <div class="kpi-card">
+            <div class="kpi-header">คะแนนเฉลี่ย {{ displayedBatches[0].name }}</div>
+            <div class="kpi-body">
+              <span class="kpi-main-number">{{ singleBatchAvg | number:'1.2-2' }}</span>
+              <span class="kpi-unit">คะแนน</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">จำนวนรายวิชาทั้งหมด</div>
+            <div class="kpi-body">
+              <span class="kpi-main-number">{{ subjects.length }}</span>
+              <span class="kpi-unit">วิชา</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">วิชาที่คะแนนสูงสุด</div>
+            <div class="kpi-body">
+              <span class="kpi-main-number text-success" *ngIf="singleTopSubject">{{ singleTopSubject.score | number:'1.1-1' }}</span>
+              <span class="kpi-sub-text" *ngIf="singleTopSubject">{{ singleTopSubject.name }}</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">วิชาที่ต้องส่งเสริม</div>
+            <div class="kpi-body">
+              <span class="kpi-main-number text-danger" *ngIf="singleBottomSubject">{{ singleBottomSubject.score | number:'1.1-1' }}</span>
+              <span class="kpi-sub-text" *ngIf="singleBottomSubject">{{ singleBottomSubject.name }}</span>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- กรณี 3: โหมดภาพรวมทุกรุ่น (All) -->
+        <ng-container *ngIf="isAllCompare">
+          <div class="kpi-card">
+            <div class="kpi-header">คะแนนเฉลี่ยรวมทุกรุ่น</div>
+            <div class="kpi-body">
+              <span class="kpi-main-number">{{ totalAvg | number:'1.2-2' }}</span>
+              <span class="kpi-unit">คะแนน</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">จำนวนรุ่นที่เปิดสอน</div>
+            <div class="kpi-body">
+              <span class="kpi-main-number">{{ batches.length }}</span>
+              <span class="kpi-unit">รุ่น</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">จำนวนรายวิชา</div>
+            <div class="kpi-body">
+              <span class="kpi-main-number">{{ subjects.length }}</span>
+              <span class="kpi-unit">วิชา</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">วิชาที่มีพัฒนาการสูงสุด</div>
+            <div class="kpi-body">
+              <span class="kpi-main-number text-success" *ngIf="topImproved">+{{ topImproved.diff }}</span>
+              <span class="kpi-sub-text" *ngIf="topImproved">{{ topImproved.name }}</span>
+            </div>
+          </div>
+        </ng-container>
+      </section>
+
+      <!-- ================= 2. Main Chart Card with Filter Tabs ================= -->
+      <section class="card chart-card">
+        <div class="chart-header">
+          <div class="chart-header-left">
+            <h2 class="chart-title">
+              <ng-container *ngIf="isPairwiseCompare && currentPair">
+                กราฟเปรียบเทียบคะแนนรายวิชา ({{ currentPair.prevBatchName }} vs {{ currentPair.currBatchName }})
+              </ng-container>
+              <ng-container *ngIf="isSingleView && displayedBatches.length === 1">
+                กราฟผลการเรียนรายวิชา ({{ displayedBatches[0].name }})
+              </ng-container>
+              <ng-container *ngIf="isAllCompare">
+                กราฟเปรียบเทียบคะแนนรายวิชา (ภาพรวมทุกรุ่น)
+              </ng-container>
+            </h2>
+          </div>
+
+          <!-- Filter Pills (สไตล์เมนูแท็บกรองบนหัวกราฟ) -->
+          <div class="chart-filter-bar">
+            <button class="filter-pill-btn" [class.active]="chartFilter === 'all'" (click)="setChartFilter('all')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+              </svg>
+              ทั้งหมด
+            </button>
+
+            <!-- สำหรับโหมดเปรียบเทียบคู่รุ่น -->
+            <ng-container *ngIf="isPairwiseCompare && currentPair">
+              <button class="filter-pill-btn pill-blue" [class.active]="chartFilter === 'top3_prev'" (click)="setChartFilter('top3_prev')">
+                <span class="pill-dot blue-dot"></span> Top 3 ({{ currentPair.prevBatchName }})
+              </button>
+              <button class="filter-pill-btn pill-pink" [class.active]="chartFilter === 'bottom3_prev'" (click)="setChartFilter('bottom3_prev')">
+                <span class="pill-dot pink-dot"></span> Bottom 3 ({{ currentPair.prevBatchName }})
+              </button>
+              <button class="filter-pill-btn pill-blue" [class.active]="chartFilter === 'top3_curr'" (click)="setChartFilter('top3_curr')">
+                <span class="pill-dot blue-dot"></span> Top 3 ({{ currentPair.currBatchName }})
+              </button>
+              <button class="filter-pill-btn pill-pink" [class.active]="chartFilter === 'bottom3_curr'" (click)="setChartFilter('bottom3_curr')">
+                <span class="pill-dot pink-dot"></span> Bottom 3 ({{ currentPair.currBatchName }})
+              </button>
+            </ng-container>
+
+            <!-- สำหรับโหมดทั่วไป / ภาพรวม -->
+            <ng-container *ngIf="!isPairwiseCompare">
+              <button class="filter-pill-btn pill-blue" [class.active]="chartFilter === 'top3'" (click)="setChartFilter('top3')">
+                <span class="pill-dot blue-dot"></span> Top 3
+              </button>
+              <button class="filter-pill-btn pill-pink" [class.active]="chartFilter === 'bottom3'" (click)="setChartFilter('bottom3')">
+                <span class="pill-dot pink-dot"></span> Bottom 3
+              </button>
+            </ng-container>
+
+            <!-- สลับ กราฟแท่ง / กราฟเส้น -->
+            <div class="chart-type-toggle">
+              <button class="type-btn" [class.active]="chartType === 'bar'" (click)="switchChartType('bar')" title="กราฟแท่ง">
+                แท่ง
+              </button>
+              <button class="type-btn" [class.active]="chartType === 'line'" (click)="switchChartType('line')" title="กราฟเส้น">
+                เส้น
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-body">
+          <canvas id="mainChart"></canvas>
+        </div>
+
+        <!-- Dynamic Legend -->
+        <div class="chart-legend" *ngIf="displayedBatches.length > 0">
+          <ng-container *ngFor="let b of displayedBatches">
+            <span class="legend-item" [ngClass]="getBatchColorClass(b.id)">
+              <span class="square"></span> {{ b.name }}
+            </span>
+          </ng-container>
+        </div>
+      </section>
+
+      <!-- ================= 3. Section Analysis & Suggestions ================= -->
+      <section class="card summary-card">
+        <div class="summary-header-row">
+          <div class="title-with-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6b21a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <h3 class="summary-title">การวิเคราะห์แนวโน้มและข้อเสนอแนะเชิงลึก</h3>
+          </div>
+
+          <span class="badge-approved" *ngIf="hasSavedSummary">
+            ✓ ได้รับการอนุมัติและเผยแพร่แล้ว
+          </span>
+        </div>
+        
+        <!-- กรณีมีบทวิเคราะห์ที่แอดมินหรือ AI บันทึกไว้แล้ว -->
+        <div class="executive-summary-content" *ngIf="hasSavedSummary && savedExecutiveSummary">
+          <p class="summary-paragraph">{{ savedExecutiveSummary }}</p>
+        </div>
+
+        <!-- กรณียังไม่มีบทวิเคราะห์ที่บันทึกไว้ ให้แสดงข้อมูลสรุปจากสถิติจริง -->
+        <div class="summary-grid" *ngIf="!hasSavedSummary && (currentTopImproved || currentTopDeclined)">
+          <div class="summary-box highlight-purple" *ngIf="currentTopImproved">
+            <div class="box-title">รายวิชาที่มีพัฒนาการสูงสุด (คะแนนเพิ่มขึ้น)</div>
+            <p>
+              วิชาที่มีคะแนนเพิ่มขึ้นสูงสุด ได้แก่ 
+              <strong>{{ currentTopImproved.name }} (+{{ currentTopImproved.diff }} คะแนน)</strong> 
+              แสดงถึงประสิทธิผลและพัฒนาการในการจัดการเรียนการสอน
+            </p>
+          </div>
+          <div class="summary-box highlight-orange" *ngIf="currentTopDeclined">
+            <div class="box-title">รายวิชาที่ต้องติดตามพัฒนาการ (คะแนนลดลง)</div>
+            <p>
+              วิชาที่มีคะแนนลดลง ได้แก่ 
+              <strong>{{ currentTopDeclined.name }} ({{ currentTopDeclined.diff }} คะแนน)</strong> 
+              ควรพิจารณาทบทวนเนื้อหาและกระบวนการจัดการเรียนรู้เพื่อยกระดับผลสัมฤทธิ์
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 4. Data Table Card ================= -->
+      <section class="card table-card">
+        <div class="title-with-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6b21a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <h3 class="table-title">
+            ตารางผลการเรียนรู้รายวิชาและแนวโน้มการพัฒนา
+            <span class="table-subtitle" *ngIf="isPairwiseCompare && currentPair">(เปรียบเทียบ {{ currentPair.prevBatchName }} กับ {{ currentPair.currBatchName }})</span>
+            <span class="table-subtitle" *ngIf="isSingleView && displayedBatches.length === 1">(เฉพาะ {{ displayedBatches[0].name }})</span>
+            <span class="table-subtitle" *ngIf="isAllCompare">(รวมทุกรุ่น)</span>
+          </h3>
+        </div>
+
+        <div class="table-responsive">
+          <table class="formal-table">
+            <thead>
+              <!-- กรณี 1: ภาพรวมทุกรุ่น -->
+              <tr *ngIf="isAllCompare">
+                <th class="text-center col-num">ลำดับ</th>
+                <th>ชื่อรายวิชา</th>
+                <th *ngFor="let b of batches" class="text-center">{{ b.name }}</th>
+                <th class="text-center">เฉลี่ยรวม</th>
+                <th class="text-center">ผลต่าง (+/-)</th>
+              </tr>
+
+              <!-- กรณี 2: เปรียบเทียบคู่รุ่น -->
+              <tr *ngIf="isPairwiseCompare && currentPair">
+                <th class="text-center col-num">ลำดับ</th>
+                <th>ชื่อรายวิชา</th>
+                <th class="text-center">{{ currentPair.prevBatchName }}</th>
+                <th class="text-center">{{ currentPair.currBatchName }}</th>
+                <th class="text-center">เฉลี่ย</th>
+                <th class="text-center">ผลต่าง (+/-)</th>
+                <th class="text-center">แนวโน้ม</th>
+              </tr>
+
+              <!-- กรณี 3: แสดงเฉพาะรุ่นเดี่ยว -->
+              <tr *ngIf="isSingleView && displayedBatches.length === 1">
+                <th class="text-center col-num">ลำดับ</th>
+                <th>ชื่อรายวิชา</th>
+                <th class="text-center">คะแนน {{ displayedBatches[0].name }} (100)</th>
+                <th class="text-center">ระดับผลการเรียน</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <!-- กรณี 1: ข้อมูลภาพรวมทุกรุ่น -->
+              <ng-container *ngIf="isAllCompare">
+                <tr *ngFor="let s of subjects; let i = index">
+                  <td class="text-center">{{ i + 1 }}</td>
+                  <td class="font-medium">{{ s.name }}</td>
+                  <td *ngFor="let b of batches" class="text-center">
+                    {{ getBatchScore(s, b.id) }}
+                  </td>
+                  <td class="text-center font-semibold">
+                    {{ s.avgScore > 0 ? (s.avgScore | number:'1.1-1') : '-' }}
+                  </td>
+                  <td class="text-center">
+                    <span *ngIf="s.diff !== null" class="diff-badge" [ngClass]="{'up': (s.diff || 0) >= 0, 'down': (s.diff || 0) < 0}">
+                      {{ (s.diff || 0) >= 0 ? '+' + s.diff : s.diff }}
+                    </span>
+                    <span *ngIf="s.diff === null">-</span>
+                  </td>
+                </tr>
+              </ng-container>
+
+              <!-- กรณี 2: ข้อมูลเปรียบเทียบคู่รุ่น -->
+              <ng-container *ngIf="isPairwiseCompare && currentPair">
+                <tr *ngFor="let s of subjects; let i = index">
+                  <td class="text-center">{{ i + 1 }}</td>
+                  <td class="font-medium">{{ s.name }}</td>
+                  <td class="text-center">{{ getBatchScore(s, currentPair.prevBatchId) }}</td>
+                  <td class="text-center">{{ getBatchScore(s, currentPair.currBatchId) }}</td>
+                  <td class="text-center font-semibold">
+                    {{ s.avgScore > 0 ? (s.avgScore | number:'1.1-1') : '-' }}
+                  </td>
+                  <td class="text-center">
+                    <span *ngIf="getSubjectDiff(s) !== null" class="diff-badge" [ngClass]="{'up': (getSubjectDiff(s) || 0) >= 0, 'down': (getSubjectDiff(s) || 0) < 0}">
+                      {{ (getSubjectDiff(s) || 0) >= 0 ? '+' + getSubjectDiff(s) : getSubjectDiff(s) }}
+                    </span>
+                    <span *ngIf="getSubjectDiff(s) === null">-</span>
+                  </td>
+                  <td class="text-center">
+                    <span *ngIf="getSubjectDiff(s) !== null && (getSubjectDiff(s) || 0) > 0" class="badge-tag tag-success">เพิ่มขึ้น</span>
+                    <span *ngIf="getSubjectDiff(s) !== null && (getSubjectDiff(s) || 0) < 0" class="badge-tag tag-danger">ลดลง</span>
+                    <span *ngIf="getSubjectDiff(s) !== null && (getSubjectDiff(s) || 0) === 0" class="badge-tag tag-neutral">คงที่</span>
+                    <span *ngIf="getSubjectDiff(s) === null">-</span>
+                  </td>
+                </tr>
+              </ng-container>
+
+              <!-- กรณี 3: ข้อมูลเฉพาะรุ่นเดี่ยว -->
+              <ng-container *ngIf="isSingleView && displayedBatches.length === 1">
+                <tr *ngFor="let s of subjects; let i = index">
+                  <td class="text-center">{{ i + 1 }}</td>
+                  <td class="font-medium">{{ s.name }}</td>
+                  <td class="text-center font-semibold">
+                    {{ getBatchScore(s, displayedBatches[0].id) }}
+                  </td>
+                  <td class="text-center">
+                    <span class="level-badge" [ngClass]="{
+                      'level-high': getRatingLevel(getBatchScoreNumber(s, displayedBatches[0].id)) === 'มากที่สุด',
+                      'level-medium': getRatingLevel(getBatchScoreNumber(s, displayedBatches[0].id)) === 'มาก',
+                      'level-normal': getRatingLevel(getBatchScoreNumber(s, displayedBatches[0].id)) === 'ปานกลาง',
+                      'level-low': getRatingLevel(getBatchScoreNumber(s, displayedBatches[0].id)) === 'พอใช้',
+                      'level-lowest': getRatingLevel(getBatchScoreNumber(s, displayedBatches[0].id)) === 'ปรับปรุง'
+                    }">
+                      {{ getRatingLevel(getBatchScoreNumber(s, displayedBatches[0].id)) }}
+                    </span>
+                  </td>
+                </tr>
+              </ng-container>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= 5. Action Plan / Recommendations ================= -->
+      <section class="card action-plan-card" *ngIf="(hasSavedSummary && savedActionPlans.length > 0) || actionPlans.length > 0">
+        <div class="title-with-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6b21a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+          </svg>
+          <h3 class="action-title">แนวทางการส่งเสริมและพัฒนาการจัดการเรียนการสอน</h3>
+        </div>
+        <ul class="action-list">
+          <ng-container *ngIf="hasSavedSummary && savedActionPlans.length > 0">
+            <li *ngFor="let plan of savedActionPlans">
+              {{ plan }}
+            </li>
+          </ng-container>
+          <ng-container *ngIf="!hasSavedSummary">
+            <li *ngFor="let plan of actionPlans">
+              {{ plan }}
+            </li>
+          </ng-container>
         </ul>
-      </div>
+      </section>
 
-      <!-- จุดอ่อน (3 อันดับต่ำสุด) -->
-      <div class="summary-box weaknesses">
-        <div class="box-title">⚠️ จุดอ่อน (3 อันดับต่ำสุด)</div>
-        <ul class="ranking-list">
-          <li>1. ความมั่นคงไซเบอร์ (61.0 คะแนน)</li>
-          <li>2. วิชาการต้นแบบอาวุธ (66.5 คะแนน)</li>
-          <li>3. วิชาสื่อสารและเรดาร์ (68.5 คะแนน)</li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- พัฒนาการ & ประเด็นเฝ้าระวัง -->
-    <div class="summary-grid marginTop">
-      <div class="summary-box highlight-blue">
-        <div class="box-title">🚀 พัฒนาการก้าวกระโดด</div>
-        <p>วิชาที่มีคะแนนเพิ่มขึ้นสูงสุดในรุ่นคือ <strong>การปฐมพยาบาลสนาม (+8 คะแนน)</strong> แสดงถึงเทคนิคการสอนที่ประสบความสำเร็จ</p>
-      </div>
-      <div class="summary-box highlight-orange">
-        <div class="box-title">🚨 ประเด็นที่ต้องเฝ้าระวัง</div>
-        <p>วิชาที่มีคะแนนลดลงมากที่สุดในรุ่นคือ <strong>วิชาสื่อสารและเรดาร์ (-7 คะแนน)</strong> ต้องเข้าตรวจสอบเนื้อหาและประเมินความพร้อมผู้เรียน</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Section 3: Data Table Card (ดึงข้อมูลตรงตามรูปภาพ + ตัดรุ่นที่ 3 ออก) -->
-  <section class="card table-card">
-    <h3 class="table-title">📋 ตารางข้อมูลผลการเรียนเชิงลึก (รวมทั้งหมด 12 รายวิชา)</h3>
-    <div class="table-responsive">
-      <table>
-        <thead>
-          <tr>
-            <th>ลำดับ</th>
-            <th>ชื่อวิชา</th>
-            <th>รุ่นที่ 62</th>
-            <th>รุ่นที่ 63</th>
-            <th>เฉลี่ยรวม</th>
-            <th>ผลต่าง (+/-)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>1</td>
-            <td class="bold">การยิงปืนประจำกาย</td>
-            <td>88</td>
-            <td>91</td>
-            <td class="bold">89.5</td>
-            <td class="trend up">▲ +3.0</td>
-          </tr>
-          <tr>
-            <td>2</td>
-            <td class="bold">ยุทธวิธีระดับหมวด</td>
-            <td>82</td>
-            <td>87</td>
-            <td class="bold">84.5</td>
-            <td class="trend up">▲ +5.0</td>
-          </tr>
-          <tr>
-            <td>3</td>
-            <td class="bold">การปฐมพยาบาลสนาม</td>
-            <td>75</td>
-            <td>83</td>
-            <td class="bold">79.0</td>
-            <td class="trend up">▲ +8.0</td>
-          </tr>
-          <tr>
-            <td>4</td>
-            <td class="bold">ระเบียบแถวและวินัย</td>
-            <td>85</td>
-            <td>86</td>
-            <td class="bold">85.5</td>
-            <td class="trend up">▲ +1.0</td>
-          </tr>
-          <tr>
-            <td>5</td>
-            <td class="bold">แผนที่และเข็มทิศ</td>
-            <td>70</td>
-            <td>74</td>
-            <td class="bold">72.0</td>
-            <td class="trend up">▲ +4.0</td>
-          </tr>
-          <tr>
-            <td>6</td>
-            <td class="bold">วิชาสื่อสารและเรดาร์</td>
-            <td>72</td>
-            <td>65</td>
-            <td class="bold">68.5</td>
-            <td class="trend down">▼ -7.0</td>
-          </tr>
-          <tr>
-            <td>7</td>
-            <td class="bold">วิชาการต้นแบบอาวุธ</td>
-            <td>68</td>
-            <td>65</td>
-            <td class="bold">66.5</td>
-            <td class="trend down">▼ -3.0</td>
-          </tr>
-          <tr>
-            <td>8</td>
-            <td class="bold">ความมั่นคงไซเบอร์</td>
-            <td>60</td>
-            <td>62</td>
-            <td class="bold">61.0</td>
-            <td class="trend up">▲ +2.0</td>
-          </tr>
-          <tr>
-            <td>9</td>
-            <td class="bold">กฎหมายสงคราม</td>
-            <td>78</td>
-            <td>72</td>
-            <td class="bold">75.0</td>
-            <td class="trend down">▼ -6.0</td>
-          </tr>
-          <tr>
-            <td>10</td>
-            <td class="bold">การต่อสู้ระยะประชิด</td>
-            <td>80</td>
-            <td>82</td>
-            <td class="bold">81.0</td>
-            <td class="trend up">▲ +2.0</td>
-          </tr>
-          <tr>
-            <td>11</td>
-            <td class="bold">ยุทธวิธีทางน้ำ</td>
-            <td>65</td>
-            <td>70</td>
-            <td class="bold">67.5</td>
-            <td class="trend up">▲ +5.0</td>
-          </tr>
-          <tr>
-            <td>12</td>
-            <td class="bold">ส่งกำลังบำรุง</td>
-            <td>74</td>
-            <td>71</td>
-            <td class="bold">72.5</td>
-            <td class="trend down">▼ -3.0</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- Section 4: Action Plan / Recommendations -->
-  <section class="card action-plan-card">
-    <h3 class="action-title">💡 ข้อเสนอแนะและกิจกรรมส่งเสริมการเรียนรู้สำหรับ (ภาพรวมทุกรุ่น)</h3>
-    <ul class="action-list">
-      <li><strong>กิจกรรมคลินิกการเรียนรู้ (Peer Tutoring):</strong> นำกำลังพลที่ได้คะแนน Top 3 ของรุ่น มาช่วยติวเชิงลึกให้เพื่อนร่วมรุ่น</li>
-      <li><strong>ทบทวนหลังการปฏิบัติ (AAR):</strong> จัด AAR เข้มข้นในวิชาที่มีคะแนนลดลง เพื่อหาสาเหตุและปรับรูปแบบการสอนก่อนเริ่มรุ่นถัดไป</li>
-    </ul>
-  </section>
+    </ng-container>
+  </ng-container>
 
 </div>
-

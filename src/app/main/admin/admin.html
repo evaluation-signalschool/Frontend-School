@@ -15,6 +15,25 @@
     </button>
   </div>
 
+  <!-- แถบโปรไฟล์ผู้ดูแลระบบปัจจุบัน -->
+  <div class="admin-profile-bar">
+    <div class="profile-info-wrap">
+      <div class="avatar-circle" [ngClass]="{'superadmin-avatar': isSuperAdmin}">
+        <mat-icon>{{ isSuperAdmin ? 'shield' : 'account_circle' }}</mat-icon>
+      </div>
+      <div class="user-meta">
+        <div class="meta-row">
+          <span class="user-name">{{ adminName }}</span>
+          <span class="role-badge" [ngClass]="isSuperAdmin ? 'badge-superadmin' : 'badge-admin'">
+            <mat-icon class="badge-icon">{{ isSuperAdmin ? 'verified_user' : 'person' }}</mat-icon>
+            {{ isSuperAdmin ? 'ผู้ดูแลระบบหลัก (Super Admin)' : 'เจ้าหน้าที่ดูแลระบบ (Admin)' }}
+          </span>
+        </div>
+        <span class="user-email">@{{ adminUsername || adminEmail }}</span>
+      </div>
+    </div>
+  </div>
+
   <div class="content-container">
     <p>หน้านี้เป็นส่วนที่ใช้สำหรับผู้ดูแลระบบในการจัดการลิงก์แบบประเมินและข้อมูลต่างๆ</p>
 
@@ -58,7 +77,20 @@
 
         <button mat-raised-button class="btn-navigate btn-teal" routerLink="/admin/profile-approvals">
           <mat-icon class="btn-icon">how_to_reg</mat-icon>
-          <span>จัดการคำร้องแก้ไขโปรไฟล์</span>
+          <span>อนุมัติการแก้ไขโปรไฟล์</span>
+        </button>
+      </div>
+
+      <!-- จัดการข่าวสาร -->
+      <div class="action-card news-management-card">
+        <div class="card-details">
+          <h4 class="card-title">จัดการข่าวสารและประกาศ</h4>
+          <p class="card-subtitle">เพิ่มข่าวสารใหม่ อัปโหลดไฟล์แนบ และลบข่าวสาร</p>
+        </div>
+
+        <button mat-raised-button class="btn-navigate btn-teal" routerLink="/admin/news-management">
+          <mat-icon class="btn-icon">campaign</mat-icon>
+          <span>จัดการข่าวสาร</span>
         </button>
       </div>
 
@@ -86,6 +118,19 @@
         <button mat-raised-button class="btn-navigate" routerLink="/score-submission">
           <mat-icon class="btn-icon">fact_check</mat-icon>
           <span>ตรวจสอบการส่งคะแนน</span>
+        </button>
+      </div>
+
+      <!-- จัดลำดับผลการเรียน (Student Rankings) -->
+      <div class="action-card ranking-card">
+        <div class="card-details">
+          <h4 class="card-title">จัดลำดับผลการเรียน (Student Rankings)</h4>
+          <p class="card-subtitle">แสดงอันดับที่ 1 ถึง N พร้อมระบบปลดล็อคลำดับซ้ำด้วยวิชาที่แอดมินเลือก และส่งออก Excel/พิมพ์</p>
+        </div>
+
+        <button mat-raised-button class="btn-navigate" routerLink="/admin/ranking">
+          <mat-icon class="btn-icon">military_tech</mat-icon>
+          <span>จัดลำดับผลการเรียน</span>
         </button>
       </div>
 
@@ -127,6 +172,49 @@
         <button mat-raised-button class="btn-navigate btn-orange" routerLink="/admin/certificate">
           <mat-icon class="btn-icon">card_membership</mat-icon>
           ไปยังหน้าออกใบประกาศฯ
+        </button>
+      </div>
+
+      <!-- 🔵 หมวดหมู่: สรุปผลและวิเคราะห์สถิติ (AI Summary) -->
+      <div class="action-card ai-summary-card">
+        <div class="card-details">
+          <h4 class="card-title">จัดการบทสรุปผลการฝึกอบรม (AI Analysis)</h4>
+          <p class="card-subtitle">ใช้ AI ช่วยวิเคราะห์สถิติจริง ตรวจสอบ ปรับปรุง และบันทึกบทสรุปเผยแพร่</p>
+        </div>
+
+        <button mat-raised-button class="btn-navigate btn-purple" routerLink="/admin/training-summary">
+          <mat-icon class="btn-icon">auto_awesome</mat-icon>
+          <span>จัดการบทสรุป & AI</span>
+        </button>
+      </div>
+
+      <!-- 🛡️ หมวดหมู่: ความปลอดภัยและการบริหารระบบ (Administration & Audit) -->
+      <!-- จัดการผู้ดูแลระบบ (เฉพาะ Super Admin) -->
+      <div class="action-card admin-users-card" *ngIf="isSuperAdmin">
+        <div class="card-details">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <h4 class="card-title" style="color: #4338ca;">จัดการผู้ดูแลระบบ (Admin Users)</h4>
+            <span class="superadmin-badge-small">สำหรับแอดมินหลัก</span>
+          </div>
+          <p class="card-subtitle">เพิ่มผู้ดูแลระบบคนใหม่ กำหนดสิทธิ์การใช้งาน ระงับบัญชี และรีเซ็ตรหัสผ่าน</p>
+        </div>
+
+        <button mat-raised-button class="btn-navigate btn-indigo" routerLink="/admin/users">
+          <mat-icon class="btn-icon">manage_accounts</mat-icon>
+          <span>จัดการผู้ดูแลระบบ</span>
+        </button>
+      </div>
+
+      <!-- บันทึกประวัติกิจกรรมและการเข้าใช้งาน (Activity Logs) -->
+      <div class="action-card admin-logs-card">
+        <div class="card-details">
+          <h4 class="card-title" style="color: #0f766e;">ประวัติการทำงานและเข้าสู่ระบบ (Activity Logs)</h4>
+          <p class="card-subtitle">ตรวจสอบประวัติการปฏิบัติงาน การบันทึกคะแนน อนุมัติข้อมูล และการเข้าสู่ระบบย้อนหลัง</p>
+        </div>
+
+        <button mat-raised-button class="btn-navigate btn-slate" routerLink="/admin/logs">
+          <mat-icon class="btn-icon">history</mat-icon>
+          <span>ดูประวัติกิจกรรม</span>
         </button>
       </div>
 

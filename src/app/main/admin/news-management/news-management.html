@@ -1,0 +1,92 @@
+<div class="news-management-page">
+  <div class="page-header">
+    <button mat-icon-button class="back-button" routerLink="/admin">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+    <h1>จัดการข่าวสารและประกาศ</h1>
+  </div>
+
+  <div class="content-container">
+    <!-- Form Section -->
+    <div class="card form-card">
+      <h2>{{ editMode ? 'แก้ไขข่าวสาร' : 'เพิ่มข่าวสารใหม่' }}</h2>
+      <form (ngSubmit)="onSubmit()" #newsForm="ngForm" class="news-form">
+        
+        <div class="form-group">
+          <label>หัวข้อข่าว <span class="required">*</span></label>
+          <input type="text" [(ngModel)]="formData.title" name="title" required placeholder="ระบุหัวข้อข่าวสาร">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>ประเภท <span class="required">*</span></label>
+            <select [(ngModel)]="formData.type" name="type" required>
+              <option value="announce">📣 ประกาศ</option>
+              <option value="news">📰 ข่าวสาร</option>
+              <option value="activity">🎓 กิจกรรม</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>วันที่ (ถ้ามี)</label>
+            <input type="date" [(ngModel)]="formData.news_date" name="news_date">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>รายละเอียด <span class="required">*</span></label>
+          <textarea [(ngModel)]="formData.description" name="description" rows="4" required placeholder="ระบุรายละเอียดข่าวสาร"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>ไฟล์แนบ (ถ้ามี)</label>
+          <input type="file" (change)="onFileSelected($event)" class="file-input">
+        </div>
+
+        <div class="form-actions" style="display: flex; gap: 10px;">
+          <button type="submit" class="btn-submit" [disabled]="!newsForm.form.valid || isSubmitting" style="flex: 1;">
+            {{ editMode ? (isSubmitting ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข') : (isSubmitting ? 'กำลังบันทึก...' : 'เพิ่มข่าวสาร') }}
+          </button>
+          <button *ngIf="editMode" type="button" class="btn-cancel" (click)="cancelEdit()" style="flex: 1; background: #e2e8f0; color: #475569; border-radius: 8px; font-weight: 600; border: none; cursor: pointer;">
+            ยกเลิก
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- List Section -->
+    <div class="card list-card">
+      <h2>รายการข่าวสารปัจจุบัน</h2>
+      
+      <div class="news-list">
+        <div class="news-item" *ngFor="let item of newsList">
+          <div class="news-info">
+            <span class="badge" [ngClass]="item.type">{{ getTypeLabel(item.type) }}</span>
+            <div class="news-text">
+              <h3>{{ item.title }}</h3>
+              <p>{{ item.news_date | date:'dd/MM/yyyy' }}</p>
+            </div>
+            <a *ngIf="item.file_url" [href]="getFileUrl(item.file_url)" target="_blank" class="file-link">
+              <mat-icon>attachment</mat-icon> {{ item.file_name }}
+            </a>
+          </div>
+          <div class="action-buttons" style="display: flex; gap: 4px;">
+            <button mat-icon-button color="primary" (click)="editNews(item)" title="แก้ไขข่าวสาร">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" (click)="deleteNews(item.id)" title="ลบข่าวสาร">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+        
+        <div *ngIf="isLoading" class="loading-state" style="text-align: center; color: #6b7280; padding: 40px 20px;">
+          กำลังโหลดข้อมูล...
+        </div>
+        
+        <div *ngIf="!isLoading && newsList.length === 0" class="empty-state">
+          ยังไม่มีข่าวสารในระบบ
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

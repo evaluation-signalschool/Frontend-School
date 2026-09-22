@@ -122,9 +122,10 @@ export class ScoreService {
     return this.http.put<any>(
       `${environment.apiUrl}/settings/max-score`,
       payload,
-      { headers: this.getHeaders() }, // ควรเช็กว่าใช้ Admin หรือ User Header
+      { headers: this.getAdminHeaders() },
     );
   }
+
 
   // 6. บันทึกคะแนนแบบ Bulk (แอดมิน - ทั้งห้อง)
   saveAdminBulkScores(payload: {
@@ -177,6 +178,21 @@ export class ScoreService {
   saveScoreSubmissions(payload: { batch_id: number; submissions: any[] }): Observable<any> {
     return this.http.post<any>(
       `${environment.apiUrl}/score-submissions/save`,
+      payload,
+      { headers: this.getAdminHeaders() }
+    );
+  }
+
+  // ==========================================
+  // จัดอันดับนักเรียนระดับรุ่น (พร้อมตรวจสอบความสมบูรณ์และแก้ปัญหาคะแนนเท่ากัน)
+  // ==========================================
+  getBatchRanking(batchId: number, subjectIds?: number[]): Observable<any> {
+    const payload: any = { batch_id: batchId };
+    if (subjectIds !== undefined) {
+      payload.subject_ids = subjectIds;
+    }
+    return this.http.post<any>(
+      `${environment.apiUrl}/score/ranking`,
       payload,
       { headers: this.getAdminHeaders() }
     );

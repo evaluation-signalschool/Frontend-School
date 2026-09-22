@@ -1,0 +1,303 @@
+<div class="admin-users-page">
+  <!-- ส่วนหัวของหน้า -->
+  <div class="page-header">
+    <div class="header-left">
+      <button mat-icon-button class="back-button" routerLink="/admin" title="กลับหน้าแอดมิน">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div>
+        <h1 class="page-title">จัดการบัญชีผู้ดูแลระบบ (Admin Users)</h1>
+        <p class="page-subtitle">จัดการรายชื่อ กำหนดสิทธิ์ และควบคุมการเข้าใช้งานระบบสำหรับผู้ดูแลระบบ</p>
+      </div>
+    </div>
+
+    <div class="header-actions" style="display: flex; align-items: center; gap: 8px;">
+      <button mat-stroked-button class="btn-refresh-admin" (click)="loadAdmins()" [disabled]="isLoading" title="รีเฟรชข้อมูล" style="border-radius: 8px; font-weight: 600; color: #475569;">
+        <mat-icon [class.spin-icon]="isLoading">refresh</mat-icon>
+        <span>รีเฟรช</span>
+      </button>
+      <button mat-raised-button class="btn-create-admin" (click)="openCreateModal()">
+        <mat-icon>person_add</mat-icon>
+        <span>เพิ่มผู้ดูแลระบบใหม่</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- กล่องเนื้อหาหลัก -->
+  <div class="content-card">
+    <!-- แถบแจ้งเตือน / สรุป -->
+    <div class="info-alert">
+      <mat-icon class="alert-icon">shield</mat-icon>
+      <div class="alert-text">
+        <strong>ระดับสิทธิ์การใช้งาน:</strong> 
+        <b>Super Admin</b> สามารถจัดการบัญชีผู้ดูแลระบบคนอื่นได้ทั้งหมด | 
+        <b>Admin</b> ปฏิบัติหน้าที่จัดการข้อมูลนักเรียน คะแนน และแบบประเมินตามปกติ
+      </div>
+    </div>
+
+    <!-- ตารางรายชื่อผู้ดูแลระบบ -->
+    <div class="table-responsive">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>ผู้ดูแลระบบ</th>
+            <th>บทบาท / สิทธิ์</th>
+            <th>สถานะ</th>
+            <th>เข้าสู่ระบบล่าสุด</th>
+            <th style="text-align: center;">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Loading state -->
+          <tr *ngIf="isLoading">
+            <td colspan="5" class="text-center py-5">
+              <div class="loading-state">
+                <mat-icon class="spin-icon">sync</mat-icon>
+                <span>กำลังโหลดข้อมูลผู้ดูแลระบบ...</span>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty state -->
+          <tr *ngIf="!isLoading && admins.length === 0">
+            <td colspan="5" class="text-center py-5">
+              <div class="empty-state">
+                <mat-icon class="empty-icon">group_off</mat-icon>
+                <p>ไม่พบข้อมูลผู้ดูแลระบบ</p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Data rows -->
+          <tr *ngFor="let admin of admins" [class.current-user-row]="admin.id === currentAdminId">
+            <!-- ข้อมูลชื่อ-อีเมล -->
+            <td>
+              <div class="user-cell">
+                <div class="avatar" [ngClass]="admin.role === 'superadmin' ? 'avatar-super' : 'avatar-normal'">
+                  <mat-icon>{{ admin.role === 'superadmin' ? 'shield' : 'person' }}</mat-icon>
+                </div>
+                <div class="user-details">
+                  <div class="name-line">
+                    <span class="admin-name">{{ admin.name }}</span>
+                    <span *ngIf="admin.id === currentAdminId" class="badge-me">คุณ</span>
+                  </div>
+                  <span class="admin-email">@{{ admin.username || admin.email }}</span>
+                </div>
+              </div>
+            </td>
+
+            <!-- บทบาท / สิทธิ์ -->
+            <td>
+              <div class="role-cell">
+                <span class="role-tag" [ngClass]="admin.role === 'superadmin' ? 'tag-super' : 'tag-admin'">
+                  <mat-icon class="tag-icon">{{ admin.role === 'superadmin' ? 'verified_user' : 'badge' }}</mat-icon>
+                  {{ admin.role === 'superadmin' ? 'Super Admin' : 'Admin' }}
+                </span>
+
+                <!-- ปุ่มสลับสิทธิ์ (ถ้าไม่ใช่ตัวเอง) -->
+                <button *ngIf="admin.id !== currentAdminId" 
+                        class="btn-toggle-role" 
+                        (click)="changeRole(admin, admin.role === 'superadmin' ? 'admin' : 'superadmin')"
+                        [title]="'สลับเป็น ' + (admin.role === 'superadmin' ? 'Admin' : 'Super Admin')">
+                  <mat-icon>swap_horiz</mat-icon>
+                  เปลี่ยนสิทธิ์
+                </button>
+              </div>
+            </td>
+
+            <!-- สถานะการใช้งาน -->
+            <td>
+              <div class="status-cell">
+                <button class="status-pill" 
+                        [ngClass]="admin.status === 'active' ? 'status-active' : 'status-inactive'"
+                        [disabled]="admin.id === currentAdminId"
+                        (click)="toggleStatus(admin)"
+                        [title]="admin.id === currentAdminId ? 'ไม่สามารถระงับบัญชีตนเองได้' : 'คลิกเพื่อสลับสถานะ'">
+                  <span class="status-dot"></span>
+                  {{ admin.status === 'active' ? 'เปิดใช้งาน' : 'ระงับชั่วคราว' }}
+                </button>
+              </div>
+            </td>
+
+            <!-- เข้าสู่ระบบล่าสุด -->
+            <td>
+              <div class="time-cell">
+                <mat-icon class="time-icon">schedule</mat-icon>
+                <span>{{ formatDate(admin.last_login_at) }}</span>
+              </div>
+            </td>
+
+            <!-- ปุ่มจัดการ -->
+            <td>
+              <div class="actions-cell">
+                <!-- รีเซ็ตรหัสผ่าน -->
+                <button mat-icon-button class="action-btn btn-reset" 
+                        (click)="openResetModal(admin)" 
+                        title="รีเซ็ตรหัสผ่าน">
+                  <mat-icon>lock_reset</mat-icon>
+                </button>
+
+                <!-- ลบแอดมิน -->
+                <button mat-icon-button class="action-btn btn-delete" 
+                        [disabled]="admin.id === currentAdminId"
+                        (click)="deleteAdmin(admin)" 
+                        [title]="admin.id === currentAdminId ? 'ไม่สามารถลบบัญชีของตนเองได้' : 'ลบผู้ดูแลระบบ'">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- Modal: เพิ่มผู้ดูแลระบบคนใหม่ -->
+<!-- ========================================== -->
+<div class="modal-backdrop" *ngIf="showCreateModal" (click)="closeCreateModal()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-title-wrap">
+        <div class="icon-wrap bg-indigo">
+          <mat-icon>person_add</mat-icon>
+        </div>
+        <div>
+          <h3 class="modal-title">เพิ่มผู้ดูแลระบบคนใหม่</h3>
+          <p class="modal-subtitle">สร้างบัญชีสำหรับเจ้าหน้าที่เพื่อเข้าใช้งานระบบ</p>
+        </div>
+      </div>
+      <button class="btn-close" (click)="closeCreateModal()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <form (ngSubmit)="submitCreate()" class="modal-body">
+      <!-- ชื่อ-นามสกุล -->
+      <div class="form-group">
+        <label for="createName">ชื่อ-นามสกุล / ตำแหน่ง <span class="required">*</span></label>
+        <input id="createName" 
+               type="text" 
+               [(ngModel)]="createForm.name" 
+               name="name" 
+               placeholder="เช่น พ.อ. สมชาย ใจดี หรือ จนท.ประสานงาน" 
+               required />
+      </div>
+
+      <!-- ชื่อผู้ใช้ (Username) -->
+      <div class="form-group">
+        <label for="createUsername">ชื่อผู้ใช้ (Username) <span class="required">*</span></label>
+        <input id="createUsername" 
+               type="text" 
+               [(ngModel)]="createForm.username" 
+               name="username" 
+               placeholder="เช่น admin_somchai หรือ somchai" 
+               required />
+      </div>
+
+      <!-- รหัสผ่านเริ่มต้น -->
+      <div class="form-group">
+        <label for="createPassword">รหัสผ่านเริ่มต้น <span class="required">*</span></label>
+        <input id="createPassword" 
+               type="text" 
+               [(ngModel)]="createForm.password" 
+               name="password" 
+               placeholder="อย่างน้อย 6 ตัวอักษร" 
+               required />
+        <small class="helper-text">
+          <mat-icon class="hint-icon">info</mat-icon>
+          กำหนดรหัสผ่านอย่างน้อย 6 ตัวอักษร เพื่อความปลอดภัยของระบบ
+        </small>
+      </div>
+
+      <!-- บทบาท / สิทธิ์ -->
+      <div class="form-group">
+        <label>บทบาทหน้าที่ (Role) <span class="required">*</span></label>
+        <div class="role-selector">
+          <label class="role-option" [class.selected]="createForm.role === 'admin'">
+            <input type="radio" [(ngModel)]="createForm.role" name="role" value="admin" />
+            <div class="role-desc">
+              <strong>เจ้าหน้าที่ดูแลระบบ (Admin)</strong>
+              <span>จัดการข้อมูลนักเรียน คะแนน แบบประเมิน และข่าวสาร</span>
+            </div>
+          </label>
+
+          <label class="role-option" [class.selected]="createForm.role === 'superadmin'">
+            <input type="radio" [(ngModel)]="createForm.role" name="role" value="superadmin" />
+            <div class="role-desc">
+              <strong>ผู้ดูแลระบบหลัก (Super Admin)</strong>
+              <span>สิทธิ์สูงสุด สามารถเพิ่ม/ลบแอดมินคนอื่น และดูประวัติทั้งหมด</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" (click)="closeCreateModal()">ยกเลิก</button>
+        <button type="submit" class="btn-primary" [disabled]="isSubmittingCreate">
+          <mat-icon *ngIf="!isSubmittingCreate">check</mat-icon>
+          <mat-icon *ngIf="isSubmittingCreate" class="spin-icon">sync</mat-icon>
+          <span *ngIf="isSubmittingCreate">กำลังบันทึก...</span>
+          <span *ngIf="!isSubmittingCreate">สร้างบัญชีผู้ดูแลระบบ</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- Modal: รีเซ็ตรหัสผ่าน -->
+<!-- ========================================== -->
+<div class="modal-backdrop" *ngIf="showResetModal" (click)="closeResetModal()">
+  <div class="modal-card modal-sm" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-title-wrap">
+        <div class="icon-wrap bg-amber">
+          <mat-icon>lock_reset</mat-icon>
+        </div>
+        <div>
+          <h3 class="modal-title">รีเซ็ตรหัสผ่าน</h3>
+          <p class="modal-subtitle">สำหรับ: {{ selectedAdmin?.name }}</p>
+        </div>
+      </div>
+      <button class="btn-close" (click)="closeResetModal()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <form (ngSubmit)="submitResetPassword()" class="modal-body">
+      <!-- รหัสผ่านใหม่ -->
+      <div class="form-group">
+        <label for="newPassword">รหัสผ่านใหม่ <span class="required">*</span></label>
+        <input id="newPassword" 
+               type="password" 
+               [(ngModel)]="resetPasswordForm.newPassword" 
+               name="newPassword" 
+               placeholder="อย่างน้อย 6 ตัวอักษร" 
+               required />
+      </div>
+
+      <!-- ยืนยันรหัสผ่านใหม่ -->
+      <div class="form-group">
+        <label for="confirmPassword">ยืนยันรหัสผ่านใหม่ <span class="required">*</span></label>
+        <input id="confirmPassword" 
+               type="password" 
+               [(ngModel)]="resetPasswordForm.confirmPassword" 
+               name="confirmPassword" 
+               placeholder="กรอกรหัสผ่านใหม่อีกครั้ง" 
+               required />
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" (click)="closeResetModal()">ยกเลิก</button>
+        <button type="submit" class="btn-primary bg-amber-btn" [disabled]="isSubmittingReset">
+          <mat-icon *ngIf="!isSubmittingReset">save</mat-icon>
+          <mat-icon *ngIf="isSubmittingReset" class="spin-icon">sync</mat-icon>
+          <span *ngIf="isSubmittingReset">กำลังบันทึก...</span>
+          <span *ngIf="!isSubmittingReset">บันทึกรหัสผ่านใหม่</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

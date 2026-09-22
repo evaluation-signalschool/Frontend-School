@@ -19,8 +19,9 @@ export interface Choice {
 export interface Question {
   id?: number;
   question_text: string;
-  question_type: 'choice' | 'text';
+  question_type: 'choice' | 'text' | 'dropdown' | 'dropdown_subject'; // dropdown (พิมพ์เอง) และ dropdown_subject (ดึงวิชาอัตโนมัติ)
   choices?: Choice[];
+  subject_for?: string | number; // เพิ่ม: ผูกคำถามกับวิชาเฉพาะ (optional)
 }
 
 @Component({
@@ -54,7 +55,7 @@ export class From implements OnInit {
       { value: 'course', label: 'แบบประเมินหลักสูตร' },
     ],
     teacher: [
-      { value: 'teacher_course', label: 'แบบประเมินหลักสูตรโดยอาจารย์' },
+      { value: 'teacher_course', label: 'แบบประเมินผู้เรียนในรายวิชา (โดยอาจารย์ผู้สอน)' },
     ],
     committee: [
       { value: 'committee', label: 'แบบประเมินสำหรับคณะกำกับหลักสูตร' },
@@ -69,12 +70,13 @@ export class From implements OnInit {
   // ตัวแปรสำหรับเก็บประเภทแบบฟอร์มแบบ Custom ที่ผู้ใช้กดเพิ่มเอง
   customFormTypes: { value: string; label: string; targetGroup: string }[] = [];
 
-  // โครงสร้างตัวแปรสำหรับผูกข้อมูลกับทุกช่องกรอกในฟอร์ม (ปรับใหม่ให้มี questions)
+  // โครงสร้างตัวแปรสำหรับผูกข้อมูลกับทุกช่องกรอกในฟอร์ม
   formData = {
     courseName: '',
     targetGroup: '',
     formType: '',
     formName: '',
+    formDescription: '', // ✅ ใหม่: คำชี้แจง/วัตถุประสงค์
     generationId: '',
     subjectId: '',
     questions: [] as Question[],
@@ -150,6 +152,7 @@ export class From implements OnInit {
               formType: item.evaluation_type,
               formTypeName: typeLabel,
               formName: item.form_name,
+              formDescription: item.form_description || '',
               subjectId: item.subject_id || '',
               subjectName: item.subject_name || '-',
               isActive: item.is_active === 1 || item.is_active === true,
@@ -366,9 +369,9 @@ export class From implements OnInit {
       question_text: '',
       question_type: 'choice',
       choices: [
-        { choice_text: 'มาก', score_value: 5 },
-        { choice_text: 'ปานกลาง', score_value: 3 },
-        { choice_text: 'น้อย', score_value: 1 },
+        { choice_text: '', score_value: 5 },
+        { choice_text: '', score_value: 3 },
+        { choice_text: '', score_value: 1 },
       ],
     });
   }
@@ -382,26 +385,36 @@ export class From implements OnInit {
       this.formData.questions[qIndex].choices = [];
     }
     this.formData.questions[qIndex].choices!.push({ choice_text: '', score_value: 0 });
+    this.cdr.detectChanges();
   }
 
   removeChoice(qIndex: number, cIndex: number) {
-    this.formData.questions[qIndex].choices!.splice(cIndex, 1);
+    if (this.formData.questions[qIndex].choices) {
+      this.formData.questions[qIndex].choices!.splice(cIndex, 1);
+      this.cdr.detectChanges();
+    }
   }
 
   onQuestionTypeChange(qIndex: number) {
-    // ถ้าเปลี่ยนเป็น text ให้ล้าง choices ไปเลย เพื่อลดข้อมูลขยะ
-    if (this.formData.questions[qIndex].question_type === 'text') {
-      this.formData.questions[qIndex].choices = [];
+    const q = this.formData.questions[qIndex];
+    if (q.question_type === 'text' || q.question_type === 'dropdown_subject') {
+      // สำหรับพิมพ์ตอบ และ ดรอปดาวน์ดึงรายวิชาอัตโนมัติ ไม่ต้องมี choices
+      q.choices = [];
+    } else if (q.question_type === 'dropdown') {
+      // สำหรับดรอปดาวน์แบบกำหนดตัวเลือกเอง
+      if (!q.choices || q.choices.length === 0) {
+        q.choices = [
+          { choice_text: '', score_value: 0 },
+          { choice_text: '', score_value: 0 },
+        ];
+      }
     } else {
-      // ถ้าเปลี่ยนกลับมา choice ให้มีค่า default ไว้ให้
-      if (
-        !this.formData.questions[qIndex].choices ||
-        this.formData.questions[qIndex].choices!.length === 0
-      ) {
-        this.formData.questions[qIndex].choices = [
-          { choice_text: 'มาก', score_value: 5 },
-          { choice_text: 'ปานกลาง', score_value: 3 },
-          { choice_text: 'น้อย', score_value: 1 },
+      // choice: หลายตัวเลือก (Radio)
+      if (!q.choices || q.choices.length === 0) {
+        q.choices = [
+          { choice_text: '', score_value: 5 },
+          { choice_text: '', score_value: 3 },
+          { choice_text: '', score_value: 1 },
         ];
       }
     }
@@ -463,8 +476,10 @@ export class From implements OnInit {
 
     const payload = {
       courseName: this.formData.courseName,
+      targetGroup: this.formData.targetGroup || 'student',
       formType: this.formData.formType,
       formName: this.formData.formName,
+      formDescription: this.formData.formDescription || '', // ✅ ส่งคำชี้แจงไปด้วย
       generationId: this.formData.generationId || null,
       subjectId: cleanSubjectId,
       questions: this.formData.questions,
@@ -518,6 +533,7 @@ export class From implements OnInit {
       targetGroup: item.targetGroup || 'student',
       formType: item.formType || '',
       formName: item.formName || '',
+      formDescription: item.formDescription || '',
       generationId: item.generationId || '',
       subjectId: item.subjectId || '',
       questions: [], // Will populate from API
@@ -543,6 +559,13 @@ export class From implements OnInit {
                   else if (c.score_value == 1) c.choice_text = 'น้อย';
                 }
               });
+            } else if (q.question_type === 'dropdown') {
+              if (!q.choices || q.choices.length === 0) {
+                q.choices = [
+                  { choice_text: '', score_value: 0 },
+                  { choice_text: '', score_value: 0 },
+                ];
+              }
             }
           });
           this.formData.questions = qs;
@@ -603,8 +626,10 @@ export class From implements OnInit {
 
     const payload = {
       courseName: this.formData.courseName,
+      targetGroup: this.formData.targetGroup || 'student',
       formType: this.formData.formType,
       formName: this.formData.formName,
+      formDescription: this.formData.formDescription || '',
       generationId: this.formData.generationId || null,
       subjectId: cleanSubjectId,
       questions: this.formData.questions,
@@ -731,6 +756,7 @@ export class From implements OnInit {
       targetGroup: '',
       formType: '',
       formName: '',
+      formDescription: '',
       generationId: '',
       subjectId: '',
       questions: [],
@@ -850,5 +876,129 @@ export class From implements OnInit {
     this.addQuestion(); // สร้างข้อแรกเตรียมไว้
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ==========================================
+  // ส่วน Preview แบบประเมินสำหรับแอดมิน
+  // ==========================================
+  showPreviewModal: boolean = false;
+  previewData: any = {
+    formName: '',
+    formDescription: '',
+    courseName: '',
+    generationName: '',
+    formType: '',
+    questions: [] as Question[],
+    subjects: [] as any[],
+  };
+  previewSelectedSubjectId: string = '';
+  previewInstructorName: string = '';
+
+  // เปิด Preview สำหรับฟอร์มที่กำลังสร้าง/แก้ไขอยู่ในปัจจุบัน
+  openCurrentPreview(): void {
+    if (!this.formData.questions || this.formData.questions.length === 0) {
+      Swal.fire({
+        icon: 'info',
+        title: 'ยังไม่มีคำถาม',
+        text: 'กรุณาเพิ่มคำถามอย่างน้อย 1 ข้อเพื่อดูตัวอย่าง',
+        confirmButtonText: 'ตกลง',
+      });
+      return;
+    }
+
+    let genName = 'รุ่นที่เลือก';
+    const foundBatch = this.availableBatches.find(b => String(b.batch_id) === String(this.formData.generationId));
+    if (foundBatch) genName = foundBatch.batch_name;
+
+    this.previewData = {
+      formName: this.formData.formName || 'แบบประเมินตัวอย่าง',
+      formDescription: this.formData.formDescription || '',
+      courseName: this.formData.courseName || 'หลักสูตรตัวอย่าง',
+      generationName: genName,
+      formType: this.formData.formType || 'instructor',
+      questions: JSON.parse(JSON.stringify(this.formData.questions)),
+      subjects: [...this.availableSubjects],
+    };
+    this.previewSelectedSubjectId = '';
+    this.previewInstructorName = '';
+    this.showPreviewModal = true;
+    this.cdr.detectChanges();
+  }
+
+  // เปิด Preview สำหรับฟอร์มที่มีอยู่ในตาราง
+  onPreviewFormAction(formDetails: any): void {
+    if (!formDetails || !formDetails.id) return;
+
+    this.generalEvaluationService.getFormById(formDetails.id).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          const form = res.data;
+          
+          let subjects: any[] = [];
+          if (form.batch_id) {
+            this.courseService.getSubjectsByBatch(form.batch_id).subscribe({
+              next: (subRes: any) => {
+                if (subRes.success && subRes.data) {
+                  let allSubjects: any[] = [];
+                  subRes.data.forEach((group: any) => {
+                    if (group.subjects && Array.isArray(group.subjects)) {
+                      group.subjects.forEach((s: any) => {
+                        allSubjects.push({
+                          id: s.id || s.subject_id || s.subjectId,
+                          name: s.subject_name || s.name || 'ไม่ระบุชื่อวิชา',
+                        });
+                      });
+                    }
+                  });
+                  subjects = allSubjects.filter((s, idx, self) => idx === self.findIndex(t => t.id === s.id));
+                  this.previewData.subjects = subjects;
+                  this.cdr.detectChanges();
+                }
+              }
+            });
+          }
+
+          this.previewData = {
+            formName: form.form_name || formDetails.formName || 'แบบประเมิน',
+            formDescription: form.form_description || '',
+            courseName: formDetails.courseName || 'หลักสูตร',
+            generationName: formDetails.generationName || 'รุ่น',
+            formType: form.evaluation_type || formDetails.formType,
+            questions: form.questions || [],
+            subjects: subjects,
+          };
+          this.previewSelectedSubjectId = '';
+          this.previewInstructorName = '';
+          this.showPreviewModal = true;
+          this.cdr.detectChanges();
+        }
+      },
+      error: (err) => {
+        console.error('Error fetching preview form:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'ผิดพลาด',
+          text: 'ไม่สามารถโหลดตัวอย่างแบบประเมินได้',
+        });
+      }
+    });
+  }
+
+  closePreviewModal(): void {
+    this.showPreviewModal = false;
+    this.cdr.detectChanges();
+  }
+
+  get previewDisplayedQuestions(): any[] {
+    if (!this.previewData || !this.previewData.questions) return [];
+    return this.previewData.questions.filter((q: any) => {
+      if (!q.subject_for || q.subject_for === '' || q.subject_for === 'all') {
+        return true;
+      }
+      if (this.previewSelectedSubjectId) {
+        return String(q.subject_for) === String(this.previewSelectedSubjectId);
+      }
+      return false;
+    });
   }
 }

@@ -9,7 +9,7 @@ import { timeout, TimeoutError } from 'rxjs';
 @Component({
   selector: 'app-score',
   standalone: true,
-  imports: [CommonModule, MatIconModule, RouterLink],
+  imports: [CommonModule, MatIconModule],
   templateUrl: './score.html',
   styleUrl: './score.scss',
 })
