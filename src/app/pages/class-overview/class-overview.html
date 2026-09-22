@@ -67,8 +67,11 @@
         </div>
       } @else {
 
-        <!-- 📝 ปุ่มกรอกคะแนนพิเศษ (อยู่นอก Tabs) -->
-        <div class="global-actions-top" style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
+        <!-- 📝 ปุ่มการทำงาน (อยู่นอก Tabs) -->
+        <div class="global-actions-top" style="display: flex; justify-content: flex-end; margin-bottom: 16px; gap: 10px;">
+          <button mat-raised-button routerLink="/admin/ranking" [queryParams]="{ courseId: selectedCourse, batchId: selectedBatch }" style="background-color: #f39c12; color: white; border-radius: 8px; font-family: inherit;">
+            <mat-icon style="margin-right: 8px;">military_tech</mat-icon> จัดลำดับผลการเรียน (1 ถึง N)
+          </button>
           <button mat-raised-button (click)="openSpecialScoreModal()" style="background-color: #8e44ad; color: white; border-radius: 8px; font-family: inherit;">
             <mat-icon style="margin-right: 8px;">edit_square</mat-icon> บันทึกคะแนนพิเศษ (ฝึกอบรม/สอบ/ความประพฤติ)
           </button>
@@ -93,6 +96,9 @@
                     <span>แสดงเกรดเฉลี่ยภาพรวม เหมาะสำหรับผู้บังคับบัญชาตรวจดูภาพรวมนักเรียนทั้งหมด</span>
                   </div>
                   <div class="action-buttons-inline">
+                    <button class="btn-inline" routerLink="/admin/ranking" [queryParams]="{ courseId: selectedCourse, batchId: selectedBatch }" style="background: #fffbe6; color: #d48806; border: 1px solid #ffe58f; display: inline-flex; align-items: center; gap: 4px; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-family: inherit; font-weight: 600;">
+                      <mat-icon style="font-size: 18px; width: 18px; height: 18px; color: #f39c12;">military_tech</mat-icon> ดูผลจัดอันดับ 1 ถึง N
+                    </button>
                     <button class="btn-inline btn-outline" (click)="reProcess()">
                       <mat-icon>refresh</mat-icon> ประมวลผลใหม่
                     </button>
@@ -104,7 +110,7 @@
                   <table class="overview-table">
                     <thead>
                       <tr>
-                        <th class="text-center" style="width: 70px;">ลำดับที่</th>
+                        <th class="text-center" style="width: 70px;">เลขที่</th>
                         <th class="text-left" style="width: 260px;">ยศ-ชื่อ-นามสกุล</th>
                         <th class="text-center" style="width: 140px;">เกรดเฉลี่ยสะสม (GPA)</th>
                         <th class="text-center" style="width: 140px;">สถานะ</th>
@@ -278,7 +284,7 @@
                           <td class="text-center highlight-cell font-medium">{{ student.trainingTimeScore || '-' }}</td>
                           <td class="text-center highlight-cell font-medium">{{ student.examTimeScore || '-' }}</td>
                           <td class="text-center highlight-cell font-medium">{{ student.behaviorScore || '-' }}</td>
-                          <td class="text-center text-bold highlight-cell">{{ student.totalScore || '-' }}</td>
+                          <td class="text-center text-bold highlight-cell">{{ formatTotalScore(student.totalScore) }}</td>
                           <td class="text-center text-bold text-purple highlight-cell">{{ student.gpa }}</td>
                           <td class="text-center highlight-cell">
                             <span class="status-badge" [ngClass]="student.isPassed ? 'pass' : 'fail'">

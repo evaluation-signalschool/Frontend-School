@@ -20,6 +20,8 @@ interface GradeItem {
   credits: string | number;
   rowspan?: number;
   isFirstInGroup?: boolean;
+  has_scores_in_db?: boolean;
+  last_score_date?: string;
 }
 
 @Component({
@@ -118,44 +120,30 @@ export class ScoreSubmission implements OnInit {
           let timeStr = '';
           let rawDate: Date | null = null;
           
-          if (item.submitted_at) {
-            // ข้อมูลจาก DB ส่งมาเป็น string ให้แปลงเป็น Date
-            // หากเวลาใน DB ไม่ตรง สามารถชดเชยเวลาได้ แต่เราจะใช้ UTC เป็นหลักเพื่อป้องกันปัญหา
-            let dateStrFromDb = item.submitted_at;
-            
-            // กรณีที่มี Z ต่อท้าย แสดงว่าเป็น UTC, แต่ถ้าข้อมูลเก่าเก็บเป็นเวลาไทยและมี Z จะทำให้เวลาเพี้ยนบวก 7
-            // เราจะถือว่ามันคือ UTC และแปลงเป็น local time ปกติ
+          // ใช้วันที่ที่บันทึกการส่ง (submitted_at) หรือ วันที่ลงคะแนนจริงในระบบล่าสุด (last_score_date)
+          const effectiveDateStr = item.submitted_at || item.last_score_date;
+
+          if (effectiveDateStr) {
+            let dateStrFromDb = effectiveDateStr;
             const dateObj = new Date(dateStrFromDb);
             rawDate = dateObj;
             
-            // Format to Thai Date
             const thaiMonths = [
               'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
               'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
             ];
             dateStr = `${dateObj.getDate()} ${thaiMonths[dateObj.getMonth()]} ${dateObj.getFullYear() + 543}`;
-            // หากต้องการให้เวลาเป็นเวลาของไทยเสมอ
             timeStr = dateObj.toLocaleTimeString('th-TH');
           }
 
           let checked = item.is_submitted === 1 || item.is_submitted === true;
           let note = item.note || '';
 
-          // ตรวจสอบอัตโนมัติหากมีคะแนนในระบบแล้วแต่ลืมติ๊ก
+          // ตรวจสอบอัตโนมัติหากมีคะแนนในระบบแล้วแต่ยังไม่ได้กดบันทึกในหน้านี้
           if (!checked && item.has_scores_in_db) {
             checked = true;
             if (!note) {
               note = 'ระบบพบการลงคะแนนแล้ว (Auto-checked)';
-            }
-            if (!dateStr) {
-              const now = new Date();
-              rawDate = now;
-              const thaiMonths = [
-                'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-                'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-              ];
-              dateStr = `${now.getDate()} ${thaiMonths[now.getMonth()]} ${now.getFullYear() + 543}`;
-              timeStr = now.toLocaleTimeString('th-TH');
             }
           }
 
@@ -173,7 +161,8 @@ export class ScoreSubmission implements OnInit {
             checked: checked,
             note: note,
             rawDate: rawDate,
-            has_scores_in_db: item.has_scores_in_db
+            has_scores_in_db: item.has_scores_in_db,
+            last_score_date: item.last_score_date
           };
         });
 

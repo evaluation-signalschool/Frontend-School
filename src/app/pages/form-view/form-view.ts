@@ -21,6 +21,7 @@ export class FormView implements OnInit {
 
   formTypes = [
     { value: 'instructor', label: 'ประเมินอาจารย์ผู้สอน' },
+    { value: 'teacher_course', label: 'แบบประเมินผู้เรียนในรายวิชา (โดยอาจารย์ผู้สอน)' },
     { value: 'director', label: 'แบบประเมินอาจารย์กำกับหลักสูตร' },
     { value: 'course', label: 'แบบประเมินหลักสูตร' },
     { value: 'committee', label: 'แบบประเมินสำหรับคณะกำกับหลักสูตร' },

@@ -62,8 +62,12 @@
             [disabled]="!selectedBatch"
           >
             <option [value]="null">— เลือกรายวิชา —</option>
-            @for (subject of subjects; track $index) {
-              <option [value]="subject?.subject_id">{{ subject?.subject_name }}</option>
+            @for (group of groupedSubjects; track group.group_name) {
+              <optgroup [label]="group.display_label">
+                @for (subject of group.subjects; track subject.subject_id) {
+                  <option [value]="subject?.subject_id">{{ subject?.subject_name }}</option>
+                }
+              </optgroup>
             }
           </select>
         </div>
@@ -182,6 +186,15 @@
             <button *ngIf="isSaved" class="btn btn-danger" (click)="enableEditMode()">
               <mat-icon>edit</mat-icon> แก้ไขคะแนนนักเรียน
             </button>
+            <button
+              *ngIf="studentList.length > 5"
+              type="button"
+              class="btn btn-ghost"
+              (click)="scrollToBottom()"
+              title="เลื่อนลงไปล่างสุด (สรุปคะแนน / ปุ่มบันทึก)"
+            >
+              <mat-icon>arrow_downward</mat-icon> ไปล่างสุด
+            </button>
           </div>
         </div>
 
@@ -230,15 +243,20 @@
                         class="score-input"
                         [class.over]="isInvalidScore(student.raw_score)"
                         [id]="'score-input-' + i"
-                        type="number"
-                        min="0"
-                        [max]="inputMaxScore"
-                        step="0.5"
-                        [(ngModel)]="student.raw_score"
-                        (ngModelChange)="onScoreChange(student, $event)"
-                        (keydown.enter)="focusNextInput(i, $event)"
+                        type="text"
+                        inputmode="decimal"
+                        [value]="
+                          student.raw_score !== null && student.raw_score !== undefined
+                            ? student.raw_score
+                            : ''
+                        "
+                        (input)="onScoreInputChange(student, $event)"
+                        (blur)="onScoreInputBlur(student, $event)"
+                        (focus)="onInputFocus($event)"
+                        (keydown)="onScoreKeydown(i, $event)"
                         [disabled]="isSaved"
                         placeholder="0"
+                        autocomplete="off"
                       />
 
                       <!-- กรณีวิชา S/U (เลือกผ่าน/ไม่ผ่าน) -->
@@ -345,13 +363,45 @@
         </div>
 
         <div class="actions">
-          <div>
+          <div class="actions-left">
             <button class="btn btn-ghost" (click)="onCancel()" [disabled]="isSaving || isLoading">
               <mat-icon>refresh</mat-icon> เริ่มใหม่/ยกเลิก
             </button>
+            <button
+              type="button"
+              class="btn btn-ghost"
+              (click)="scrollToTop()"
+              title="เลื่อนกลับไปด้านบน"
+            >
+              <mat-icon>arrow_upward</mat-icon> กลับไปข้างบน
+            </button>
           </div>
 
-          <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-end">
+          <div class="actions-right">
+            <!-- ตัวเลือกวิชาด้านล่าง -->
+            <div class="bottom-subject-picker" *ngIf="subjects.length > 0">
+              <label class="picker-label" for="bottomSubjectSelect">
+                <mat-icon>menu_book</mat-icon>
+                <span>เลือกวิชา:</span>
+              </label>
+              <select
+                id="bottomSubjectSelect"
+                class="custom-select bottom-subject-select"
+                [(ngModel)]="selectedSubjectId"
+                (ngModelChange)="onBottomSubjectChange()"
+                [disabled]="!selectedBatch || isSaving || isLoading"
+              >
+                <option [value]="null">— เลือกรายวิชา —</option>
+                @for (group of groupedSubjects; track group.group_name) {
+                  <optgroup [label]="group.display_label">
+                    @for (subject of group.subjects; track subject.subject_id) {
+                      <option [value]="subject?.subject_id">{{ subject?.subject_name }}</option>
+                    }
+                  </optgroup>
+                }
+              </select>
+            </div>
+
             <button
               *ngIf="hasPreviousSubject"
               class="btn btn-outline"
@@ -382,4 +432,189 @@
       </ng-container>
     </div>
   </div>
+
+  <!-- กลุ่มปุ่มลอยสำหรับเลื่อนขึ้น-ลง (Floating Scroll Nav) -->
+  <div class="floating-scroll-nav">
+    <button
+      type="button"
+      class="floating-scroll-btn btn-to-top"
+      [class.visible]="showScrollTopBtn"
+      (click)="scrollToTop()"
+      title="กลับไปข้างบน"
+      aria-label="กลับไปข้างบน"
+    >
+      <mat-icon>arrow_upward</mat-icon>
+      <span>กลับไปข้างบน</span>
+    </button>
+
+    <button
+      type="button"
+      class="floating-scroll-btn btn-to-bottom"
+      [class.visible]="showScrollBottomBtn"
+      (click)="scrollToBottom()"
+      title="เลื่อนลงล่างสุด"
+      aria-label="เลื่อนลงล่างสุด"
+    >
+      <mat-icon>arrow_downward</mat-icon>
+      <span>ไปล่างสุด</span>
+    </button>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- Modal: ตรวจสอบและแก้ไขคะแนนที่ไม่ถึงเกณฑ์ 70% -->
+  <!-- ========================================== -->
+  <div
+    class="failing-modal-backdrop"
+    *ngIf="showFailingReviewModal"
+    (click)="closeFailingReviewModal()"
+  >
+    <div class="failing-modal-card" (click)="$event.stopPropagation()">
+      <!-- Modal Header -->
+      <div class="failing-modal-header">
+        <div class="header-title-wrap">
+          <div class="header-icon-wrap">
+            <mat-icon>warning</mat-icon>
+          </div>
+          <div>
+            <h3 class="modal-title">ตรวจสอบคะแนนที่ไม่ถึงเกณฑ์ 70%</h3>
+            <p class="modal-subtitle">
+              วิชา: <strong>{{ getSelectedSubjectName() }}</strong> | คะแนนเต็ม {{ inputMaxScore }} คะแนน 
+              (เกณฑ์ผ่านคือ {{ getReviewPassingThreshold().toFixed(1) }} คะแนน)
+            </p>
+          </div>
+        </div>
+        <button type="button" class="btn-modal-close" (click)="closeFailingReviewModal()" title="ปิด">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <!-- Alert / Guide -->
+      <div class="failing-modal-alert">
+        <mat-icon class="alert-icon">info</mat-icon>
+        <div class="alert-text">
+          ตรวจพบนักเรียนที่มีคะแนนต่ำกว่าเกณฑ์ 70% จำนวน <strong>{{ failingReviewStudents.length }} คน</strong>
+          <br />
+          <span class="alert-subtext">
+            หากมีคะแนนที่พิมพ์ผิดพลาด ท่านสามารถแก้ไขตัวเลขในช่องด้านล่างได้ทันที แล้วกด <strong>"ยืนยันและบันทึกคะแนน"</strong>
+          </span>
+        </div>
+      </div>
+
+      <!-- Table Body -->
+      <div class="failing-modal-body">
+        <table class="failing-review-table">
+          <thead>
+            <tr>
+              <th class="col-num">ลำดับ</th>
+              <th class="col-student">รหัส / ชื่อ-นามสกุล</th>
+              <th class="col-orig">คะแนนเดิม</th>
+              <th class="col-edit">คะแนนที่จะบันทึก</th>
+              <th class="col-status">สถานะ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let item of failingReviewStudents; let idx = index"
+              [class.row-fixed]="isReviewItemPassing(item.raw_score)"
+              [class.row-invalid]="isReviewItemInvalid(item.raw_score)"
+            >
+              <td class="col-num">{{ idx + 1 }}</td>
+              <td class="col-student">
+                <div class="student-info">
+                  <span class="student-name">
+                    {{ item.rank_name }} {{ item.first_name }} {{ item.last_name }}
+                  </span>
+                  <span class="student-code" *ngIf="item.student_code">
+                    รหัส: {{ item.student_code }}
+                  </span>
+                </div>
+              </td>
+              <td class="col-orig">
+                <span class="badge-orig">{{ item.originalScore }}</span>
+              </td>
+              <td class="col-edit">
+                <div class="edit-input-wrapper">
+                  <input
+                    type="number"
+                    class="review-input"
+                    [class.input-passing]="isReviewItemPassing(item.raw_score)"
+                    [class.input-invalid]="isReviewItemInvalid(item.raw_score)"
+                    [value]="item.raw_score !== null && item.raw_score !== undefined ? item.raw_score : ''"
+                    (input)="onReviewScoreInput(item, $event)"
+                    min="0"
+                    [max]="inputMaxScore || 100"
+                    step="0.5"
+                    placeholder="0"
+                  />
+                  <button
+                    type="button"
+                    class="btn-reset-score"
+                    *ngIf="item.isEdited"
+                    (click)="resetReviewScore(item)"
+                    title="คืนค่าคะแนนเดิม"
+                  >
+                    <mat-icon>undo</mat-icon>
+                  </button>
+                </div>
+              </td>
+              <td class="col-status">
+                <!-- กรณีคะแนนไม่ถูกต้อง -->
+                <span *ngIf="isReviewItemInvalid(item.raw_score)" class="status-badge badge-danger">
+                  <mat-icon>error</mat-icon> เกินคะแนนเต็ม/ติดลบ
+                </span>
+                <!-- กรณีแก้แล้วผ่านเกณฑ์ -->
+                <span
+                  *ngIf="!isReviewItemInvalid(item.raw_score) && isReviewItemPassing(item.raw_score)"
+                  class="status-badge badge-success"
+                >
+                  <mat-icon>check_circle</mat-icon> ผ่านเกณฑ์แล้ว
+                </span>
+                <!-- กรณียังไม่ถึงเกณฑ์ -->
+                <span
+                  *ngIf="!isReviewItemInvalid(item.raw_score) && !isReviewItemPassing(item.raw_score)"
+                  class="status-badge badge-warning"
+                >
+                  <mat-icon>warning</mat-icon> 
+                  ไม่ถึง 70% 
+                  <small *ngIf="item.raw_score !== null">
+                    (ขาดอีก {{ (getReviewPassingThreshold() - (+item.raw_score)).toFixed(1) }})
+                  </small>
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="failing-modal-footer">
+        <div class="footer-stats">
+          <span class="stat-item" *ngIf="getAdjustedPassingCount() > 0">
+            <mat-icon class="stat-icon text-success">check_circle</mat-icon>
+            ปรับผ่านแล้ว: <strong>{{ getAdjustedPassingCount() }}</strong> คน
+          </span>
+          <span class="stat-item">
+            <mat-icon class="stat-icon text-warning">warning</mat-icon>
+            คงเหลือไม่ถึงเกณฑ์: <strong>{{ getRemainingFailingCount() }}</strong> คน
+          </span>
+        </div>
+
+        <div class="footer-actions">
+          <button type="button" class="btn-modal-cancel" (click)="closeFailingReviewModal()">
+            กลับไปตรวจสอบในตาราง
+          </button>
+          <button
+            type="button"
+            class="btn-modal-confirm"
+            (click)="confirmFailingReviewSave()"
+            [disabled]="isSaving"
+          >
+            <mat-icon>save</mat-icon>
+            <span>ยืนยันและบันทึกคะแนน</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+

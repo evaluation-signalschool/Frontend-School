@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,11 +13,32 @@ import Swal from 'sweetalert2';
   templateUrl: './admin.html',
   styleUrl: './admin.scss'
 })
-export class Admin {
+export class Admin implements OnInit {
+  adminName: string = 'ผู้ดูแลระบบ';
+  adminRole: string = 'admin';
+  adminUsername: string = '';
+  adminEmail: string = '';
+
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
+
+  ngOnInit(): void {
+    const data = this.authService.getAdminData();
+    if (data) {
+      this.adminName = data.name || data.username || data.email || 'ผู้ดูแลระบบ';
+      this.adminRole = data.role || 'admin';
+      this.adminUsername = data.username || (data.email?.includes('@') ? data.email.split('@')[0] : data.email) || '';
+      this.adminEmail = data.email || '';
+    }
+    this.cdr.detectChanges();
+  }
+
+  get isSuperAdmin(): boolean {
+    return this.authService.isSuperAdmin();
+  }
 
   onLogout(): void {
     Swal.fire({

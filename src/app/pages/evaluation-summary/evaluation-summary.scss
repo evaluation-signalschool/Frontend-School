@@ -15,22 +15,117 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
 :host {
   display: block;
   min-height: 100vh;
-  background-color: $bg-body !important; // พื้นหลังหลักหลังสุดของเว็บ
-  padding: 2.5rem 0;
+  background-color: $bg-body !important;
+  padding: 0;
 }
 
 // ==========================================
 // 2. PAGE & HEADER LAYOUT
 // ==========================================
-.page-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
+.page-wrap {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background-color: $bg-body;
   font-family: 'Inter', 'Sarabun', sans-serif;
   color: $text-main;
 
-  .header {
-    margin-bottom: 2rem;
+  // Sidebar styling
+  .sidebar {
+    width: 250px;
+    background: #6c2299;
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: 0 40px 40px 0;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    z-index: 50;
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+    }
+
+    .sidebar-line {
+      width: 1px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .sidebar-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      border-radius: 12px;
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        transition: all 0.3s;
+      }
+
+      .label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 16px;
+        text-align: center;
+        transition: all 0.3s;
+      }
+
+      &:hover {
+        .dot { background: rgba(255, 255, 255, 0.8); }
+        .label { color: #ffffff; }
+      }
+
+      &.active {
+        background: rgba(255, 255, 255, 0.1);
+        .dot {
+          width: 14px;
+          height: 14px;
+          background: #ffd000;
+          box-shadow: 0 0 10px #ffd000;
+        }
+        .label {
+          color: #ffd000;
+          font-weight: 700;
+        }
+      }
+    }
+  }
+
+  // Content Area
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    padding: 0 1rem 0 1rem;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+
+    &::-webkit-scrollbar {
+      width: 8px;
+    }
+    .header {
+    margin-bottom: 1rem;
+    position: sticky;
+    top: 0;
+    background: $bg-body;
+    z-index: 100;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 
     .header-title h1 {
       font-size: 1.75rem;
@@ -45,7 +140,6 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
       border-radius: 16px;
       padding: 1rem 1.5rem;
       border: 1px solid $border-color;
-      margin-bottom: 1.25rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -66,80 +160,86 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
         max-width: 450px;
 
         label {
-          font-size: 0.875rem;
           font-weight: 600;
-          color: $text-muted;
+          color: $text-main;
           white-space: nowrap;
+          font-size: 0.95rem;
         }
 
         select {
           width: 100%;
-          padding: 0.6rem 0.9rem;
-          border-radius: 10px;
-          border: 1px solid $border-color;
-          background-color: #f8fafc;
-          color: $text-main;
-          font-size: 0.875rem;
+          padding: 0.8rem 1.25rem;
+          border-radius: 12px;
+          border: 2px solid #e2e8f0;
+          background-color: #ffffff;
+          font-size: 1rem;
           font-weight: 500;
-          outline: none;
-          transition: all 0.2s ease;
+          color: $text-main;
           cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+          appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 1rem center;
+          background-size: 1.2em 1.2em;
+          padding-right: 2.5rem;
 
           &:hover {
-            border-color: #cbd5e1;
+            border-color: $primary;
+            background-color: #f8fafc;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(99, 102, 241, 0.05);
           }
 
           &:focus {
+            outline: none;
             border-color: $primary;
-            background-color: #ffffff;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+          }
+
+          &:disabled {
+            background-color: #f1f5f9;
+            cursor: not-allowed;
+            color: #94a3b8;
+            border-color: #e2e8f0;
           }
         }
       }
 
-      // ปุ่ม Export PDF & Excel
       .export-actions {
         display: flex;
-        align-items: center;
-        gap: 0.65rem;
+        gap: 0.75rem;
 
         .btn-export {
           display: inline-flex;
           align-items: center;
-          justify-content: center;
-          gap: 0.4rem;
-          padding: 0.6rem 1.1rem;
+          gap: 0.5rem;
+          padding: 0.6rem 1.25rem;
           border-radius: 10px;
-          font-size: 0.85rem;
           font-weight: 600;
+          font-size: 0.875rem;
           cursor: pointer;
-          border: 1px solid transparent;
-          white-space: nowrap;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          border: none;
+          transition: all 0.2s;
 
           &.pdf {
-            background-color: #fef2f2;
-            color: #dc2626;
-            border-color: #fecaca;
-
+            background: #fef2f2;
+            color: #ef4444;
+            border: 1px solid #fecaca;
             &:hover {
-              background-color: #dc2626;
-              color: #ffffff;
-              box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
-              transform: translateY(-1px);
+              background: #fee2e2;
+              color: #dc2626;
             }
           }
 
           &.excel {
-            background-color: #f0fdf4;
+            background: #f0fdf4;
             color: #16a34a;
-            border-color: #bbf7d0;
-
+            border: 1px solid #bbf7d0;
             &:hover {
-              background-color: #16a34a;
-              color: #ffffff;
-              box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);
-              transform: translateY(-1px);
+              background: #dcfce7;
+              color: #15803d;
             }
           }
 
@@ -149,57 +249,20 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
         }
       }
     }
-
-    .tab-nav {
-      display: flex;
-      gap: 0.5rem;
-      background: #ffffff;
-      padding: 0.4rem;
-      border-radius: 16px;
-      border: 1px solid $border-color;
-      box-shadow: $shadow-sm;
-      overflow-x: auto;
-
-      &::-webkit-scrollbar {
-        display: none;
-      }
-
-      .tab-btn {
-        flex: 1;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        padding: 0.8rem 1.25rem;
-        border: none;
-        background: transparent;
-        color: $text-muted;
-        font-weight: 600;
-        font-size: 0.875rem;
-        border-radius: 12px;
-        cursor: pointer;
-        white-space: nowrap;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-
-        &:hover {
-          color: $primary;
-          background: rgba(99, 102, 241, 0.08);
-        }
-
-        &.active {
-          background: linear-gradient(135deg, $primary 0%, $primary-hover 100%);
-          color: #ffffff;
-          box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
-          transform: translateY(-1px);
-        }
-      }
-    }
   }
 
-  .content {
+  .sections-container {
     display: flex;
     flex-direction: column;
-    gap: 1.75rem;
+    gap: 0;
+    
+    .section {
+      min-height: calc(100vh - 180px);
+      display: flex;
+      flex-direction: column;
+      scroll-margin-top: 180px;
+      padding-bottom: 1rem;
+    }
   }
 }
 
@@ -209,146 +272,107 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
 .overview-card {
   background: #ffffff !important;
   border-radius: 20px;
-  padding: 2rem;
+  padding: 1.5rem 2rem;
   box-shadow: $shadow-md;
   border: 1px solid $border-color;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 3rem;
+  display: block;
+  transition: all 0.3s ease;
 
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
-    justify-items: center;
-    padding: 1.5rem;
+  &.expanded-mode {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 95vw;
+    height: 95vh;
+    z-index: 9999;
+    border-radius: 24px;
+    margin: 0;
+    padding: 2rem 2.5rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3), 0 0 0 100vw rgba(30, 27, 75, 0.6) !important; // Deep purple overlay
+    animation: modalScaleUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+
+    .section-header {
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid #f1f5f9;
+      margin-bottom: 1.5rem;
+
+      h2 {
+        font-size: 1.4rem;
+        color: #312e81;
+      }
+
+      .btn-expand {
+        background: #fef2f2;
+        border: 1px solid #fca5a5;
+        color: #dc2626;
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+
+        &:hover {
+          background: #fee2e2;
+          color: #b91c1c;
+          border-color: #f87171;
+          transform: translateY(-1px);
+        }
+      }
+    }
+
+    .chart-scroll-wrapper {
+      flex: 1;
+      height: 100%;
+      
+      .chart-inner {
+        height: calc(100vh - 200px) !important;
+      }
+    }
   }
 
-  .chart-container .donut-chart {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    display: flex;
+  @keyframes modalScaleUp {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -48%) scale(0.96);
+    }
+    100% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+
+  .btn-expand {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    padding: 0.55rem 1.25rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    transition: transform 0.3s ease;
+    gap: 0.5rem;
 
     &:hover {
-      transform: scale(1.03);
+      background: #e2e8f0;
+      color: #1e293b;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
-
-    .chart-center {
-      width: 108px;
-      height: 108px;
-      background: #ffffff;
-      border-radius: 50%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-
-      .total-number {
-        font-size: 1.75rem;
-        font-weight: 800;
-        line-height: 1.1;
-        color: $text-main;
-      }
-
-      .total-label {
-        font-size: 0.75rem;
-        font-weight: 500;
-        color: $text-muted;
-      }
+    &:active {
+      transform: translateY(0);
     }
   }
 
-  .legend-container {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.25rem;
-    width: 100%;
-
-    @media (max-width: 480px) {
-      grid-template-columns: 1fr;
+  .chart-scroll-wrapper {
+    &::-webkit-scrollbar {
+      height: 8px;
     }
-
-    .legend-card {
-      padding: 1.25rem;
-      border-radius: 14px;
-      background: #f8fafc !important;
-      border: 1px solid #f1f5f9;
-      transition: all 0.2s ease;
-
-      &:hover {
-        background: #ffffff !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-        transform: translateY(-2px);
-      }
-
-      .legend-header {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 0.6rem;
-
-        .badge {
-          width: 10px;
-          height: 10px;
-          border-radius: 50%;
-        }
-
-        .label {
-          font-size: 0.875rem;
-          color: $text-muted;
-          font-weight: 600;
-        }
-      }
-
-      .legend-value {
-        display: flex;
-        align-items: baseline;
-        gap: 0.4rem;
-
-        .num {
-          font-size: 1.65rem;
-          font-weight: 800;
-          line-height: 1;
-        }
-
-        .unit {
-          font-size: 0.875rem;
-          font-weight: 500;
-          color: $text-muted;
-        }
-
-        .percent {
-          font-size: 0.85rem;
-          font-weight: 600;
-          color: $text-muted;
-          margin-left: 0.2rem;
-        }
-      }
-
-      &.evaluated {
-        .badge {
-          background-color: $primary;
-          box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
-        }
-
-        .num {
-          color: $primary;
-        }
-      }
-
-      &.pending {
-        .badge {
-          background-color: #94a3b8;
-        }
-
-        .num {
-          color: #475569;
-        }
-      }
+    &::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 10px;
     }
   }
 }
@@ -361,9 +385,13 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
 .student-eval-container {
   background: #ffffff !important;
   border-radius: 20px;
-  padding: 1.75rem;
+  padding: 1rem;
   border: 1px solid $border-color;
   box-shadow: $shadow-md;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 
   .section-header {
     display: flex;
@@ -389,11 +417,16 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
   }
 
   .table-wrapper {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    overflow-y: auto;
     overflow-x: auto;
     border-radius: 12px;
     border: 1px solid #e0e7ff;
 
     &::-webkit-scrollbar {
+      width: 6px;
       height: 6px;
     }
 
@@ -426,6 +459,9 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
     text-align: left;
     border-bottom: 2px solid #c7d2fe;
     white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 
     &.col-status {
       text-align: center;
@@ -481,19 +517,35 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
 // ------------------------------------------
 .results-table,
 .student-eval-table {
-  width: 100%;
-  border-collapse: collapse !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
   background-color: #ffffff;
   font-size: 0.875rem;
 
   th,
   td {
     padding: 0.85rem 0.75rem;
-    border: 1px solid #e0e7ff !important;
+    border-right: 1px solid #e0e7ff;
+    border-bottom: 1px solid #e0e7ff;
     vertical-align: middle;
+
+    &:first-child {
+      border-left: 1px solid #e0e7ff;
+    }
+  }
+
+  // Sticky thead ทั้งแถว
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 15;
   }
 
   thead th {
+    border-top: 1px solid #c7d2fe;
+    border-bottom: 2px solid #c7d2fe !important;
     background: linear-gradient(135deg, #eef2ff 0%, #f3e8ff 100%) !important;
     color: #3730a3 !important;
     font-weight: 700;
@@ -501,6 +553,10 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
     white-space: normal !important;
     word-break: break-word;
     min-width: 95px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
 
     &.col-course,
     &.col-teacher,
@@ -509,6 +565,24 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
       min-width: 150px;
       text-align: left;
       padding-left: 1rem;
+    }
+
+    // Sticky คอลัมน์แรก (ชื่อวิชา) ติดซ้าย
+    &.col-course {
+      position: sticky;
+      left: 0;
+      z-index: 20;
+      background: linear-gradient(135deg, #eef2ff 0%, #f3e8ff 100%) !important;
+      box-shadow: 2px 0 4px rgba(0, 0, 0, 0.08), 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    // Sticky คอลัมน์ที่ 2 (อาจารย์ผู้สอน) ติดซ้ายถัดมา
+    &.col-teacher {
+      position: sticky;
+      left: 150px;
+      z-index: 20;
+      background: linear-gradient(135deg, #eef2ff 0%, #f3e8ff 100%) !important;
+      box-shadow: 2px 0 4px rgba(0, 0, 0, 0.08), 0 2px 2px -1px rgba(0, 0, 0, 0.1);
     }
   }
 
@@ -534,6 +608,24 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
         font-weight: 600;
         color: #0f172a;
         padding-left: 1rem;
+      }
+
+      // Sticky body cell สำหรับคอลัมน์ชื่อวิชา
+      &.col-course {
+        position: sticky;
+        left: 0;
+        z-index: 5;
+        background-color: #ffffff;
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
+      }
+
+      // Sticky body cell สำหรับคอลัมน์อาจารย์ผู้สอน
+      &.col-teacher {
+        position: sticky;
+        left: 150px;
+        z-index: 5;
+        background-color: #ffffff;
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
       }
 
       // คอลัมน์คะแนนเฉลี่ยยังคงไฮไลท์สีให้เด่นชัด
@@ -582,10 +674,26 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
       background-color: #ddd6fe !important;
       color: #5b21b6 !important;
     }
+
+    &.level-low,
+    &.level-purple-fair {
+      background-color: #fef08a !important;
+      color: #854d0e !important;
+    }
+
+    &.level-lowest,
+    &.level-purple-low {
+      background-color: #fee2e2 !important;
+      color: #991b1b !important;
+    }
   }
 
   tfoot,
   tfoot.summary-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+
     tr.summary-row td {
       background: linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%) !important;
       border-top: 2px solid #818cf8 !important;
@@ -677,7 +785,7 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
     tr.score-row td {
       padding: 0.85rem 0.75rem;
       font-size: 0.95rem;
-      font-weight: 400; // ปรับเป็นตัวเลขปกติ
+      font-weight: 500;
       color: #4c1d95;
       background-color: #faf5ff;
       border-right: 1px solid #f1f5f9;
@@ -687,7 +795,31 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
       &.highlight-score {
         background-color: #ede9fe;
         color: #4c1d95;
-        font-weight: 600; // หากต้องการเน้นคอลัมน์เฉลี่ยให้หนาขึ้นนิดนึง (หรือปรับเป็น 400 ให้ปกติทั้งหมดได้ครับ)
+        font-weight: 600;
+      }
+
+      &:last-child {
+        border-right: none;
+      }
+    }
+
+    // แถวแสดงคิดเป็นร้อยละ (%)
+    tr.percent-row td {
+      padding: 0.75rem 0.5rem;
+      background-color: #fcfaff;
+      border-right: 1px solid #f1f5f9;
+      border-bottom: 1px solid #f1f5f9;
+
+      .percent-tag {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        background-color: #f3e8ff;
+        color: #7e22ce;
+        border: 1px solid #e9d5ff;
+        letter-spacing: 0.3px;
       }
 
       &:last-child {
@@ -730,4 +862,60 @@ $shadow-md: 0 4px 20px -2px rgba(99, 102, 241, 0.08);
 
 .text-center {
   text-align: center !important;
+}
+
+// ปุ่ม ขยายเต็มจอ / ย่อขนาด
+.btn-expand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Sarabun', sans-serif;
+  border: 1.5px solid #6366f1;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  white-space: nowrap;
+
+  &:hover {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.45);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+  }
+}
+
+// Fullscreen overlay สำหรับตาราง (แยกออกจาก layout หลัก)
+.results-fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1200;
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.results-fullscreen-panel {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+  padding: 24px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 }

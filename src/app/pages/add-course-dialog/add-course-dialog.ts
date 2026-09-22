@@ -5,6 +5,7 @@ import { CourseService } from '../../services/course.service';
 import { AuthService } from '../../services/auth.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { ThaiDatePickerComponent } from '../../components/thai-datepicker/thai-datepicker.component';
 import Swal from 'sweetalert2';
 import { lastValueFrom } from 'rxjs';
 
@@ -18,7 +19,7 @@ interface CourseBatch {
 @Component({
   selector: 'app-add-course',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, ThaiDatePickerComponent],
   templateUrl: './add-course-dialog.html',
   styleUrl: './add-course-dialog.scss',
 })
@@ -33,7 +34,12 @@ export class AddCourse implements OnInit {
   showCoursesTable: boolean = false;
   showGroupsTable: boolean = false;
   showSubjectsTable: boolean = false;
-  courseForm = { course_name: '', curriculum_year: null };
+  courseForm: any = { course_name: '', curriculum_year: null };
+  isNewCourse: boolean = false;
+  
+  // Table filters
+  filterCourseYear: string = '';
+  filterCourseName: string = '';
   
   // Cascading states for Batch Form
   selectedCourseNameForBatch: string = '';
@@ -53,6 +59,12 @@ export class AddCourse implements OnInit {
   subjectsList: { subject_name: string, is_su: boolean }[] = [{ subject_name: '', is_su: false }];
   subjectsInGroup: any[] = [];
   isLoadingSubjects: boolean = false;
+
+  // Batch Subjects Inline Section states
+  batchSubjectsList: any[] = [];
+  isLoadingBatchSubjects: boolean = false;
+  filterSubjectGroupId: string = '';
+  filterSubjectName: string = '';
 
   constructor(
     private location: Location, 
@@ -87,18 +99,34 @@ export class AddCourse implements OnInit {
     this.courseService.getAllSubjectGroups().subscribe({
       next: (res) => { 
         if(res.success) {
-          this.groups = res.data; 
+          this.groups = (res.data || []).sort((a: any, b: any) => this.compareGroupNames(a.group_name, b.group_name)); 
           this.cdr.detectChanges(); // บังคับให้ UI อัปเดตทันที
         }
       },
       error: (err) => console.error(err)
     });
+    if (this.selectedBatchForSubject) {
+      this.loadSubjectsForSelectedBatch();
+    }
   }
 
   // Helpers for Course Names
   getUniqueCourseNames(): string[] {
     const names = this.courses.map(c => c.course_name);
     return Array.from(new Set(names));
+  }
+
+  getUniqueCourseYears(): string[] {
+    const years = this.courses.map(c => c.curriculum_year).filter(y => y);
+    return Array.from(new Set(years)).sort((a: any, b: any) => b - a).map(String);
+  }
+
+  getFilteredCourses(): any[] {
+    return this.courses.filter(c => {
+      const matchYear = this.filterCourseYear ? c.curriculum_year?.toString() === this.filterCourseYear : true;
+      const matchName = this.filterCourseName ? c.course_name.toLowerCase().includes(this.filterCourseName.toLowerCase()) : true;
+      return matchYear && matchName;
+    });
   }
 
   getCoursesByName(name: string): any[] {
@@ -158,15 +186,52 @@ export class AddCourse implements OnInit {
     return batch.id;
   }
 
+  trackByGroupId(index: number, group: any): any {
+    return group.id;
+  }
+
   // Filter methods for cascading dropdowns
   getBatchesForCourse(courseId: string) {
     if (!courseId) return [];
     return this.batches.filter((b: any) => b.course_id.toString() === courseId.toString());
   }
 
+  // ฟังก์ชันช่วยจัดลำดับความสำคัญของกลุ่มวิชา: M (วิชาหลัก) -> MN (วิชารอง) -> S (วิชาประกอบ) -> P (ภาคปฏิบัติ)
+  getGroupPrefixOrder(name: string): number {
+    const upper = (name || '').trim().toUpperCase();
+    if (upper.startsWith('MN')) return 2;
+    if (upper.startsWith('M')) return 1;
+    if (upper.startsWith('S')) return 3;
+    if (upper.startsWith('P')) return 4;
+    return 5;
+  }
+
+  compareGroupNames(aName: string, bName: string): number {
+    const orderA = this.getGroupPrefixOrder(aName);
+    const orderB = this.getGroupPrefixOrder(bName);
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+
+    // ถ้าเป็นกลุ่มประเภทเดียวกัน ให้เรียงตามตัวเลขน้อยไปมาก เช่น M01, M02, M03...
+    const matchA = (aName || '').match(/\d+/);
+    const matchB = (bName || '').match(/\d+/);
+    if (matchA && matchB) {
+      const numA = parseInt(matchA[0], 10);
+      const numB = parseInt(matchB[0], 10);
+      if (numA !== numB) {
+        return numA - numB;
+      }
+    }
+
+    return (aName || '').localeCompare(bName || '', 'th', { numeric: true, sensitivity: 'base' });
+  }
+
   getGroupsForBatch(batchId: string) {
     if (!batchId) return [];
-    return this.groups.filter((g: any) => g.batch_id.toString() === batchId.toString());
+    return this.groups
+      .filter((g: any) => g.batch_id.toString() === batchId.toString())
+      .sort((a: any, b: any) => this.compareGroupNames(a.group_name, b.group_name));
   }
 
   toThaiDate(dateString: string | null | undefined): string {
@@ -187,15 +252,33 @@ export class AddCourse implements OnInit {
     this.location.back();
   }
 
+  onCourseSelectChange(event: any) {
+    if (event.target.value === 'NEW_COURSE') {
+      this.isNewCourse = true;
+      this.courseForm.course_name = '';
+    }
+  }
+
+  cancelNewCourse() {
+    this.isNewCourse = false;
+    this.courseForm.course_name = '';
+  }
+
   onSubmitCourse() {
+    if (this.courseForm.course_name === 'NEW_COURSE' || !this.courseForm.course_name) {
+      Swal.fire('แจ้งเตือน', 'กรุณาระบุชื่อหลักสูตร', 'warning');
+      return;
+    }
     this.courseService.addCourse(this.courseForm).subscribe({
       next: (res) => {
         Swal.fire('สำเร็จ!', 'เพิ่มหลักสูตรเรียบร้อยแล้ว', 'success');
         this.courseForm = { course_name: '', curriculum_year: null };
+        this.isNewCourse = false;
         this.loadAllData(); // reload
       },
       error: (err) => {
-        Swal.fire('เกิดข้อผิดพลาด!', 'ไม่สามารถเพิ่มหลักสูตรได้', 'error');
+        const msg = err?.error?.message || 'ไม่สามารถเพิ่มหลักสูตรได้';
+        Swal.fire('เกิดข้อผิดพลาด!', msg, 'error');
         console.error(err);
       }
     });
@@ -259,8 +342,53 @@ export class AddCourse implements OnInit {
 
   removeGroupField(index: number) {
     if (this.groupsList.length > 1) {
+      const removed = this.groupsList[index];
+      const match = removed?.group_name ? removed.group_name.match(/^(.*?)(\d+)$/) : null;
+
       this.groupsList.splice(index, 1);
+
+      if (match) {
+        const prefix = match[1];
+        const padLength = match[2].length;
+
+        for (let i = index; i < this.groupsList.length; i++) {
+          const curr = this.groupsList[i];
+          if (!curr || !curr.group_name) break;
+
+          const currMatch = curr.group_name.match(/^(.*?)(\d+)$/);
+          // ถ้าไม่ใช่รหัสที่ขึ้นต้นด้วย prefix เดียวกัน ให้หยุดรันเลข
+          if (!currMatch || currMatch[1].toUpperCase() !== prefix.toUpperCase()) {
+            break;
+          }
+
+          let nextNum: number;
+          if (i === 0) {
+            nextNum = parseInt(match[2], 10);
+          } else {
+            const prev = this.groupsList[i - 1];
+            const prevMatch = prev?.group_name ? prev.group_name.match(/^(.*?)(\d+)$/) : null;
+            if (prevMatch && prevMatch[1].toUpperCase() === prefix.toUpperCase()) {
+              nextNum = parseInt(prevMatch[2], 10) + 1;
+            } else {
+              nextNum = 1;
+            }
+          }
+
+          const nextNumStr = nextNum.toString().padStart(padLength, '0');
+          curr.group_name = prefix + nextNumStr;
+        }
+      }
+
+      this.cdr.detectChanges();
     }
+  }
+
+  onGroupNameInput(g: any, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    // อนุญาตเฉพาะตัวแปรภาษาอังกฤษ (A-Z, a-z) และตัวเลข (0-9) เท่านั้น ไม่อนุญาตอักษรพิเศษและภาษาไทย
+    const clean = (input.value || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    g.group_name = clean;
+    input.value = clean;
   }
 
   async onSubmitSubjectGroup() {
@@ -275,14 +403,14 @@ export class AddCourse implements OnInit {
       return;
     }
 
-    // Pattern Validation: ต้องขึ้นต้นด้วย M, MN, S, P ตามด้วยตัวเลขเท่านั้น
-    const pattern = /^(M|MN|S|P)\d+$/i;
+    // Pattern Validation: ต้องเป็นตัวแปรภาษาอังกฤษ (A-Z) และตัวเลขเท่านั้น โดยไม่มีอักษรพิเศษ
+    const pattern = /^[A-Z][A-Z0-9]*$/i;
     for (const g of validGroups) {
       const gName = g.group_name.trim().toUpperCase();
       if (!pattern.test(gName)) {
         Swal.fire(
           'รูปแบบชื่อกลุ่มวิชาไม่ถูกต้อง', 
-          `กลุ่มวิชา "<b>${g.group_name}</b>" ไม่ตรงตามรูปแบบที่กำหนด<br><br><span style="font-size: 14px; color: #666;">ต้องขึ้นต้นด้วยตัวอักษร <b>M, MN, S, หรือ P</b> และตามด้วยตัวเลขเท่านั้น<br>ตัวอย่างเช่น: M01, MN02, S05, P10</span>`, 
+          `กลุ่มวิชา "<b>${g.group_name}</b>" ไม่ตรงตามรูปแบบที่กำหนด<br><br><span style="font-size: 14px; color: #666;">ต้องเป็นตัวอักษรภาษาอังกฤษ (A-Z) และตัวเลขเท่านั้น โดยไม่มีอักษรพิเศษหรือภาษาไทย<br>ตัวอย่างเช่น: M01, MN01, S01, P01</span>`, 
           'warning'
         );
         return;
@@ -358,6 +486,9 @@ export class AddCourse implements OnInit {
       this.subjectsList = [{ subject_name: '', is_su: false }];
       // Do not clear the selected course/batch/group so the user can see the updated table
       this.onGroupChange(); // Reload the table
+      if (this.selectedBatchForSubject) {
+        this.loadSubjectsForSelectedBatch();
+      }
       
     } catch (err: any) {
       const msg = err?.error?.message || 'ไม่สามารถเพิ่มรายวิชาได้บางส่วน';
@@ -452,6 +583,39 @@ export class AddCourse implements OnInit {
   // ==========================================
   // จัดการรุ่น (Edit / Delete)
   // ==========================================
+  formatDateToThaiInput(dateStr: string): string {
+    if (!dateStr) return '';
+    const parts = dateStr.split('T')[0].split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parts[1];
+      const d = parts[2];
+      const beYear = y < 2500 ? y + 543 : y;
+      return `${d}/${m}/${beYear}`;
+    }
+    return dateStr;
+  }
+
+  parseThaiInputToISO(text: string): string {
+    if (!text || !text.trim()) return '';
+    const parts = text.trim().split(/[\/\-\.]/);
+    if (parts.length === 3) {
+      // กรณีผู้ใช้กรอก YYYY-MM-DD
+      if (parts[0].length === 4) {
+        let y = parseInt(parts[0], 10);
+        if (y >= 2400) y -= 543;
+        return `${y}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      }
+      // กรณีผู้ใช้กรอก DD/MM/YYYY (พ.ศ.)
+      const d = parts[0].padStart(2, '0');
+      const m = parts[1].padStart(2, '0');
+      let y = parseInt(parts[2], 10);
+      if (y >= 2400) y -= 543;
+      return `${y}-${m}-${d}`;
+    }
+    return text;
+  }
+
   editBatch(batch: any) {
     const startDate = batch.start_date ? batch.start_date.split('T')[0] : '';
     const endDate = batch.end_date ? batch.end_date.split('T')[0] : '';
@@ -466,11 +630,11 @@ export class AddCourse implements OnInit {
           <label style="font-size: 14px; color: #555; margin-top: 8px;">ชื่อรุ่น</label>
           <input id="swal-batch-name" class="swal2-input" placeholder="ชื่อรุ่น" value="${batch.batch_name || ''}" style="margin: 0; width: 100%; box-sizing: border-box;">
           
-          <label style="font-size: 14px; color: #555; margin-top: 8px;">วันที่เริ่มต้น</label>
-          <input type="date" id="swal-start-date" class="swal2-input" value="${startDate}" style="margin: 0; width: 100%; box-sizing: border-box;">
+          <label style="font-size: 14px; color: #555; margin-top: 8px;">วันที่เริ่มต้น (วว/ดด/พ.ศ.)</label>
+          <input id="swal-start-date" class="swal2-input" placeholder="เช่น 09/09/2569" value="${this.formatDateToThaiInput(startDate)}" style="margin: 0; width: 100%; box-sizing: border-box;">
           
-          <label style="font-size: 14px; color: #555; margin-top: 8px;">วันที่สิ้นสุด</label>
-          <input type="date" id="swal-end-date" class="swal2-input" value="${endDate}" style="margin: 0; width: 100%; box-sizing: border-box;">
+          <label style="font-size: 14px; color: #555; margin-top: 8px;">วันที่สิ้นสุด (วว/ดด/พ.ศ.)</label>
+          <input id="swal-end-date" class="swal2-input" placeholder="เช่น 09/09/2569" value="${this.formatDateToThaiInput(endDate)}" style="margin: 0; width: 100%; box-sizing: border-box;">
         </div>
       `,
       showCancelButton: true,
@@ -479,13 +643,17 @@ export class AddCourse implements OnInit {
       confirmButtonColor: '#673ab7',
       preConfirm: () => {
         const name = (document.getElementById('swal-batch-name') as HTMLInputElement).value;
-        const start = (document.getElementById('swal-start-date') as HTMLInputElement).value;
-        const end = (document.getElementById('swal-end-date') as HTMLInputElement).value;
+        const startRaw = (document.getElementById('swal-start-date') as HTMLInputElement).value;
+        const endRaw = (document.getElementById('swal-end-date') as HTMLInputElement).value;
         
         if (!name.trim()) {
           Swal.showValidationMessage('กรุณากรอกชื่อรุ่น');
           return false;
         }
+
+        const start = this.parseThaiInputToISO(startRaw);
+        const end = this.parseThaiInputToISO(endRaw);
+
         return { batch_name: name, start_date: start, end_date: end };
       }
     }).then((result) => {
@@ -867,6 +1035,9 @@ export class AddCourse implements OnInit {
                       showConfirmButton: false
                     });
                     this.onGroupChange(); // reload subjects in this group
+                    if (this.selectedBatchForSubject) {
+                      this.loadSubjectsForSelectedBatch();
+                    }
                   } else {
                     Swal.fire('ข้อผิดพลาด', delRes.message, 'error');
                   }
@@ -889,10 +1060,12 @@ export class AddCourse implements OnInit {
   onGroupChange() {
     if (!this.subjectForm.group_id || !this.selectedBatchForSubject) {
       this.subjectsInGroup = [];
+      this.cdr.detectChanges();
       return;
     }
     
     this.isLoadingSubjects = true;
+    this.cdr.detectChanges();
     this.courseService.getSubjectsByBatch(this.selectedBatchForSubject).subscribe({
       next: (res) => {
         if (res.success && Array.isArray(res.data)) {
@@ -920,5 +1093,86 @@ export class AddCourse implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  // ==========================================
+  // จัดการรายวิชาทั้งหมดในรุ่นที่เลือก (Inline Batch Subjects)
+  // ==========================================
+  onBatchSelectedForSubject() {
+    this.subjectForm.group_id = '';
+    this.filterSubjectGroupId = '';
+    this.filterSubjectName = '';
+    if (this.selectedBatchForSubject) {
+      this.loadSubjectsForSelectedBatch();
+    } else {
+      this.batchSubjectsList = [];
+    }
+    this.cdr.detectChanges();
+  }
+
+  loadSubjectsForSelectedBatch() {
+    if (!this.selectedBatchForSubject) {
+      this.batchSubjectsList = [];
+      this.cdr.detectChanges();
+      return;
+    }
+    this.isLoadingBatchSubjects = true;
+    this.cdr.detectChanges();
+    this.courseService.getSubjectsByBatch(this.selectedBatchForSubject).subscribe({
+      next: (res) => {
+        if (res.success && Array.isArray(res.data)) {
+          const allSubjs: any[] = [];
+          const sortedGroups = [...res.data].sort((a: any, b: any) =>
+            this.compareGroupNames(a.group_name, b.group_name)
+          );
+          for (const g of sortedGroups) {
+            if (Array.isArray(g.subjects)) {
+              for (const s of g.subjects) {
+                allSubjs.push({
+                  ...s,
+                  subject_id: s.subject_id || s.id,
+                  group_name: g.group_name,
+                  group_id: g.id || g.group_id
+                });
+              }
+            }
+          }
+          this.batchSubjectsList = allSubjs;
+        } else {
+          this.batchSubjectsList = [];
+        }
+        this.isLoadingBatchSubjects = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error loading subjects for batch:', err);
+        this.batchSubjectsList = [];
+        this.isLoadingBatchSubjects = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  getSubjectsCountInGroup(groupName: string): number {
+    return this.batchSubjectsList.filter(s => s.group_name === groupName).length;
+  }
+
+  getFilteredBatchSubjects(): any[] {
+    let list = this.batchSubjectsList;
+    if (this.filterSubjectGroupId) {
+      const selGroup = this.groups.find(g => g.id.toString() === this.filterSubjectGroupId.toString());
+      if (selGroup) {
+        list = list.filter(s => s.group_name === selGroup.group_name);
+      }
+    }
+    if (this.filterSubjectName && this.filterSubjectName.trim()) {
+      const q = this.filterSubjectName.trim().toLowerCase();
+      list = list.filter(s => (s.subject_name || '').toLowerCase().includes(q));
+    }
+    return list;
+  }
+
+  trackBySubjectId(index: number, s: any): any {
+    return s.subject_id || s.id || index;
   }
 }

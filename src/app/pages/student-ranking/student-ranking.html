@@ -1,0 +1,683 @@
+<div class="student-ranking-page">
+  <!-- 🟪 หัวข้อบนสุด: จัดลำดับผลการเรียน -->
+  <div class="page-header no-print">
+    <div class="header-left">
+      <button mat-icon-button class="back-button" routerLink="/admin/classoverview" title="กลับไปหน้าภาพรวมผลการเรียน">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <div>
+        <h1 class="page-title">จัดลำดับผลการเรียน (Student Rankings)</h1>
+        <p class="page-subtitle">จัดลำดับผลการเรียน 1 ถึง N พร้อมระบบปลดล็อคลำดับซ้ำด้วยวิชาที่แอดมินเลือก</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button mat-stroked-button class="btn-action-header" routerLink="/admin/classoverview" [queryParams]="{ courseId: selectedCourse, batchId: selectedBatch }">
+        <mat-icon>table_chart</mat-icon>
+        <span>ดูตารางผลการเรียนรวม (Master Grid)</span>
+      </button>
+      <button mat-stroked-button class="btn-action-header" (click)="printPage()" [disabled]="rankedStudents.length === 0">
+        <mat-icon>print</mat-icon>
+        <span>พิมพ์รายงาน (A4)</span>
+      </button>
+      <button mat-raised-button class="btn-action-header btn-primary" (click)="exportToExcel()" [disabled]="rankedStudents.length === 0">
+        <mat-icon>description</mat-icon>
+        <span>ส่งออก Excel</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="page-wrapper">
+    
+    <!-- 🔍 เมนูกรองข้อมูล: โครงสร้างหลักสูตร และ เลือกรุ่น -->
+    <div class="filter-card no-print">
+      <div class="card-section-title">
+        <mat-icon>tune</mat-icon>
+        <span>เลือกรุ่นที่ต้องการประมวลผลการจัดอันดับ</span>
+      </div>
+
+      <div class="filter-row">
+        <!-- 1. เลือกโครงสร้างหลักสูตร -->
+        <div class="form-group">
+          <label class="form-label">เลือกโครงสร้างหลักสูตร</label>
+          <div class="select-wrapper">
+            <select [(ngModel)]="selectedCourse" (change)="onCourseChange()">
+              <option value="">-- กรุณาเลือกโครงสร้างหลักสูตร --</option>
+              @for (course of courses; track course.id) {
+                <option [value]="course.id">{{ course.group_name }}</option>
+              }
+            </select>
+            <span class="arrow-icon">▼</span>
+          </div>
+        </div>
+
+        <!-- 2. เลือกรุ่น -->
+        <div class="form-group">
+          <label class="form-label">เลือกรุ่น</label>
+          <div class="select-wrapper">
+            <select [(ngModel)]="selectedBatch" (change)="onBatchChange()" [disabled]="!selectedCourse">
+              <option value="">-- กรุณาเลือกรุ่น --</option>
+              @for (batch of batches; track batch.id) {
+                <option [value]="batch.id">{{ batch.name }}</option>
+              }
+            </select>
+            <span class="arrow-icon">▼</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⚠️ กรณีผู้ใช้ยังไม่ได้เลือกรุ่น -->
+    @if (!selectedBatch) {
+      <div class="empty-state-container no-print">
+        <div class="empty-icon-circle">
+          <mat-icon>military_tech</mat-icon>
+        </div>
+        <h3 class="empty-title">กรุณาเลือกรุ่นเพื่อแสดงผลการจัดลำดับ</h3>
+        <p class="empty-desc">เลือกรุ่นจากเมนูด้านบน ระบบจะดึงข้อมูลเกรดเฉลี่ย คะแนนวิชาหลัก และจัดลำดับที่ 1 ถึง N ให้โดยอัตโนมัติ</p>
+      </div>
+    } @else {
+
+      <!-- ⏳ กำลังโหลดข้อมูล -->
+      @if (isLoading) {
+        <div class="loading-state no-print">
+          <mat-icon class="spinning">sync</mat-icon>
+          <span>กำลังประมวลผลการจัดอันดับนักเรียน...</span>
+        </div>
+      } @else {
+
+        <!-- 🎯 แผงตั้งค่าเลือกวิชาสำหรับ Tie-Breaking (กรณีเกรดเท่ากัน) -->
+        <div class="tiebreak-panel no-print">
+          <div class="panel-header" (click)="isTieBreakPanelOpen = !isTieBreakPanelOpen">
+            <div class="panel-title-area">
+              <div class="panel-icon-wrap">
+                <mat-icon>checklist</mat-icon>
+              </div>
+              <div>
+                <h3 class="panel-title">เลือกรายวิชาสำหรับตัดสินกรณีเกรดเท่ากัน (Tie-Breaking Criteria)</h3>
+                <p class="panel-subtitle">
+                  คนที่ GPA เท่ากัน ระบบจะนำคะแนนรวมของวิชาที่ท่าน <span class="highlight-text">ติ๊กเลือก</span> ด้านล่างนี้มาเปรียบเทียบเพื่อจัดอันดับ 1, 2, 3... ให้ทันที
+                </p>
+              </div>
+            </div>
+
+            <div class="panel-header-right">
+              <button 
+                type="button" 
+                class="btn-apply-header" 
+                (click)="$event.stopPropagation(); applyRecalculateRanking()" 
+                [disabled]="isRecalculating"
+                [class.highlight-btn]="hasPendingSubjectChanges"
+                title="คลิกเพื่อคำนวณและจัดอันดับใหม่ตามวิชาที่เลือก"
+              >
+                <mat-icon [class.spinning]="isRecalculating">{{ isRecalculating ? 'sync' : 'refresh' }}</mat-icon>
+                <span>{{ isRecalculating ? 'กำลังคำนวณ...' : 'ประมวลผลอีกครั้ง' }}</span>
+              </button>
+
+              <span class="selected-badge">
+                <mat-icon>verified</mat-icon>
+                เลือกแล้ว {{ getSelectedSubjectsCount() }} / {{ availableSubjects.length }} วิชา
+              </span>
+              <button mat-icon-button class="toggle-btn" type="button">
+                <mat-icon>{{ isTieBreakPanelOpen ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+            </div>
+          </div>
+
+          @if (isTieBreakPanelOpen) {
+            <div class="panel-body">
+              <div class="panel-toolbar">
+                <span class="toolbar-hint">
+                  <mat-icon>info_outline</mat-icon> คลิกเลือกวิชาที่ใช้เป็นเกณฑ์ตัดสินหลักตามระเบียบโรงเรียน:
+                </span>
+                <div class="toolbar-buttons">
+                  <button type="button" class="btn-chip" (click)="selectMainSubjectsOnly()">
+                    <mat-icon>filter_alt</mat-icon> เลือกเฉพาะวิชาหลัก (M)
+                  </button>
+                  <button type="button" class="btn-chip" (click)="selectGradeSubjectsOnly()">
+                    <mat-icon>school</mat-icon> เลือกวิชาที่มีเกรด (ไม่รวม S/U)
+                  </button>
+                  <button type="button" class="btn-chip" (click)="selectAllSubjects(true)">
+                    <mat-icon>select_all</mat-icon> เลือกทั้งหมด (รวม S/U)
+                  </button>
+                  <button type="button" class="btn-chip" (click)="selectAllSubjects(false)">
+                    <mat-icon>deselect</mat-icon> ล้างการเลือก
+                  </button>
+                </div>
+              </div>
+
+              <!-- รายการวิชาให้ติ๊กเลือกแบบ Checkbox Grid -->
+              <div class="subjects-checkbox-grid">
+                @for (sub of availableSubjects; track sub.id) {
+                  <label class="subject-checkbox-card" [class.is-selected]="sub.selected">
+                    <input 
+                      type="checkbox" 
+                      [(ngModel)]="sub.selected" 
+                      (change)="onSubjectToggle()"
+                      class="custom-chk"
+                    />
+                    <div class="chk-content">
+                      <div class="sub-name">{{ sub.name }}</div>
+                      <div class="sub-meta">
+                        <span class="badge-group" *ngIf="sub.group_name">{{ sub.group_name }}</span>
+                        <span class="badge-su" *ngIf="sub.is_su">ประเมินผล S/U</span>
+                        <span class="max-score">เต็ม {{ sub.max_score }}</span>
+                      </div>
+                    </div>
+                  </label>
+                }
+              </div>
+
+              <!-- 🎛️ แถบควบคุมและปุ่มกดสั่งคำนวณอันดับใหม่ด้านล่างแผง -->
+              <div class="panel-action-footer">
+                <div class="footer-summary">
+                  <mat-icon class="icon-info">info</mat-icon>
+                  <span>
+                    เลือกเกณฑ์ตัดสินแล้ว <strong>{{ getSelectedSubjectsCount() }}</strong> วิชา (จาก {{ availableSubjects.length }} วิชา)
+                    @if (hasPendingSubjectChanges) {
+                      <span class="notice-badge">⚠️ มีการเปลี่ยนแปลงวิชาที่เลือก — กดปุ่ม "ประมวลผลการจัดอันดับอีกครั้ง" เพื่อคำนวณ</span>
+                    }
+                  </span>
+                </div>
+                <button 
+                  type="button" 
+                  class="btn-recalc-action" 
+                  (click)="applyRecalculateRanking()" 
+                  [disabled]="isRecalculating"
+                  [class.pulse-btn]="hasPendingSubjectChanges"
+                >
+                  <mat-icon [class.spinning]="isRecalculating">{{ isRecalculating ? 'sync' : 'refresh' }}</mat-icon>
+                  <span>{{ isRecalculating ? 'กำลังประมวลผลอันดับ...' : 'ประมวลผลการจัดอันดับอีกครั้ง' }}</span>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- ⏳ สถานะกำลังประมวลผลวาดหน้าใหม่เฉพาะส่วนตารางด้านล่าง -->
+        @if (isTableLoading) {
+          <div class="table-loading-card no-print">
+            <div class="loading-content">
+              <mat-icon class="spinning">sync</mat-icon>
+              <h4>กำลังประมวลผลและจัดอันดับนักเรียนใหม่...</h4>
+              <p>ระบบกำลังคำนวณคะแนนรวมวิชาที่เลือก ตรวจสอบเกรดเฉลี่ย และจัดเรียงอันดับใหม่อีกครั้ง</p>
+            </div>
+          </div>
+        } @else {
+
+        <!-- 📊 สถิติภาพรวม (Stat Cards) -->
+        <div class="stats-row no-print">
+          <div class="stat-card">
+            <div class="stat-icon-wrap purple">
+              <mat-icon>people</mat-icon>
+            </div>
+            <div class="stat-data">
+              <span class="stat-label">นักเรียนทั้งหมด</span>
+              <span class="stat-value">{{ totalStudents }} <small>นาย</small></span>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrap gold">
+              <mat-icon>emoji_events</mat-icon>
+            </div>
+            <div class="stat-data">
+              <span class="stat-label">ลำดับที่ 1 (Top Performer)</span>
+              <span class="stat-value top-name">
+                @if (topPerformer) {
+                  {{ topPerformer.rank_name }} {{ topPerformer.first_name }} (GPA {{ topPerformer.gpa }})
+                } @else {
+                  -
+                }
+              </span>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrap blue">
+              <mat-icon>grade</mat-icon>
+            </div>
+            <div class="stat-data">
+              <span class="stat-label">เกรดเฉลี่ย (เฉพาะผู้เรียนครบ)</span>
+              <span class="stat-value">{{ avgGpa }}</span>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrap amber">
+              <mat-icon>balance</mat-icon>
+            </div>
+            <div class="stat-data">
+              <span class="stat-label">กรณีเกรดเท่ากันที่ปลดล็อค</span>
+              <span class="stat-value">{{ tiedCount }} <small>คน</small></span>
+            </div>
+          </div>
+
+          @if (incompleteCount > 0) {
+            <div class="stat-card stat-warning">
+              <div class="stat-icon-wrap orange">
+                <mat-icon>pending_actions</mat-icon>
+              </div>
+              <div class="stat-data">
+                <span class="stat-label">ยังไม่ส่ง/ไม่ครบวิชา</span>
+                <span class="stat-value text-orange">{{ incompleteCount }} <small>นาย</small></span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- 📢 แถบแจ้งเตือนเมื่อมีการปรับลำดับด้วยมือ -->
+        @if (hasManualAdjustments) {
+          <div class="alert-banner-adjust no-print">
+            <div class="adjust-text">
+              <mat-icon>touch_app</mat-icon>
+              <span>มีการปรับสลับอันดับด้วยมือ (Manual Override) ในบางลำดับ</span>
+            </div>
+            <button class="btn-reset-adjust" (click)="resetToCalculated()">
+              <mat-icon>restart_alt</mat-icon>
+              <span>รีเซ็ตตามเกณฑ์คำนวณอัตโนมัติ</span>
+            </button>
+          </div>
+        }
+
+        <!-- 📢 แถบแจ้งเตือนเมื่อมีนักเรียนที่คะแนนวิชาที่เลือกยังเท่ากัน -->
+        @if (hasTiedUnresolved) {
+          <div class="alert-banner-tied no-print">
+            <div class="tied-alert-left">
+              <mat-icon>lightbulb</mat-icon>
+              <div>
+                <strong>พบนักเรียนที่คะแนนดิบรวมในวิชาที่เลือกยังเท่ากัน:</strong>
+                <span>ท่านสามารถ <strong>ติ๊กเลือกวิชาเพิ่มในแผงด้านบน</strong> เพื่อนำคะแนนมารวมตัดสิน หรือใช้ปุ่ม ⬆️ ⬇️ เพื่อปรับอันดับ</span>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- 🧩 แผงระบุกลุ่มเกรดซ้ำ (Tied Groups Detection Panel) -->
+        @if (tiedGroups.length > 0) {
+          <div class="tied-groups-panel no-print">
+            <div class="tied-panel-header">
+              <div class="tied-title-wrap">
+                <div class="panel-badge-icon">
+                  <mat-icon>hub</mat-icon>
+                </div>
+                <div>
+                  <h4 class="tied-title">
+                    ตรวจพบลำดับที่เกรดซ้ำกัน {{ tiedGroups.length }} กลุ่ม (รวม {{ tiedCount }} คน)
+                  </h4>
+                  <p class="tied-desc">
+                    แต่ละกลุ่มมีสีประจำกลุ่มที่ชัดเจน คลิกที่การ์ดกลุ่มเพื่อกรองดูเฉพาะกลุ่มนั้น หรือดูช่วงลำดับที่กำลังแย่งกัน:
+                  </p>
+                </div>
+              </div>
+
+              @if (filterMode !== 'all') {
+                <button type="button" class="btn-clear-group-filter" (click)="setFilterMode('all')">
+                  <mat-icon>refresh</mat-icon>
+                  <span>แสดงทุกคน (ล้างตัวกรองกลุ่ม)</span>
+                </button>
+              }
+            </div>
+
+            <div class="tied-clusters-grid">
+              @for (tg of tiedGroups; track tg.groupId) {
+                <div 
+                  class="tied-cluster-card"
+                  [class.is-active]="filterMode === 'group:' + tg.groupId"
+                  [style.border-color]="tg.color.border"
+                  (click)="setFilterMode(filterMode === 'group:' + tg.groupId ? 'all' : 'group:' + tg.groupId)"
+                  title="คลิกเพื่อกรองดูเฉพาะกลุ่มนี้"
+                >
+                  <div class="card-tag-badge" [style.background-color]="tg.color.border">
+                    กลุ่ม {{ tg.groupId }}
+                  </div>
+
+                  <div class="card-inner-body">
+                    <div class="top-meta-line">
+                      <span class="gpa-tag" [style.color]="tg.color.text">
+                        GPA {{ tg.gpa }}
+                      </span>
+                      <span class="count-pill">
+                        {{ tg.studentCount }} คน
+                      </span>
+                    </div>
+
+                    <div class="competing-ranks">
+                      <mat-icon>military_tech</mat-icon>
+                      <span>แย่งลำดับที่ <strong>{{ tg.minRank }} - {{ tg.maxRank }}</strong></span>
+                    </div>
+
+                    <div class="student-codes-list">
+                      <span class="code-title">เลขที่:</span>
+                      <span class="codes-bold">{{ tg.studentCodes }}</span>
+                    </div>
+
+                    <div class="resolution-badge">
+                      @if (tg.isResolved) {
+                        <span class="badge-status resolved">
+                          <mat-icon>check_circle</mat-icon> ปลดล็อคแล้ว
+                        </span>
+                      } @else {
+                        <span class="badge-status pending">
+                          <mat-icon>error_outline</mat-icon> คะแนนเท่ากัน (รอติ๊กวิชา)
+                        </span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- 📄 หัวรายงานสำหรับตอนพิมพ์ (Print Only Header) -->
+        <div class="print-header only-print">
+          <h2>รายงานการจัดลำดับผลการศึกษา</h2>
+          <h3>หลักสูตร {{ getSelectedCourseName() }} {{ getSelectedBatchName() }}</h3>
+          <p>เกณฑ์การตัดสินกรณีเกรดเฉลี่ยเท่ากัน: คำนวณจากคะแนนรวมในวิชา [ {{ getSelectedSubjectsText() }} ]</p>
+        </div>
+
+        <!-- 🎛️ แถบควบคุมมุมมองการดู (สลับดูเรียงตามลำดับที่ VS เรียงตามเลขที่) -->
+        <div class="view-mode-bar no-print">
+          <div class="view-mode-left">
+            <span class="mode-label">
+              <mat-icon>tune</mat-icon> โหมดการแสดงผล:
+            </span>
+            <div class="segmented-control">
+              <button 
+                type="button" 
+                class="seg-btn" 
+                [class.active]="viewMode === 'by-rank'"
+                (click)="setViewMode('by-rank')"
+              >
+                <mat-icon>emoji_events</mat-icon>
+                <span>เรียงตามลำดับที่ได้ (1 ถึง {{ totalStudents }})</span>
+              </button>
+              <button 
+                type="button" 
+                class="seg-btn" 
+                [class.active]="viewMode === 'by-code'"
+                (click)="setViewMode('by-code')"
+              >
+                <mat-icon>format_list_numbered</mat-icon>
+                <span>เรียงตามเลขที่ (01 ถึง {{ totalStudents }})</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="view-mode-right">
+            <span class="filter-label">
+              <mat-icon>filter_list</mat-icon> ตัวกรอง:
+            </span>
+            <div class="quick-filter-chips">
+              <button 
+                type="button" 
+                class="chip-btn" 
+                [class.active]="filterMode === 'all'"
+                (click)="setFilterMode('all')"
+              >
+                ทุกคน ({{ rankedStudents.length }})
+              </button>
+              <button 
+                type="button" 
+                class="chip-btn" 
+                [class.active]="filterMode === 'complete-only'"
+                (click)="setFilterMode('complete-only')"
+                *ngIf="incompleteCount > 0"
+              >
+                <mat-icon>check_circle</mat-icon>
+                เรียนครบ ({{ completedCount }} คน)
+              </button>
+              <button 
+                type="button" 
+                class="chip-btn chip-warning" 
+                [class.active]="filterMode === 'tied-only'"
+                (click)="setFilterMode('tied-only')"
+                *ngIf="tiedCount > 0"
+              >
+                <mat-icon>warning_amber</mat-icon>
+                เฉพาะเกรดซ้ำ ({{ tiedCount }} คน)
+              </button>
+              <button 
+                type="button" 
+                class="chip-btn chip-danger" 
+                [class.active]="filterMode === 'incomplete-only'"
+                (click)="setFilterMode('incomplete-only')"
+                *ngIf="incompleteCount > 0"
+              >
+                <mat-icon>pending_actions</mat-icon>
+                คะแนนไม่ครบ ({{ incompleteCount }} คน)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 🏆 ตารางผลการจัดลำดับ 1 ถึง N (Ranking Table) -->
+        <div class="table-container">
+          <div class="table-action-bar no-print">
+            <div class="table-title">
+              <mat-icon>military_tech</mat-icon>
+              @if (viewMode === 'by-rank') {
+                <span>ตารางจัดลำดับผลการเรียน (เรียงตามลำดับที่ 1 ถึง {{ completedCount }})</span>
+              } @else {
+                <span>ตารางจัดลำดับผลการเรียน (เรียงตามเลขที่ 01 ถึง {{ rankedStudents.length }})</span>
+              }
+
+              @if (filterMode !== 'all') {
+                <span class="active-filter-badge">
+                  กรอง: {{ filterMode === 'tied-only' ? 'เฉพาะคนที่เกรดซ้ำกัน' : (filterMode === 'incomplete-only' ? 'เฉพาะคนที่คะแนนไม่ครบ' : filterMode) }}
+                </span>
+              }
+            </div>
+
+            <div class="table-meta-hint">
+              @if (viewMode === 'by-code') {
+                <span class="hint-code-mode">
+                  ℹ️ กำลังเรียงตามเลขที่ — คอลัมน์ "ลำดับที่ได้" จะแสดงอันดับจริงที่นักเรียนแต่ละคนได้รับ
+                </span>
+              } @else {
+                <span>* เกณฑ์ตัดสิน: 1. GPA ➔ 2. คะแนนดิบรวมวิชาที่ติ๊กเลือก (หากยังเท่ากัน สามารถติ๊กเพิ่มวิชาด้านบน)</span>
+              }
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="ranking-table">
+              <thead>
+                <tr>
+                  <th class="text-center col-rank">
+                    {{ viewMode === 'by-rank' ? 'ลำดับที่' : 'ลำดับที่ได้' }}
+                  </th>
+                  <th class="text-center col-code">เลขที่</th>
+                  <th class="text-left col-name">ยศ - ชื่อ - นามสกุล</th>
+                  <th class="text-center col-gpa">เกรดเฉลี่ย (GPA)</th>
+                  <th class="text-center col-tiebreak highlight-col" title="คะแนนดิบรวมเฉพาะวิชาที่เลือกด้านบนเพื่อใช้ตัดสินกรณีเกรดเท่ากัน">
+                    คะแนนวิชาที่เลือกตัดสิน
+                    <div class="sub-header-text">
+                      @if (appliedSubjectCount > 0) {
+                        <span>({{ appliedSubjectCount }} / {{ availableSubjects.length }} วิชา)</span>
+                      } @else {
+                        <span>(ไม่ได้เลือกวิชา)</span>
+                      }
+                      @if (hasPendingSubjectChanges) {
+                        <span class="pending-sync-tag" title="มีการเปลี่ยนการเลือกวิชา — กรุณากดปุ่ม 'ประมวลผลการจัดอันดับอีกครั้ง' เพื่อคำนวณ">*ยังไม่อัปเดต</span>
+                      }
+                    </div>
+                  </th>
+                  <th class="text-center col-score" title="คะแนนดิบรวมทุกวิชาที่มีในฐานข้อมูลทั้งหมด (รวมวิชา S/U)">
+                    คะแนนรวมทุกวิชา
+                    <div class="sub-header-text">(ทุกวิชาในระบบ)</div>
+                  </th>
+                  <th class="text-left col-reason">เกณฑ์การตัดสิน / สรุปกลุ่มซ้ำ</th>
+                  <th class="text-center col-action no-print">ปรับลำดับ</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (student of displayedStudents; track student.student_id; let i = $index) {
+                  <tr 
+                    [class.row-top-1]="student.manualRank === 1 && student.is_completed !== false"
+                    [class.row-top-2]="student.manualRank === 2 && student.is_completed !== false"
+                    [class.row-top-3]="student.manualRank === 3 && student.is_completed !== false"
+                    [class.row-tied]="student.isTiedGpa && student.is_completed !== false"
+                    [class.row-incomplete]="student.is_completed === false"
+                    [style.border-left]="student.is_completed === false ? '6px solid #d9d9d9' : (student.isTiedGpa ? '6px solid ' + student.tiedGroupColor : null)"
+                    [style.background-color]="student.is_completed === false ? '#fafafa' : (student.isTiedGpa ? student.tiedGroupBg : null)"
+                  >
+                    
+                    <!-- ลำดับที่ (แสดงเหรียญรางวัล Top 3 สำหรับผู้ที่เรียนครบ และป้ายสถานะสำหรับผู้ที่ไม่ครบ) -->
+                    <td class="text-center col-rank font-bold">
+                      @if (student.is_completed === false) {
+                        <span class="badge-incomplete" title="มีคะแนนไม่ครบตามโครงสร้างหลักสูตร ไม่นำมาจัดอันดับ">
+                          <mat-icon>hourglass_top</mat-icon> ไม่ครบวิชา
+                        </span>
+                      } @else if (student.manualRank === 1) {
+                        <span class="badge-medal gold">🥇 1</span>
+                      } @else if (student.manualRank === 2) {
+                        <span class="badge-medal silver">🥈 2</span>
+                      } @else if (student.manualRank === 3) {
+                        <span class="badge-medal bronze">🥉 3</span>
+                      } @else {
+                        <span class="badge-rank">{{ student.manualRank }}</span>
+                      }
+                    </td>
+
+                    <!-- เลขที่ -->
+                    <td class="text-center col-code text-muted font-bold">
+                      <span class="code-pill">{{ student.student_code }}</span>
+                    </td>
+
+                    <!-- ยศ - ชื่อ - นามสกุล -->
+                    <td class="text-left col-name">
+                      <span class="rank-tag" *ngIf="student.rank_name">{{ student.rank_name }}</span>
+                      <span class="student-name">{{ student.first_name }} {{ student.last_name }}</span>
+                    </td>
+
+                    <!-- เกรดเฉลี่ยสะสม (GPA) พร้อมป้ายระบุกลุ่มซ้ำ -->
+                    <td class="text-center col-gpa font-bold">
+                      <div class="gpa-display-stack">
+                        <span 
+                          class="gpa-pill" 
+                          [class.gpa-high]="+student.gpa >= 3.5 && student.is_completed !== false"
+                          [class.gpa-incomplete]="student.is_completed === false"
+                        >
+                          {{ student.gpa }}{{ student.is_completed === false ? '*' : '' }}
+                        </span>
+                        @if (student.is_completed === false) {
+                          <span class="badge-incomplete-tag" title="มีคะแนนเพียง {{ student.completion_text || student.completed_subjects_count }} วิชา">
+                            ({{ student.completion_text || 'ไม่ครบวิชา' }})
+                          </span>
+                        } @else if (student.isTiedGpa) {
+                          <span 
+                            class="group-tag-pill" 
+                            [style.background-color]="student.tiedGroupBg"
+                            [style.color]="student.tiedGroupText"
+                            [style.border-color]="student.tiedGroupColor"
+                            title="กลุ่มซ้ำที่ {{ student.tiedGroupId }}: เกรดเท่ากัน {{ student.tiedGroupCount }} คน (เลขที่ {{ getGroupStudentCodes(student.tiedGroupId) }})"
+                          >
+                            กลุ่มซ้ำ #{{ student.tiedGroupId }}
+                          </span>
+                        }
+                      </div>
+                    </td>
+
+                    <!-- คะแนนวิชาที่เลือกสำหรับ Tie-Breaking -->
+                    <td class="text-center col-tiebreak highlight-cell font-bold">
+                      @if (appliedSubjectCount > 0 && student.tieBreakMaxScore > 0) {
+                        <div class="score-main-wrap">
+                          <span class="score-val">{{ student.tieBreakScore | number:'1.1-2' }}</span>
+                          <span class="score-max">/ {{ student.tieBreakMaxScore }}</span>
+                        </div>
+                        @if (student.scoredSubjectsCount !== undefined && student.scoredSubjectsCount < appliedSubjectCount) {
+                          <div class="score-missing-badge" title="นักเรียนมีคะแนนบันทึกไว้ในระบบเพียง {{ student.scoredSubjectsCount }} วิชา จาก {{ appliedSubjectCount }} วิชาที่เลือก">
+                            (มีคะแนน {{ student.scoredSubjectsCount }}/{{ appliedSubjectCount }} วิชา)
+                          </div>
+                        }
+                      } @else {
+                        <span class="no-sub-dash" title="ไม่ได้เลือกวิชาตัดสิน">-</span>
+                      }
+                    </td>
+
+                    <!-- คะแนนรวมทุกวิชา -->
+                    <td class="text-center col-score">
+                      <span class="score-sub">{{ student.total_raw_score | number:'1.1-2' }}</span>
+                    </td>
+
+                    <!-- เกณฑ์การตัดสิน / เหตุผล / สรุปกลุ่มซ้ำ -->
+                    <td class="text-left col-reason">
+                      @if (student.is_completed === false) {
+                        <span class="badge-reason incomplete">
+                          <mat-icon>pending_actions</mat-icon>
+                          <span>{{ student.tieBreakReason }}</span>
+                        </span>
+                      } @else if (student.isTrulyTied) {
+                        <span 
+                          class="badge-reason truly-tied"
+                          [style.border-color]="student.tiedGroupColor"
+                        >
+                          <mat-icon>gavel</mat-icon>
+                          <span><strong>กลุ่ม {{ student.tiedGroupId }}:</strong> {{ student.tieBreakReason }}</span>
+                        </span>
+                      } @else if (student.isTiedGpa) {
+                        <span 
+                          class="badge-reason tied resolved"
+                          [style.border-color]="student.tiedGroupColor"
+                        >
+                          <mat-icon>verified</mat-icon>
+                          <span><strong>กลุ่ม {{ student.tiedGroupId }}:</strong> {{ student.tieBreakReason }}</span>
+                        </span>
+                      } @else {
+                        <span class="badge-reason standard">
+                          <mat-icon>check_circle</mat-icon>
+                          <span>{{ student.tieBreakReason }}</span>
+                        </span>
+                      }
+                    </td>
+
+                    <!-- ปุ่มปรับลำดับด้วยมือ ⬆️ ⬇️ -->
+                    <td class="text-center col-action no-print">
+                      @if (student.is_completed !== false) {
+                        <div class="action-btn-group">
+                          <button 
+                            mat-icon-button 
+                            class="btn-reorder" 
+                            [disabled]="i === 0 || viewMode === 'by-code'" 
+                            (click)="moveRankUp(student)"
+                            [title]="viewMode === 'by-code' ? 'กรุณาสลับเป็นโหมดเรียงตามลำดับที่ได้เพื่อปรับอันดับ' : 'เลื่อนอันดับขึ้น'"
+                          >
+                            <mat-icon>arrow_upward</mat-icon>
+                          </button>
+                          <button 
+                            mat-icon-button 
+                            class="btn-reorder" 
+                            [disabled]="i === completedCount - 1 || viewMode === 'by-code'" 
+                            (click)="moveRankDown(student)"
+                            [title]="viewMode === 'by-code' ? 'กรุณาสลับเป็นโหมดเรียงตามลำดับที่ได้เพื่อปรับอันดับ' : 'เลื่อนอันดับลง'"
+                          >
+                            <mat-icon>arrow_downward</mat-icon>
+                          </button>
+                        </div>
+                      } @else {
+                        <span class="text-muted" style="font-size: 11px;">-</span>
+                      }
+                    </td>
+
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="8" class="empty-table-msg">
+                      ไม่พบข้อมูลคะแนนนักเรียนในรุ่นที่เลือก หรือไม่ตรงกับตัวกรอง
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+        }
+
+      }
+
+    }
+
+  </div>
+</div>

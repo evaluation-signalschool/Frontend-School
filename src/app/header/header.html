@@ -40,7 +40,7 @@
 
         <ul class="dropdown-menu" *ngIf="menu.simpleItems">
           <li *ngFor="let item of menu.simpleItems">
-            <a [routerLink]="menu.path" [queryParams]="{ course: item.courseName ? item.courseName : item }">
+            <a [routerLink]="menu.path" [queryParams]="{ course: item.courseName ? item.courseName : item, courseId: item.courseId }">
               {{ item.title ? item.title : item }}
             </a>
           </li>
@@ -121,7 +121,7 @@
       mat-menu-item
       *ngFor="let item of simpleItems"
       [routerLink]="path"
-      [queryParams]="{ course: item.courseName ? item.courseName : item }"
+      [queryParams]="{ course: item.courseName ? item.courseName : item, courseId: item.courseId }"
     >
       {{ item.title ? item.title : item }}
     </a>

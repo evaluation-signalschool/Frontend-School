@@ -17,10 +17,10 @@
     <div class="login-card">
       <div class="login-container">
         <mat-form-field appearance="outline" class="input-field">
-          <mat-label>อีเมล</mat-label>
-          <input matInput type="email" placeholder="กรอกอีเมลของคุณ"
-            [(ngModel)]="email" (keyup.enter)="onLogin()">
-          <mat-icon matSuffix>email</mat-icon>
+          <mat-label>ชื่อผู้ใช้ (Username)</mat-label>
+          <input matInput type="text" placeholder="กรอกชื่อผู้ใช้ของคุณ"
+            [(ngModel)]="username" (keyup.enter)="onLogin()">
+          <mat-icon matSuffix>person</mat-icon>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="input-field">

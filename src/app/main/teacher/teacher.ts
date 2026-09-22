@@ -33,7 +33,7 @@ export class Teacher {
       return;
     }
 
-    this.router.navigate(['/student/fill-form'], {
+    this.router.navigate(['/teacher/fill-form'], {
       queryParams: {
         type: 'teacher_course',
         batchId: this.currentBatchId,

@@ -220,6 +220,38 @@
     }
   }
 
+  /* 🔷 ปุ่มธีม Indigo สำหรับ Super Admin */
+  &.btn-indigo {
+    background-color: #4338ca !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(67, 56, 202, 0.25);
+
+    &:hover {
+      background-color: #3730a3 !important;
+      box-shadow: 0 6px 16px rgba(67, 56, 202, 0.35);
+    }
+
+    &:active {
+      box-shadow: 0 2px 6px rgba(67, 56, 202, 0.2);
+    }
+  }
+
+  /* 🪨 ปุ่มธีม Dark Slate สำหรับ Activity Logs */
+  &.btn-slate {
+    background-color: #0f766e !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25);
+
+    &:hover {
+      background-color: #115e59 !important;
+      box-shadow: 0 6px 16px rgba(15, 118, 110, 0.35);
+    }
+
+    &:active {
+      box-shadow: 0 2px 6px rgba(15, 118, 110, 0.2);
+    }
+  }
+
   /* 📍 ไอคอนภายในปุ่ม */
   .btn-icon {
     font-size: 20px;
@@ -230,6 +262,116 @@
     justify-content: center;
     transition: transform 0.25s ease;
   }
+}
+
+/* แถบโปรไฟล์ผู้ดูแลระบบ (Admin Profile Bar) */
+.admin-profile-bar {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+
+  .profile-info-wrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .avatar-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #e0f2fe;
+    color: #0284c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    mat-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+
+    &.superadmin-avatar {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      color: #b45309;
+      border: 2px solid #f59e0b;
+    }
+  }
+
+  .user-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .user-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .user-email {
+      font-size: 13px;
+      color: #64748b;
+    }
+  }
+
+  .role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+
+    .badge-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+    }
+
+    &.badge-superadmin {
+      background-color: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+
+    &.badge-admin {
+      background-color: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+    }
+  }
+}
+
+.superadmin-badge-small {
+  font-size: 11px;
+  padding: 2px 8px;
+  background-color: #ede9fe;
+  color: #6b21a8;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+/* Card เฉพาะกลุ่มการบริหารระบบ */
+.admin-users-card {
+  border-left: 4px solid #4338ca;
+}
+
+.admin-logs-card {
+  border-left: 4px solid #0f766e;
 }
 
 /* รองรับการแสดงผลบนหน้าจอมือถือ */
@@ -243,5 +385,10 @@
       width: 100%;
       justify-content: center;
     }
+  }
+
+  .admin-profile-bar .profile-info-wrap {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

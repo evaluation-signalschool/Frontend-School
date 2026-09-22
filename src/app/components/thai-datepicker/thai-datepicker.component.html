@@ -1,0 +1,90 @@
+<div class="thai-datepicker-container">
+  <div class="input-wrapper" [class.disabled]="disabled" [class.is-open]="isOpen">
+    <input
+      type="text"
+      class="thai-date-input"
+      [placeholder]="placeholder"
+      [value]="displayText"
+      [disabled]="disabled"
+      [id]="id"
+      [name]="name"
+      (click)="toggleCalendar()"
+      (input)="onManualInput($event)"
+      (blur)="onBlur()"
+      autocomplete="off"
+    />
+    <button
+      type="button"
+      class="calendar-toggle-btn"
+      (click)="toggleCalendar()"
+      [disabled]="disabled"
+      tabindex="-1"
+      title="เปิดปฏิทิน พ.ศ."
+    >
+      <span class="material-icons">calendar_today</span>
+    </button>
+  </div>
+
+  <!-- Popup Calendar -->
+  <div class="calendar-popup" *ngIf="isOpen">
+    <!-- Header: Navigation & Selectors -->
+    <div class="popup-header">
+      <button type="button" class="nav-btn" (click)="prevMonth()" title="เดือนก่อนหน้า">
+        <span class="material-icons">chevron_left</span>
+      </button>
+
+      <div class="selectors-wrapper">
+        <select class="select-month" [ngModel]="viewMonth" (ngModelChange)="onMonthChange($event)">
+          <option *ngFor="let m of thaiMonths; let i = index" [value]="i">
+            {{ m }}
+          </option>
+        </select>
+
+        <select class="select-year" [ngModel]="viewYearBE" (ngModelChange)="onYearChange($event)">
+          <option *ngFor="let y of availableYears" [value]="y">
+            {{ y }}
+          </option>
+        </select>
+      </div>
+
+      <button type="button" class="nav-btn" (click)="nextMonth()" title="เดือนถัดไป">
+        <span class="material-icons">chevron_right</span>
+      </button>
+    </div>
+
+    <!-- Weekdays Header -->
+    <div class="weekdays-grid">
+      <div *ngFor="let day of weekDays; let idx = index" class="weekday-label" [class.sunday]="idx === 0">
+        {{ day }}
+      </div>
+    </div>
+
+    <!-- Days Grid -->
+    <div class="days-grid">
+      <button
+        type="button"
+        *ngFor="let item of calendarDays"
+        class="day-btn"
+        [class.other-month]="item.monthOffset !== 0"
+        [class.today]="item.isToday"
+        [class.selected]="item.isSelected"
+        (click)="selectDay(item)"
+      >
+        {{ item.day }}
+      </button>
+    </div>
+
+    <!-- Footer Actions -->
+    <div class="popup-footer">
+      <button type="button" class="action-btn text-purple" (click)="selectToday()">
+        วันนี้
+      </button>
+      <button type="button" class="action-btn text-muted" (click)="clearDate()">
+        ล้างค่า
+      </button>
+      <button type="button" class="action-btn text-close" (click)="closeCalendar()">
+        ปิด
+      </button>
+    </div>
+  </div>
+</div>

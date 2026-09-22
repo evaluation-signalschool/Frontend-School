@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, NgZone, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -32,6 +32,14 @@ interface Subject {
   subject_id: number;
   subject_name: string;
   is_su?: boolean;
+  group_id?: number;
+  group_name?: string;
+}
+
+interface SubjectGroupItem {
+  group_name: string;
+  display_label: string;
+  subjects: Subject[];
 }
 
 interface StudentScore {
@@ -43,6 +51,17 @@ interface StudentScore {
   raw_score: number | null;
 }
 
+export interface FailingReviewStudent {
+  student_id: number;
+  student_code: string;
+  rank_name: string;
+  first_name: string;
+  last_name: string;
+  originalScore: number | null;
+  raw_score: number | null;
+  isEdited: boolean;
+}
+
 @Component({
   selector: 'app-score-management',
   standalone: true,
@@ -51,7 +70,6 @@ interface StudentScore {
     FormsModule,
     MatIconModule,
     MatButtonModule,
-    RouterLink,
     MatDialogModule,
     MatTabsModule,
     MatSelectModule,
@@ -65,6 +83,7 @@ export class ScoreManagement implements OnInit {
   courseGroups: CourseGroup[] = []; // เก็บข้อมูลหลักสูตรดิบจาก API พร้อม batches
   batches: Batch[] = [];
   subjects: Subject[] = [];
+  groupedSubjects: SubjectGroupItem[] = [];
 
   selectedCourse: any = 'all';
   selectedBatch: any = null;
@@ -79,10 +98,16 @@ export class ScoreManagement implements OnInit {
   saveError: string = '';
   isSaving: boolean = false;
   isLoading: boolean = false;
-  isSaved: boolean = false; 
+  isSaved: boolean = false;
   isMaxScoreSaved: boolean = false;
   isSU: boolean = false;
   showFailingHighlight: boolean = false;
+  showScrollTopBtn: boolean = false;
+  showScrollBottomBtn: boolean = false;
+
+  // Modal ตรวจสอบและแก้ไขคะแนนที่ไม่ถึงเกณฑ์ 70%
+  showFailingReviewModal: boolean = false;
+  failingReviewStudents: FailingReviewStudent[] = [];
 
   constructor(
     private dialog: MatDialog,
@@ -93,8 +118,7 @@ export class ScoreManagement implements OnInit {
     private cdr: ChangeDetectorRef,
 
     private ngZone: NgZone,
-    private router: Router
-
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -114,25 +138,95 @@ export class ScoreManagement implements OnInit {
             id: c.batches?.[0]?.course_id || c.course_name,
             course_name: c.course_name,
           }));
-          this.cdr.markForCheck();
+          this.cdr.detectChanges();
         }
       },
       error: (err) => console.error('Failed to load courses', err),
     });
   }
 
+  getGroupPrefixOrder(name: string): number {
+    const upper = (name || '').trim().toUpperCase();
+    if (upper.startsWith('M') && !upper.startsWith('MN')) return 1;
+    if (upper.startsWith('MN')) return 2;
+    if (upper.startsWith('S')) return 3;
+    if (upper.startsWith('P')) return 4;
+    return 5;
+  }
+
+  compareGroupNames(aName: string, bName: string): number {
+    const a = (aName || '').trim();
+    const b = (bName || '').trim();
+
+    const orderA = this.getGroupPrefixOrder(a);
+    const orderB = this.getGroupPrefixOrder(b);
+    if (orderA !== orderB) return orderA - orderB;
+
+    const matchA = a.match(/\d+/);
+    const matchB = b.match(/\d+/);
+    if (matchA && matchB) {
+      const numA = parseInt(matchA[0], 10);
+      const numB = parseInt(matchB[0], 10);
+      if (numA !== numB) return numA - numB;
+    }
+
+    return a.localeCompare(b, 'th', { numeric: true, sensitivity: 'base' });
+  }
+
+  getGroupDisplayLabel(groupName: string): string {
+    if (!groupName || groupName === 'ทั่วไป') return 'รายวิชาทั่วไป';
+    const nameUpper = groupName.trim().toUpperCase();
+    let type = '';
+    if (nameUpper.startsWith('MN')) type = 'วิชารอง';
+    else if (nameUpper.startsWith('M')) type = 'วิชาหลัก';
+    else if (nameUpper.startsWith('S')) type = 'วิชาประกอบ';
+    else if (nameUpper.startsWith('P')) type = 'ภาคปฏิบัติ';
+
+    const hasGroupWord = groupName.includes('กลุ่ม') || groupName.includes('หมวด');
+    const prefix = hasGroupWord ? '' : 'กลุ่มวิชา ';
+    const typeText = type ? ` (${type})` : '';
+    return `${prefix}${groupName}${typeText}`;
+  }
+
   loadSubjects(batchId: number) {
     // 1. ล้างข้อมูลวิชาเก่า และล้างค่าวิชาที่เคยเลือกไว้ เพื่อป้องกันข้อมูลตกค้าง
     this.subjects = [];
+    this.groupedSubjects = [];
     this.selectedSubjectId = null;
+    this.cdr.detectChanges();
 
     this.dropdownService.getSubjects(batchId).subscribe({
       next: (res) => {
         this.ngZone.run(() => {
-          if (res && res.data) {
-            this.subjects = res.data;
+          if (res && res.data && res.data.length > 0) {
+            const rawSubjects: Subject[] = res.data;
+
+            // 🌟 จัดเรียงตามกลุ่มวิชา 1 ไปจนสุด (M01 -> M11 -> MN -> S -> P)
+            rawSubjects.sort((a, b) => {
+              const groupCompare = this.compareGroupNames(a.group_name || '', b.group_name || '');
+              if (groupCompare !== 0) return groupCompare;
+              return (a.subject_id || 0) - (b.subject_id || 0);
+            });
+
+            this.subjects = rawSubjects;
+
+            // จัดกลุ่มวิชาสำหรับแสดงผลใน optgroup
+            const groupMap = new Map<string, SubjectGroupItem>();
+            for (const subj of rawSubjects) {
+              const gName = (subj.group_name || 'ทั่วไป').trim();
+              if (!groupMap.has(gName)) {
+                groupMap.set(gName, {
+                  group_name: gName,
+                  display_label: this.getGroupDisplayLabel(gName),
+                  subjects: [],
+                });
+              }
+              groupMap.get(gName)!.subjects.push(subj);
+            }
+            this.groupedSubjects = Array.from(groupMap.values());
           } else {
             this.subjects = [];
+            this.groupedSubjects = [];
           }
           this.cdr.detectChanges();
         });
@@ -141,6 +235,7 @@ export class ScoreManagement implements OnInit {
         this.ngZone.run(() => {
           console.error('Failed to load subjects', err);
           this.subjects = [];
+          this.groupedSubjects = [];
           this.cdr.detectChanges();
         });
       },
@@ -149,21 +244,29 @@ export class ScoreManagement implements OnInit {
 
   loadStudents(batchId: number, subjectId: number) {
     this.isLoading = true;
+    this.cdr.detectChanges(); // วาดหน้าจอทันทีเพื่อแสดงสถานะกำลังโหลด
 
     this.scoreService.getAdminSubjectScores(batchId, subjectId).subscribe({
       next: (res) => {
         this.ngZone.run(() => {
           if (res?.success && res.data) {
-            this.studentList = res.data.map((s: any) => ({
-              student_id: s.student_id,
-              student_code: s.student_code,
-              rank_name: s.rank_name || '',
-              first_name: s.first_name,
-              last_name: s.last_name,
-              raw_score: s.raw_score !== null && s.raw_score !== undefined ? Number(s.raw_score) : null,
-            })).sort((a: any, b: any) => {
-              return String(a.student_code || '').localeCompare(String(b.student_code || ''), undefined, { numeric: true });
-            });
+            this.studentList = res.data
+              .map((s: any) => ({
+                student_id: s.student_id,
+                student_code: s.student_code,
+                rank_name: s.rank_name || '',
+                first_name: s.first_name,
+                last_name: s.last_name,
+                raw_score:
+                  s.raw_score !== null && s.raw_score !== undefined ? Number(s.raw_score) : null,
+              }))
+              .sort((a: any, b: any) => {
+                return String(a.student_code || '').localeCompare(
+                  String(b.student_code || ''),
+                  undefined,
+                  { numeric: true },
+                );
+              });
 
             if (res.max_score !== undefined && res.max_score !== null && res.max_score > 0) {
               this.inputMaxScore = res.max_score;
@@ -172,34 +275,41 @@ export class ScoreManagement implements OnInit {
               this.inputMaxScore = null;
               this.isMaxScoreSaved = false;
             }
-            
+
             if (res.is_su !== undefined && res.is_su !== null) {
               this.isSU = !!res.is_su;
             } else {
-              const subj = this.subjects.find((s: any) => Number(s.subject_id) === Number(this.selectedSubjectId));
+              const subj = this.subjects.find(
+                (s: any) => Number(s.subject_id) === Number(this.selectedSubjectId),
+              );
               this.isSU = subj?.is_su ?? false;
             }
 
             if (this.isSU && !this.isMaxScoreSaved) {
               this.isMaxScoreSaved = true;
               this.inputMaxScore = 1;
-              
-              this.scoreService.updateMaxScore({
-                batch_id: this.selectedBatch,
-                subject_id: this.selectedSubjectId,
-                max_score: 1
-              }).subscribe({
-                error: (err) => console.error("Auto-save SU max score failed", err)
-              });
+
+              this.scoreService
+                .updateMaxScore({
+                  batch_id: this.selectedBatch,
+                  subject_id: this.selectedSubjectId,
+                  max_score: 1,
+                })
+                .subscribe({
+                  error: (err) => console.error('Auto-save SU max score failed', err),
+                });
             }
 
-            const hasScores = this.studentList.some((s) => s.raw_score !== null && s.raw_score !== undefined && s.raw_score.toString() !== '');
+            const hasScores = this.studentList.some(
+              (s) =>
+                s.raw_score !== null && s.raw_score !== undefined && s.raw_score.toString() !== '',
+            );
             if (hasScores) {
               this.isSaved = true;
             }
 
             if (this.isSU) {
-              this.studentList.forEach(s => {
+              this.studentList.forEach((s) => {
                 if (s.raw_score === null || s.raw_score === undefined) {
                   s.raw_score = 1;
                 }
@@ -210,6 +320,7 @@ export class ScoreManagement implements OnInit {
           }
           this.isLoading = false;
           this.cdr.detectChanges();
+          setTimeout(() => this.onWindowScroll(), 150);
         });
       },
       error: (err) => {
@@ -220,12 +331,15 @@ export class ScoreManagement implements OnInit {
             this.studentList = [];
             this.inputMaxScore = null;
             this.isMaxScoreSaved = false;
-            
-            const subj = this.subjects.find((s: any) => Number(s.subject_id) === Number(this.selectedSubjectId));
+
+            const subj = this.subjects.find(
+              (s: any) => Number(s.subject_id) === Number(this.selectedSubjectId),
+            );
             this.isSU = subj?.is_su ?? false;
-            
+
             this.updateStats();
-            this.saveError = err.error?.message || 'ไม่พบข้อมูลนักเรียนหรือยังไม่ได้ตั้งค่าวิชาในรุ่นที่เลือก';
+            this.saveError =
+              err.error?.message || 'ไม่พบข้อมูลนักเรียนหรือยังไม่ได้ตั้งค่าวิชาในรุ่นที่เลือก';
           }
           this.cdr.detectChanges();
         });
@@ -270,6 +384,7 @@ export class ScoreManagement implements OnInit {
     this.selectedBatch = null;
     this.selectedSubjectId = null;
     this.subjects = [];
+    this.groupedSubjects = [];
     this.studentList = [];
     this.updateStats();
 
@@ -290,6 +405,7 @@ export class ScoreManagement implements OnInit {
     } else {
       this.batches = [];
     }
+    this.cdr.detectChanges();
   }
 
   onBatchChange() {
@@ -300,12 +416,15 @@ export class ScoreManagement implements OnInit {
       this.loadSubjects(this.selectedBatch);
     } else {
       this.subjects = [];
+      this.groupedSubjects = [];
     }
+    this.cdr.detectChanges();
   }
 
   // ✅ เพิ่มฟังก์ชันรับค่าเมื่อมีการพิมพ์คะแนนเต็ม
   onMaxScoreChange(newMaxScore: number) {
     this.inputMaxScore = newMaxScore;
+    this.cdr.detectChanges();
   }
 
   onSubjectChange() {
@@ -319,10 +438,15 @@ export class ScoreManagement implements OnInit {
     if (this.selectedBatch && this.selectedSubjectId) {
       this.loadStudents(this.selectedBatch, this.selectedSubjectId);
     }
+    this.cdr.detectChanges(); // วาดหน้าจอใหม่ทันที
   }
 
   onMaxScoreConfirm() {
-    if (this.selectedSubjectId && this.selectedBatch && (this.inputMaxScore !== null || this.isSU)) {
+    if (
+      this.selectedSubjectId &&
+      this.selectedBatch &&
+      (this.inputMaxScore !== null || this.isSU)
+    ) {
       const finalMaxScore = this.isSU ? 1 : this.inputMaxScore;
       this.scoreService
         .updateMaxScore({
@@ -347,7 +471,7 @@ export class ScoreManagement implements OnInit {
               confirmButtonText: 'ตกลง',
               confirmButtonColor: '#8e44ad',
               background: '#ffffff',
-              backdrop: `rgba(0,0,0,0.4)`
+              backdrop: `rgba(0,0,0,0.4)`,
             });
             this.isMaxScoreSaved = true;
             this.cdr.detectChanges(); // ให้ Angular อัปเดต UI ทันที
@@ -359,9 +483,11 @@ export class ScoreManagement implements OnInit {
             Swal.fire({
               icon: 'error',
               title: 'ผิดพลาด',
-              text: 'เกิดข้อผิดพลาดในการอัปเดตคะแนนเต็ม: ' + (err.error?.message || err.error?.error || 'ไม่ทราบสาเหตุ'),
+              text:
+                'เกิดข้อผิดพลาดในการอัปเดตคะแนนเต็ม: ' +
+                (err.error?.message || err.error?.error || 'ไม่ทราบสาเหตุ'),
               confirmButtonText: 'ตกลง',
-              confirmButtonColor: '#d33'
+              confirmButtonColor: '#d33',
             });
           },
         });
@@ -371,7 +497,7 @@ export class ScoreManagement implements OnInit {
         title: 'ข้อมูลไม่ครบ',
         text: 'กรุณาเลือกรุ่น รายวิชา และกรอกคะแนนเต็มก่อนบันทึก',
         confirmButtonText: 'ตกลง',
-        confirmButtonColor: '#f39c12'
+        confirmButtonColor: '#f39c12',
       });
     }
   }
@@ -401,14 +527,110 @@ export class ScoreManagement implements OnInit {
     return numScore < 0 || numScore > numMax;
   }
 
-  focusNextInput(currentIndex: number, event: Event) {
-    event.preventDefault();
-    const nextId = 'score-input-' + (currentIndex + 1);
-    const nextInput = document.getElementById(nextId) as HTMLInputElement;
+  focusNextInput(currentIndex: number, event?: Event) {
+    if (event) event.preventDefault();
+    this.focusInputAtIndex(currentIndex + 1);
+  }
+
+  focusInputAtIndex(index: number): void {
+    if (index < 0 || index >= this.studentList.length) return;
+    const nextInput = document.getElementById('score-input-' + index) as HTMLInputElement;
     if (nextInput) {
       nextInput.focus();
-      nextInput.select();
+      setTimeout(() => {
+        nextInput.select();
+      }, 0);
     }
+  }
+
+  onScoreKeydown(currentIndex: number, event: KeyboardEvent): void {
+    if (event.key === 'ArrowDown' || event.key === 'Enter') {
+      event.preventDefault();
+      this.focusInputAtIndex(currentIndex + 1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.focusInputAtIndex(currentIndex - 1);
+    }
+  }
+
+  onInputFocus(event: FocusEvent): void {
+    const input = event.target as HTMLInputElement;
+    if (input) {
+      setTimeout(() => {
+        input.select();
+      }, 0);
+    }
+  }
+
+  cleanScoreValue(rawStr: string): string {
+    if (!rawStr) return '';
+
+    // 1. อนุญาตเฉพาะตัวเลข 0-9 และจุดทศนิยม .
+    let cleaned = rawStr.replace(/[^0-9.]/g, '');
+
+    // 2. ป้องกันจุดทศนิยมซ้ำ เช่น 1.2.3 -> ให้เหลือจุดเดียว
+    const firstDotIndex = cleaned.indexOf('.');
+    if (firstDotIndex !== -1) {
+      const intPart = cleaned.substring(0, firstDotIndex);
+      const decPart = cleaned.substring(firstDotIndex + 1).replace(/\./g, '');
+      // จำกัดทศนิยมสูงสุดไม่เกิน 2 ตำแหน่ง
+      cleaned = (intPart === '' ? '0' : intPart) + '.' + decPart.slice(0, 2);
+    }
+
+    // 3. จัดการเลข 0 นำหน้า (Leading Zeros) เช่น 090 -> 90, 05 -> 5
+    if (cleaned.includes('.')) {
+      let [intPart, decPart] = cleaned.split('.');
+      if (intPart.length > 1 && intPart.startsWith('0')) {
+        intPart = intPart.replace(/^0+(?=[0-9])/, '');
+        if (intPart === '') intPart = '0';
+      }
+      cleaned = intPart + '.' + decPart;
+    } else {
+      if (cleaned.length > 1 && cleaned.startsWith('0')) {
+        cleaned = cleaned.replace(/^0+(?=[1-9])/, '');
+        if (/^0+$/.test(cleaned)) {
+          cleaned = '0';
+        }
+      }
+    }
+
+    return cleaned;
+  }
+
+  onScoreInputChange(student: StudentScore, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const rawValue = input.value;
+    const cleaned = this.cleanScoreValue(rawValue);
+
+    if (cleaned !== rawValue) {
+      input.value = cleaned;
+    }
+
+    if (cleaned === '') {
+      student.raw_score = null;
+    } else if (cleaned.endsWith('.')) {
+      // กำลังพิมพ์จุด เช่น '1.' ให้แปลงเป็นตัวเลขสำหรับคำนวณ Progress bar ชั่วคราว
+      student.raw_score = Number(cleaned.slice(0, -1));
+    } else {
+      student.raw_score = Number(cleaned);
+    }
+
+    this.onScoreInput(student);
+  }
+
+  onScoreInputBlur(student: StudentScore, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    let val = input.value.trim();
+    if (val.endsWith('.')) {
+      val = val.slice(0, -1);
+      input.value = val;
+    }
+    if (val === '') {
+      student.raw_score = null;
+    } else {
+      student.raw_score = Number(val);
+    }
+    this.updateStats();
   }
 
   async fillScoreForEveryone() {
@@ -428,7 +650,7 @@ export class ScoreManagement implements OnInit {
       inputAttributes: {
         min: '0',
         max: this.inputMaxScore.toString(),
-        step: '0.5'
+        step: '0.5',
       },
       inputValidator: (value) => {
         if (!value) {
@@ -438,13 +660,13 @@ export class ScoreManagement implements OnInit {
           return `คะแนนต้องอยู่ระหว่าง 0 ถึง ${this.inputMaxScore}`;
         }
         return null;
-      }
+      },
     });
 
     if (score !== undefined && score !== null && score !== '') {
       const numScore = Number(score);
       this.ngZone.run(() => {
-        this.studentList.forEach(student => {
+        this.studentList.forEach((student) => {
           student.raw_score = numScore;
         });
         this.updateStats();
@@ -455,6 +677,7 @@ export class ScoreManagement implements OnInit {
 
   onCancel() {
     this.selectedSubjectId = null;
+    this.cdr.detectChanges();
   }
 
   onSaveScores() {
@@ -503,43 +726,142 @@ export class ScoreManagement implements OnInit {
 
     const maxScore = Number(this.inputMaxScore);
     const passThreshold = maxScore * 0.7;
-    const failingStudents = this.isSU ? [] : studentsToSave.filter(s => Number(s.raw_score) < passThreshold);
+    const failingStudents = this.isSU
+      ? []
+      : studentsToSave.filter((s) => Number(s.raw_score) < passThreshold);
 
     if (failingStudents.length > 0) {
-      this.showFailingHighlight = true; // เปิดไฮไลต์
-
-      Swal.fire({
-        icon: 'warning',
-        title: 'มีนักเรียนคะแนนไม่ถึง 70%',
-        text: `พบนักเรียน ${failingStudents.length} คนที่คะแนนไม่ถึงเกณฑ์ 70% (นักเรียนจะต้องติดต่ออาจารย์ผู้สอน) คุณต้องการบันทึกคะแนนยืนยันหรือไม่?`,
-        showCancelButton: true,
-        confirmButtonText: 'บันทึกคะแนนต่อไป',
-        cancelButtonText: 'กลับไปตรวจสอบ',
-        confirmButtonColor: '#8e44ad',
-        cancelButtonColor: '#7f8c8d',
-        background: '#ffffff',
-        backdrop: `rgba(0,0,0,0.4)`,
-      }).then((result) => {
-        if (result.isConfirmed) {
-          this.executeSave(studentsToSave);
-        }
-      });
+      this.openFailingReviewModal(failingStudents);
       return;
     }
 
     this.executeSave(studentsToSave);
   }
 
+  // --- จัดการ Modal ตรวจสอบและแก้ไขคะแนนต่ำกว่าเกณฑ์ 70% ---
+  openFailingReviewModal(failingStudents: StudentScore[]): void {
+    this.failingReviewStudents = failingStudents.map((s) => ({
+      student_id: s.student_id,
+      student_code: s.student_code,
+      rank_name: s.rank_name || '',
+      first_name: s.first_name,
+      last_name: s.last_name,
+      originalScore: s.raw_score,
+      raw_score: s.raw_score,
+      isEdited: false,
+    }));
+    this.showFailingHighlight = true;
+    this.showFailingReviewModal = true;
+    this.cdr.detectChanges();
+  }
+
+  closeFailingReviewModal(): void {
+    this.showFailingReviewModal = false;
+    this.cdr.detectChanges();
+  }
+
+  onReviewScoreInput(item: FailingReviewStudent, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const val = input.value.trim();
+    if (val === '') {
+      item.raw_score = null;
+    } else {
+      const num = Number(val);
+      item.raw_score = isNaN(num) ? null : num;
+    }
+    item.isEdited = item.raw_score !== item.originalScore;
+  }
+
+  resetReviewScore(item: FailingReviewStudent): void {
+    item.raw_score = item.originalScore;
+    item.isEdited = false;
+  }
+
+  getReviewPassingThreshold(): number {
+    return Number(this.inputMaxScore || 0) * 0.7;
+  }
+
+  isReviewItemPassing(score: any): boolean {
+    if (score === null || score === undefined || score === '') return false;
+    return Number(score) >= this.getReviewPassingThreshold();
+  }
+
+  isReviewItemInvalid(score: any): boolean {
+    if (score === null || score === undefined || score === '') return false;
+    const num = Number(score);
+    return num < 0 || num > Number(this.inputMaxScore || 0);
+  }
+
+  getRemainingFailingCount(): number {
+    const threshold = this.getReviewPassingThreshold();
+    return this.failingReviewStudents.filter(
+      (item) => item.raw_score === null || Number(item.raw_score) < threshold
+    ).length;
+  }
+
+  getAdjustedPassingCount(): number {
+    const threshold = this.getReviewPassingThreshold();
+    return this.failingReviewStudents.filter(
+      (item) => item.raw_score !== null && Number(item.raw_score) >= threshold
+    ).length;
+  }
+
+  getSelectedSubjectName(): string {
+    return (
+      this.subjects.find((s) => s.subject_id === this.selectedSubjectId)?.subject_name ||
+      'รายวิชา'
+    );
+  }
+
+  confirmFailingReviewSave(): void {
+    // 1. ตรวจสอบว่ามีคะแนนที่กรอกผิด (ติดลบ หรือ เกินคะแนนเต็ม) หรือไม่
+    const hasInvalid = this.failingReviewStudents.some((item) =>
+      this.isReviewItemInvalid(item.raw_score)
+    );
+    if (hasInvalid) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'คะแนนไม่ถูกต้อง',
+        text: `กรุณากรอกคะแนนให้อยู่ระหว่าง 0 ถึง ${this.inputMaxScore} คะแนน (ห้ามติดลบ และไม่เกินคะแนนเต็ม)`,
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#8e44ad',
+      });
+      return;
+    }
+
+    // 2. นำคะแนนที่แก้ไขใน Modal ไปอัปเดตใส่ studentList
+    this.failingReviewStudents.forEach((item) => {
+      const student = this.studentList.find((s) => s.student_id === item.student_id);
+      if (student) {
+        student.raw_score =
+          item.raw_score !== null && item.raw_score !== undefined
+            ? Number(item.raw_score)
+            : null;
+      }
+    });
+
+    this.updateStats();
+    this.showFailingReviewModal = false;
+    this.cdr.detectChanges();
+
+    // 3. ดำเนินการบันทึก
+    const studentsToSave = this.studentList.filter(
+      (s) => s.raw_score !== null && s.raw_score !== undefined && s.raw_score.toString() !== '',
+    );
+    this.executeSave(studentsToSave);
+  }
+
   isFailingScore(score: any): boolean {
     if (this.isSU) return score === 0;
-    if (!this.inputMaxScore || score === null || score === undefined || score.toString() === '') return false;
-    return Number(score) < (Number(this.inputMaxScore) * 0.7);
+    if (!this.inputMaxScore || score === null || score === undefined || score.toString() === '')
+      return false;
+    return Number(score) < Number(this.inputMaxScore) * 0.7;
   }
 
   private executeSave(studentsToSave: any[]) {
     this.isSaving = true;
 
-     if (document.activeElement instanceof HTMLElement) {
+    if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
 
@@ -562,7 +884,7 @@ export class ScoreManagement implements OnInit {
         this.isSaved = true;
         this.saveError = '';
         this.cdr.detectChanges(); // อัปเดต UI ให้ปุ่มกลายเป็นสีเทาและฟิลด์ถูกล็อคทันที
-        
+
         // แจ้งเตือนสำเร็จด้วย SweetAlert2
         Swal.fire({
           icon: 'success',
@@ -571,7 +893,7 @@ export class ScoreManagement implements OnInit {
           confirmButtonText: 'ตกลง',
           confirmButtonColor: '#8e44ad',
           background: '#ffffff',
-          backdrop: `rgba(0,0,0,0.4)`
+          backdrop: `rgba(0,0,0,0.4)`,
         }).then(() => {
           this.cdr.detectChanges(); // เผื่อกรณี UI หายไปหลังป๊อปอัปปิด
         });
@@ -581,7 +903,7 @@ export class ScoreManagement implements OnInit {
         this.saveError = 'เกิดข้อผิดพลาดในการบันทึกคะแนน';
         console.error(err);
         this.cdr.detectChanges(); // อัปเดตข้อความ Error ให้แสดงบน UI ทันที
-        
+
         Swal.fire({
           icon: 'error',
           title: 'ผิดพลาด',
@@ -597,12 +919,12 @@ export class ScoreManagement implements OnInit {
   enableEditMode() {
     this.isSaved = false;
     this.saveError = '';
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   enableMaxScoreEdit() {
     this.isMaxScoreSaved = false;
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   goToNextSubject() {
@@ -611,6 +933,7 @@ export class ScoreManagement implements OnInit {
     if (nextIndex < this.subjects.length) {
       this.selectedSubjectId = this.subjects[nextIndex].subject_id;
       this.onSubjectChange();
+      this.scrollToTop();
     }
   }
 
@@ -624,7 +947,41 @@ export class ScoreManagement implements OnInit {
     if (prevIndex >= 0) {
       this.selectedSubjectId = this.subjects[prevIndex].subject_id;
       this.onSubjectChange();
+      this.scrollToTop();
     }
+  }
+
+  onBottomSubjectChange() {
+    this.onSubjectChange();
+    this.scrollToTop();
+  }
+
+  @HostListener('window:scroll', [])
+  onWindowScroll() {
+    const scrollOffset =
+      window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    const windowHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const documentHeight = Math.max(
+      document.body.scrollHeight,
+      document.documentElement.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.offsetHeight,
+    );
+
+    this.showScrollTopBtn = scrollOffset > 250;
+    const isNearBottom = scrollOffset + windowHeight >= documentHeight - 150;
+    this.showScrollBottomBtn = this.studentList.length > 5 && !isNearBottom;
+  }
+
+  scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  scrollToBottom() {
+    window.scrollTo({
+      top: document.documentElement.scrollHeight || document.body.scrollHeight,
+      behavior: 'smooth',
+    });
   }
 
   get hasPreviousSubject(): boolean {
@@ -643,19 +1000,29 @@ export class ScoreManagement implements OnInit {
       return;
     }
 
-    const subjectName = this.subjects.find(s => s.subject_id === this.selectedSubjectId)?.subject_name || 'รายวิชา';
-    const batchName = this.batches.find(b => b.id === this.selectedBatch)?.batch_name || 'รุ่น';
+    const subjectName =
+      this.subjects.find((s) => s.subject_id === this.selectedSubjectId)?.subject_name || 'รายวิชา';
+    const batchName = this.batches.find((b) => b.id === this.selectedBatch)?.batch_name || 'รุ่น';
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('คะแนนรายวิชา');
-    
+
     worksheet.properties.defaultRowHeight = 25;
 
     let headers: string[];
     if (this.isSU) {
       headers = ['ลำดับ', 'รหัสนักเรียน', 'ยศ', 'ชื่อ', 'นามสกุล', 'ผลการประเมิน'];
     } else {
-      headers = ['ลำดับ', 'รหัสนักเรียน', 'ยศ', 'ชื่อ', 'นามสกุล', 'คะแนนดิบ', 'คะแนนเต็ม', 'คิดเป็นเปอร์เซ็นต์'];
+      headers = [
+        'ลำดับ',
+        'รหัสนักเรียน',
+        'ยศ',
+        'ชื่อ',
+        'นามสกุล',
+        'คะแนนดิบ',
+        'คะแนนเต็ม',
+        'คิดเป็นเปอร์เซ็นต์',
+      ];
     }
 
     // เพิ่มหัวตาราง
@@ -664,7 +1031,12 @@ export class ScoreManagement implements OnInit {
       cell.font = { name: 'Sarabun', size: 12, bold: true };
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
-      cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
     });
 
     // เพิ่มข้อมูลนักเรียน
@@ -674,7 +1046,7 @@ export class ScoreManagement implements OnInit {
         student.student_code || '-',
         student.rank_name || '',
         student.first_name || '',
-        student.last_name || ''
+        student.last_name || '',
       ];
 
       if (this.isSU) {
@@ -683,13 +1055,16 @@ export class ScoreManagement implements OnInit {
         else if (student.raw_score === 0) suResult = 'U (ไม่ผ่าน)';
         rowData.push(suResult);
       } else {
-        const rawScore = student.raw_score !== null && student.raw_score !== undefined ? student.raw_score : 'ยังไม่กรอก';
+        const rawScore =
+          student.raw_score !== null && student.raw_score !== undefined
+            ? student.raw_score
+            : 'ยังไม่กรอก';
         const maxScore = this.inputMaxScore || '-';
         let percentage = '-';
         if (student.raw_score !== null && student.raw_score !== undefined && this.inputMaxScore) {
-           let pct = (student.raw_score / this.inputMaxScore) * 100;
-           if (pct > 100) pct = 100;
-           percentage = pct.toFixed(2) + '%';
+          let pct = (student.raw_score / this.inputMaxScore) * 100;
+          if (pct > 100) pct = 100;
+          percentage = pct.toFixed(2) + '%';
         }
         rowData.push(rawScore, maxScore, percentage);
       }
@@ -698,19 +1073,26 @@ export class ScoreManagement implements OnInit {
       excelRow.eachCell((cell) => {
         cell.font = { name: 'Sarabun', size: 11 };
         cell.alignment = { vertical: 'middle', horizontal: 'center' };
-        cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
       });
     });
 
     // ปรับขนาดคอลัมน์
-    worksheet.columns.forEach(column => {
+    worksheet.columns.forEach((column) => {
       column.width = 15;
     });
     worksheet.getColumn(4).width = 20; // ชื่อ
     worksheet.getColumn(5).width = 20; // นามสกุล
 
     const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
     saveAs(blob, `คะแนน_${subjectName}_${batchName}.xlsx`);
   }
 }

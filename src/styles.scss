@@ -24,7 +24,7 @@ body {
   --mat-sys-body-medium-font: 'Sarabun', sans-serif;
   --mat-sys-body-large-font: 'Sarabun', sans-serif;
   --mat-sys-label-large-font: 'Sarabun', sans-serif;
-  
+
   // 2. กำหนด font-family สำรองให้ตัว body เอง
   font-family: 'Sarabun', sans-serif;
 
@@ -61,48 +61,12 @@ body {
   font-family: 'Sarabun', sans-serif !important;
 }
 
-mat-icon, .material-icons, .material-symbols-outlined {
+mat-icon,
+.material-icons,
+.material-symbols-outlined {
   font-family: 'Material Icons' !important;
 }
 
 body {
   font-size: 16px;
-}
-
-/* 📌 ใส่ท้ายสุดของ styles.scss */
-@media print {
-  /* 1. ซ่อน Body Elements ทั้งหมด รวมถึง Header/Navbar ทุกชั้น */
-  body {
-    background: #ffffff !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* 2. บังคับซ่อนลูกทุกตัวของ body และ app-root */
-  body > *,
-  app-root > * {
-    display: none !important;
-  }
-
-  /* 3. เจาะช่องให้ Container ที่อุ้ม transcript-wrapper และตัว transcript-wrapper แสดงผลออกมา */
-  app-root,
-  :has(.transcript-wrapper),
-  .transcript-wrapper {
-    display: block !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: #ffffff !important;
-    z-index: 99999 !important;
-  }
-
-  /* 4. เคลียร์พื้นที่ด้านบนให้ชิดขอบกระดาษจริง */
-  .page-a4 {
-    margin: 0 auto !important;
-    box-shadow: none !important;
-  }
 }

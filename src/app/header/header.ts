@@ -53,26 +53,12 @@ export class Header implements OnInit {
     {
       title: 'สรุปผลการฝึกอบรม',
       path: '/training-results',
-
-      simpleItems: [
-        { title: 'ชั้นนายพัน', courseName: 'ชั้นนายพัน' },
-        { title: 'นายสิบอาวุโส', courseName: 'นายสิบอาวุโส' },
-        { title: 'นายสิบชั้นต้น', courseName: 'นายสิบชั้นต้น' },
-        { title: 'ช่างอิเล็กทรอนิกส์', courseName: 'ช่างอิเล็กทรอนิกส์' },
-        { title: 'นักเรียนนายสิบ เหล่า ส.', courseName: 'นักเรียนนายสิบ เหล่า ส.' }
-        ], // เราจะเอาข้อมูล API มายัดใส่ตรงนี้
+      simpleItems: [], // เราจะเอาข้อมูล API มายัดใส่ตรงนี้
     },
     {
       title: 'สรุปผลการประเมินฯ',
       path: '/evaluation-summary',
-      simpleItems: [
-        'ชั้นนายพัน',
-        'ชั้นนายร้อย',
-        'นายสิบอาวุโส (เร่งรัด)',
-        'นายสิบชั้นต้น (เร่งรัด)',
-        'ช่างอิเล็กทรอนิกส์',
-        'นนส.ทบ.',
-      ], // เราจะเอาข้อมูล API มายัดใส่ตรงนี้
+      simpleItems: [], // เราจะเอาข้อมูล API มายัดใส่ตรงนี้
     },
   ];
 
@@ -117,7 +103,7 @@ export class Header implements OnInit {
           // กรองเอาเฉพาะรุ่นที่ is_active เป็น true
           const activeData = response.data.map((course: any) => ({
             ...course,
-            batches: (course.batches || []).filter((b: any) => b.is_active !== false)
+            batches: (course.batches || []).filter((b: any) => b.is_active !== false),
           }));
 
           // หา index ของเมนูที่ชื่อ 'สำหรับผู้เรียน'
@@ -136,7 +122,7 @@ export class Header implements OnInit {
 
           // 3. ใส่ข้อมูลให้เมนู "สำหรับคณะกับกำหลักสูตร"
           const committeeMenuIndex = this.menuData.findIndex(
-            (m) => m.title === 'สำหรับคณะกับกำหลักสูตร',
+            (m) => m.title === 'สำหรับคณะกำกับหลักสูตร',
           );
           if (committeeMenuIndex !== -1) {
             this.menuData[committeeMenuIndex].submenus = activeData;
@@ -148,6 +134,28 @@ export class Header implements OnInit {
           );
           if (followUpMenuIndex !== -1) {
             this.menuData[followUpMenuIndex].submenus = activeData;
+          }
+
+          // 5. ใส่ข้อมูลให้เมนู "สรุปผลการฝึกอบรม"
+          const trainingMenuIndex = this.menuData.findIndex((m) => m.title === 'สรุปผลการฝึกอบรม');
+          if (trainingMenuIndex !== -1) {
+            this.menuData[trainingMenuIndex].simpleItems = activeData.map((c: any) => ({
+              title: c.course_name,
+              courseName: c.course_name,
+              courseId: c.batches?.[0]?.course_id || c.course_id || null,
+            }));
+          }
+
+          // 6. ใส่ข้อมูลให้เมนู "สรุปผลการประเมินฯ"
+          const evaluationMenuIndex = this.menuData.findIndex(
+            (m) => m.title === 'สรุปผลการประเมินฯ',
+          );
+          if (evaluationMenuIndex !== -1) {
+            this.menuData[evaluationMenuIndex].simpleItems = activeData.map((c: any) => ({
+              title: c.course_name,
+              courseName: c.course_name,
+              courseId: c.batches?.[0]?.course_id || c.course_id || null,
+            }));
           }
 
           this.cdr.detectChanges();

@@ -67,4 +67,8 @@ export class GeneralEvaluationService {
     }
     return this.http.get<any>(url);
   }
+
+  getEvaluationSummary(batchId: number | string): Observable<any> {
+    return this.http.get<any>(`${environment.apiUrl}/summary/${batchId}`);
+  }
 }

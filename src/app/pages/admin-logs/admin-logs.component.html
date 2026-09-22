@@ -1,0 +1,232 @@
+<div class="admin-logs-page">
+  <!-- ส่วนหัวของหน้า -->
+  <div class="page-header">
+    <div class="header-left">
+      <button mat-icon-button class="back-button" routerLink="/admin" title="กลับหน้าแอดมิน">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div>
+        <h1 class="page-title">ประวัติการทำงานและเข้าสู่ระบบ (Activity & Audit Logs)</h1>
+        <p class="page-subtitle">ตรวจสอบประวัติการปฏิบัติงาน ความเคลื่อนไหว และการเข้าสู่ระบบของผู้ดูแลระบบทุกคน</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- ปุ่มล้างประวัติเก่ากว่า 1 ปี (เฉพาะ Super Admin) -->
+      <button *ngIf="isSuperAdmin" 
+              mat-stroked-button 
+              class="btn-cleanup" 
+              (click)="onCleanupOldLogs()" 
+              [disabled]="isCleaning"
+              title="ล้างประวัติกิจกรรมที่มีอายุมากกว่า 1 ปีเพื่อประหยัดพื้นที่">
+        <mat-icon [class.spin-icon]="isCleaning">auto_delete</mat-icon>
+        <span *ngIf="!isCleaning">ล้างประวัติเก่ากว่า 1 ปี</span>
+        <span *ngIf="isCleaning">กำลังล้างข้อมูล...</span>
+      </button>
+
+      <button mat-stroked-button class="btn-refresh" (click)="loadLogs(); loadStats()" [disabled]="isLoading">
+        <mat-icon [class.spin-icon]="isLoading">refresh</mat-icon>
+        <span>รีเฟรชข้อมูล</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Top Stat Cards (ภาพรวมวันนี้) -->
+  <div class="stats-grid">
+    <div class="stat-card stat-logins">
+      <div class="stat-icon-wrap">
+        <mat-icon>login</mat-icon>
+      </div>
+      <div class="stat-content">
+        <span class="stat-label">เข้าสู่ระบบวันนี้</span>
+        <div class="stat-number">{{ stats.todayLogins }} <span class="stat-unit">ครั้ง</span></div>
+      </div>
+    </div>
+
+    <div class="stat-card stat-activities">
+      <div class="stat-icon-wrap">
+        <mat-icon>bolt</mat-icon>
+      </div>
+      <div class="stat-content">
+        <span class="stat-label">กิจกรรมการทำงานวันนี้</span>
+        <div class="stat-number">{{ stats.todayActivities }} <span class="stat-unit">รายการ</span></div>
+      </div>
+    </div>
+
+    <div class="stat-card stat-admins">
+      <div class="stat-icon-wrap">
+        <mat-icon>people</mat-icon>
+      </div>
+      <div class="stat-content">
+        <span class="stat-label">เจ้าหน้าที่ที่เคลื่อนไหววันนี้</span>
+        <div class="stat-number">{{ stats.activeAdminsToday }} <span class="stat-unit">คน</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- กล่องเนื้อหาหลักพร้อมตัวกรอง -->
+  <div class="content-card">
+    <!-- แถบตัวกรอง (Filter Toolbar) -->
+    <div class="filter-toolbar">
+      <!-- ตัวเลือกวันที่ด่วน -->
+      <div class="quick-date-group">
+        <span class="filter-label">ช่วงเวลา:</span>
+        <div class="pill-group">
+          <button class="pill-btn" [class.active]="selectedDateRange === 'today'" (click)="setQuickDate('today')">
+            วันนี้
+          </button>
+          <button class="pill-btn" [class.active]="selectedDateRange === '7days'" (click)="setQuickDate('7days')">
+            7 วันล่าสุด
+          </button>
+          <button class="pill-btn" [class.active]="selectedDateRange === '30days'" (click)="setQuickDate('30days')">
+            30 วันล่าสุด
+          </button>
+          <button class="pill-btn" [class.active]="selectedDateRange === 'all'" (click)="setQuickDate('all')">
+            ทั้งหมด
+          </button>
+        </div>
+      </div>
+
+      <!-- กำหนดวันที่เอง -->
+      <div class="custom-date-wrap">
+        <input type="date" [(ngModel)]="startDate" (change)="onCustomDateChange()" title="ตั้งแต่วันที่" />
+        <span class="date-sep">ถึง</span>
+        <input type="date" [(ngModel)]="endDate" (change)="onCustomDateChange()" title="ถึงวันที่" />
+      </div>
+    </div>
+
+    <div class="filter-subbar">
+      <!-- กรองตามผู้ดูแลระบบ -->
+      <div class="filter-item">
+        <mat-icon class="subbar-icon">person</mat-icon>
+        <select [(ngModel)]="selectedAdminId" (change)="onFilterChange()">
+          <option [ngValue]="null">ผู้ดูแลระบบทั้งหมด</option>
+          <option *ngFor="let adm of adminsList" [ngValue]="adm.id">
+            {{ adm.name }} ({{ adm.email }})
+          </option>
+        </select>
+      </div>
+
+      <!-- กรองตามหมวดหมู่ -->
+      <div class="filter-item">
+        <mat-icon class="subbar-icon">category</mat-icon>
+        <select [(ngModel)]="selectedCategory" (change)="onFilterChange()">
+          <option value="ALL">ทุกหมวดหมู่กิจกรรม</option>
+          <option value="AUTH">เข้า/ออกระบบ (AUTH)</option>
+          <option value="STUDENT">จัดการข้อมูลนักเรียน (STUDENT)</option>
+          <option value="SCORE">บันทึก/จัดการคะแนน (SCORE)</option>
+          <option value="PROFILE">อนุมัติแก้ไขโปรไฟล์ (PROFILE)</option>
+          <option value="NEWS">ข่าวสารและประกาศ (NEWS)</option>
+          <option value="ADMIN">จัดการผู้ดูแลระบบ (ADMIN)</option>
+        </select>
+      </div>
+
+      <!-- ค้นหาข้อความ -->
+      <div class="search-box">
+        <mat-icon class="search-icon">search</mat-icon>
+        <input type="text" 
+               [(ngModel)]="searchQuery" 
+               (keyup.enter)="onFilterChange()" 
+               placeholder="ค้นหาข้อความ, ชื่อ หรือชื่อผู้ใช้..." />
+        <button *ngIf="searchQuery" class="btn-clear-search" (click)="searchQuery = ''; onFilterChange()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- ตารางแสดงประวัติกิจกรรม -->
+    <div class="table-responsive">
+      <table class="logs-table">
+        <thead>
+          <tr>
+            <th style="width: 170px;">วัน-เวลา</th>
+            <th style="width: 200px;">ผู้ปฏิบัติงาน</th>
+            <th style="width: 150px;">หมวดหมู่</th>
+            <th>รายละเอียดการปฏิบัติงาน</th>
+            <th style="width: 140px; text-align: right;">IP Address</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Loading state -->
+          <tr *ngIf="isLoading">
+            <td colspan="5" class="text-center py-5">
+              <div class="loading-state">
+                <mat-icon class="spin-icon">sync</mat-icon>
+                <span>กำลังโหลดประวัติการทำงาน...</span>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty state -->
+          <tr *ngIf="!isLoading && logs.length === 0">
+            <td colspan="5" class="text-center py-5">
+              <div class="empty-state">
+                <mat-icon class="empty-icon">history_toggle_off</mat-icon>
+                <p>ไม่พบรายการประวัติกิจกรรมตามเงื่อนไขที่เลือก</p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Data rows -->
+          <tr *ngFor="let log of logs">
+            <!-- วันที่และเวลา -->
+            <td>
+              <div class="time-col">
+                <span class="time-main">{{ formatDate(log.created_at) }}</span>
+              </div>
+            </td>
+
+            <!-- ผู้ปฏิบัติงาน -->
+            <td>
+              <div class="admin-col">
+                <span class="admin-name">{{ log.admin_name }}</span>
+                <span class="admin-email">@{{ log.admin_username || log.admin_email }}</span>
+              </div>
+            </td>
+
+            <!-- หมวดหมู่ -->
+            <td>
+              <span class="category-tag" [ngClass]="getCategoryClass(log.action_category)">
+                <mat-icon class="cat-icon">{{ getActionIcon(log.action, log.action_category) }}</mat-icon>
+                {{ getCategoryLabel(log.action_category) }}
+              </span>
+            </td>
+
+            <!-- รายละเอียด -->
+            <td>
+              <div class="details-text">
+                {{ log.details }}
+              </div>
+            </td>
+
+            <!-- IP Address -->
+            <td style="text-align: right;">
+              <span class="ip-tag">{{ log.ip_address || '-' }}</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ส่วนแถบ Pagination -->
+    <div class="pagination-footer" *ngIf="totalItems > 0">
+      <div class="pagination-info">
+        แสดงรายการที่ {{ (currentPage - 1) * pageSize + 1 }} ถึง 
+        {{ currentPage * pageSize > totalItems ? totalItems : currentPage * pageSize }} 
+        จากทั้งหมด <strong>{{ totalItems }}</strong> รายการ
+      </div>
+
+      <div class="pagination-controls">
+        <button class="page-btn" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+
+        <span class="page-display">หน้า {{ currentPage }} / {{ totalPages }}</span>
+
+        <button class="page-btn" [disabled]="currentPage === totalPages" (click)="goToPage(currentPage + 1)">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

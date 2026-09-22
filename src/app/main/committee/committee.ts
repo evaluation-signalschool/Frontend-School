@@ -1,7 +1,6 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
-import { GeneralEvaluationService } from '../../services/general-evaluation.service';
 
 @Component({
   selector: 'app-committee',
@@ -38,7 +37,7 @@ export class Committee implements OnInit, OnDestroy {
       return;
     }
 
-    this.router.navigate(['/student/fill-form'], {
+    this.router.navigate(['/committee/fill-form'], {
       queryParams: {
         type: 'committee',
         batchId: this.currentBatchId,
