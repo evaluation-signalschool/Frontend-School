@@ -1,0 +1,381 @@
+<div class="transcript-wrapper">
+    <div class="action-bar no-print">
+        <button (click)="printTranscript()" class="btn-print">
+            🖨️ พิมพ์เอกสาร / บันทึกเป็น PDF
+        </button>
+    </div>
+
+    <div class="page-a4">
+        <!-- Header -->
+        <div class="header-text">
+            <div class="student-info">
+                <div>ผนวก ก</div>
+                <div>ระเบียบแสดงผลการฝึกอบรม</div>
+                <div>โรงเรียนทหารสื่อสาร กรมทหารสื่อสาร </div>
+                <div>หลักสูตรชั้นนายร้อย เหล่า ส. รุ่นที่ 70 (ชกท.0210) ประจำปีการศึกษา 2569</div>
+                <div>เปิดการฝึกอบรมตามคำสั่ง สส. (เฉพาะ) ที่ 293/69 ลง 16. เม.ย. 69</div>
+                <div>ระยะเวลาการฝึกอบรม 14 สัปดาห์ ตั้งแต่ 14 พ.ค. 69 ถึง 28 ส.ค. 69</div>
+                <div>ยศ-ชื่อ-นามสกุล ร้อยตรี อธิวัฒณ์ นิลศรี</div>
+            </div>
+        </div>
+
+        <!-- Main Data Table -->
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ลำดับ</th>
+                    <th>วิชา / กิจกรรม</th>
+                    <th>หน่วยกิต</th>
+                    <th>ผลการฝึก<br>อบรม</th>
+                    <th>ลำดับ</th>
+                    <th>วิชา/กิจกรรม</th>
+                    <th>หน่วยกิต</th>
+                    <th>ผลการฝึก<br>อบรม</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let row of displayRows" class="item-row">
+                    <!-- ฝั่งซ้าย -->
+                    <ng-container *ngIf="row.left as l; else emptyLeft">
+                        <ng-container *ngIf="l.isHeader; else leftNormal">
+                            <td></td>
+                            <td class="text-center font-bold category-title">{{ l.name }}</td>
+                            <td></td>
+                            <td></td>
+                        </ng-container>
+                        <ng-template #leftNormal>
+                            <td class="text-center">{{ l.no }}</td>
+                            <td class="text-left subject-cell">
+                                <span class="subject-name">{{ l.name }}</span>
+                                <svg *ngIf="!l.inGroup && l.groupSize && l.groupSize > 1" class="brace-svg-right"
+                                    viewBox="0 0 40 200" preserveAspectRatio="xMidYMid meet"
+                                    [style.height.%]="l.groupSize * 100">
+                                    <path
+                                        d="M12,2 C24,2 25,10 25,20 C25,20 25,75 25,78 C25,88 25,90 35,100 C25,110 25,112 25,122 C25,122 25,180 25,180 C25,190 24,198 12,198"
+                                        fill="none" stroke="black" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                            </td>
+                            <td class="text-center">{{ l.credit }}</td>
+                            <td class="text-center">{{ l.grade }}</td>
+                        </ng-template>
+                    </ng-container>
+                    <ng-template #emptyLeft>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </ng-template>
+
+                    <!-- ฝั่งขวา -->
+                    <ng-container *ngIf="row.right as r; else emptyRight">
+                        <ng-container *ngIf="r.isHeader; else rightNormal">
+                            <td></td>
+                            <td class="text-center font-bold category-title">{{ r.name }}</td>
+                            <td></td>
+                            <td></td>
+                        </ng-container>
+                        <ng-template #rightNormal>
+                            <td class="text-center">{{ r.no }}</td>
+                            <td class="text-left subject-cell">
+                                <span class="subject-name">{{ r.name }}</span>
+                                <svg *ngIf="!r.inGroup && r.groupSize && r.groupSize > 1" class="brace-svg-right"
+                                    viewBox="0 0 40 200" preserveAspectRatio="none"
+                                    [style.height.%]="r.groupSize * 100">
+                                    <path
+                                        d="M12,2 C24,2 25,10 25,20 C25,20 25,75 25,78 C25,88 25,90 35,100 C25,110 25,112 25,122 C25,122 25,180 25,180 C25,190 24,198 12,198"
+                                        fill="none" stroke="black" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                            </td>
+                            <td class="text-center">{{ r.credit }}</td>
+                            <td class="text-center">{{ r.grade }}</td>
+                        </ng-template>
+                    </ng-container>
+                    <ng-template #emptyRight>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </ng-template>
+                </tr>
+
+                <!-- Summary Rows (แถวสรุปผลการเรียนด้านล่าง - ปรับเส้นตรงเป๊ะ) -->
+                <tr class="summary-row">
+                    <td></td>
+                    <td class="text-left font-bold">เวลาในการฝึกอบรมคิดร้อยละ</td>
+                    <td colspan="2" class="text-center">{{ summaryData.trainingTimePercent }}</td>
+
+                    <td></td>
+                    <td class="text-left font-bold">หน่วยกิตที่เรียน</td>
+                    <td colspan="2" class="text-center">{{ summaryData.totalCredits }}</td>
+                </tr>
+                <tr class="summary-row">
+                    <td></td>
+                    <td class="text-left font-bold">เวลาในการสอบ คิดเป็นร้อยละ</td>
+                    <td colspan="2" class="text-center">{{ summaryData.examTimePercent }}</td>
+
+                    <td></td>
+                    <td class="text-left font-bold">ระดับคะแนนเฉลี่ยสะสม</td>
+                    <td colspan="2" class="text-center">{{ summaryData.gpa }}</td>
+                </tr>
+                <tr class="summary-row">
+                    <td></td>
+                    <td class="text-left font-bold">คะแนนความประพฤติ</td>
+                    <td colspan="2" class="text-center">{{ summaryData.conductScore }}</td>
+
+                    <td></td>
+                    <td class="text-left font-bold">เกณฑ์ที่ได้</td>
+                    <td colspan="2" class="text-center">{{ summaryData.gradeCriteria }}</td>
+                </tr>
+                <tr class="summary-row">
+                    <td></td>
+                    <td class="text-left font-bold">ลำดับที่ได้</td>
+                    <td colspan="2" class="text-center">{{ summaryData.rank }}</td>
+
+                    <td></td>
+                    <td class="text-left font-bold">ผลการฝึกอบรม</td>
+                    <td colspan="2" class="text-center">{{ summaryData.result }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- ส่วนล่างไร้เส้นขอบ -->
+        <div class="footer-layout">
+            <!-- ฝั่งซ้าย: 1. ระดับเกรด -->
+            <div class="footer-col">
+                <div class="footer-title">1. ระดับเกรด</div>
+                <div class="grade-grid">
+                    <div><span class="grade-code">A</span>= ดีเลิศ</div>
+                    <div>= 4,</div>
+                    <div><span class="grade-code">D+</span>= เกือบพอใช้</div>
+                    <div>= 1.5</div>
+
+                    <div><span class="grade-code">B+</span>= ดีมาก</div>
+                    <div>= 3.5,</div>
+                    <div><span class="grade-code">D</span>= ยังไม่พอใช้</div>
+                    <div>= 1</div>
+
+                    <div><span class="grade-code">B</span>= ดี</div>
+                    <div>= 3,</div>
+                    <div><span class="grade-code">F</span>= ตก</div>
+                    <div>= 0</div>
+
+                    <div><span class="grade-code">C+</span>= ค่อนข้างดี</div>
+                    <div>= 2.5,</div>
+                    <div><span class="grade-code">S</span>= เป็นที่พอใจ</div>
+                    <div></div>
+
+                    <div><span class="grade-code">C</span>= พอใช้</div>
+                    <div>= 2,</div>
+                    <div><span class="grade-code">U</span>= ไม่เป็นที่พอใจ</div>
+                    <div></div>
+                </div>
+            </div>
+
+            <!-- ฝั่งขวา: 2. คุณสมบัติ -->
+            <div class="footer-col">
+                <div class="footer-title">2.นายทหารนักเรียนที่จบหลักสูตร ต้องมีคุณสมบัติดังนี้</div>
+                <div class="qual-list">
+                    <div>2.1 ฝึกอบรมรายวิชาที่กำหนดไว้ในหลักสูตร</div>
+                    <div>2.2 มีผลการฝึกอบรมผ่านทุกรายวิชาตามหลักเกณฑ์ที่กำหนด</div>
+                    <div>2.3 ระดับคะแนนเฉลี่ยสะสมไม่ตํ่ากว่า 2.00</div>
+                    <div>2.4 เวลาที่เข้ารับการฝึกอบรมและเวลาในการสอบ ต้องไม่ตํ่ากว่าร้อยละ 85</div>
+                    <div>2.5 คะแนนความประพฤติไม่ตํ่ากว่าร้อยละ 50</div>
+                </div>
+            </div> 
+        </div>
+
+        <div class="sig-wrapper">
+            <div class="sig-container">
+                <div class="sig-box">
+                    <div class="sig-right-group">
+                        <div class="sig-rank" *ngIf="signature1.rank">{{ signature1.rank }}</div>
+                        <div>({{ signature1.name }})</div>
+                    </div>
+                    <div class="sig-left-group">
+                        <div>{{ signature1.position1 }}</div>
+                        <div *ngIf="signature1.position2">{{ signature1.position2 }}</div>
+                    </div>
+                    <div class="sig-right-group">
+                        <div>{{ signature1.date }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="sig-container">
+                <div class="sig-box">
+                    <div class="sig-right-group">
+                        <div class="sig-rank" *ngIf="signature2.rank">{{ signature2.rank }}</div>
+                        <div>({{ signature2.name }})</div>
+                    </div>
+                    <div class="sig-left-group">
+                        <div>{{ signature2.position1 }}</div>
+                        <div *ngIf="signature2.position2">{{ signature2.position2 }}</div>
+                    </div>
+                    <div class="sig-right-group">
+                        <div>{{ signature2.date }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @page {
+        size: A4 portrait;
+        margin: 0;
+    }
+
+    @media print {
+
+        html,
+        body {
+            height: 100%;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden;
+        }
+
+        .no-print {
+            display: none !important;
+        }
+
+        .page-a4 {
+            box-shadow: none !important;
+            padding: 5mm !important;
+            width: 210mm !important;
+            height: 297mm !important;
+            transform: scale(0.88);
+            transform-origin: top center;
+            page-break-after: avoid;
+            page-break-before: avoid;
+        }
+    }
+
+    .page-a4 {
+        width: 210mm;
+        box-sizing: border-box;
+        margin: 0 auto;
+        background: white;
+        font-family: 'Sarabun', 'TH Sarabun PSK', sans-serif;
+        font-size: 10.5pt;
+        line-height: 1.2;
+    }
+
+    .header-text {
+        text-align: center;
+        font-weight: bold;
+        margin-bottom: 6px;
+    }
+
+    .header-text div {
+        margin-bottom: 1px;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    .data-table th,
+    .data-table td {
+        border: 1px solid black;
+        padding: 1px 3px;
+        font-size: 9.5pt;
+    }
+
+    .data-table th {
+        text-align: center;
+        background-color: #f8f8f8;
+    }
+
+    .item-row td {
+        height: 18px;
+    }
+
+    .summary-row td {
+        height: 20px;
+        vertical-align: middle;
+    }
+
+    .footer-layout {
+        display: flex;
+        margin-top: 10px;
+        width: 100%;
+        page-break-inside: avoid;
+    }
+
+    .footer-col {
+        flex: 1;
+    }
+
+    .footer-col:first-child {
+        padding-right: 15px;
+    }
+
+    .footer-col:last-child {
+        padding-left: 15px;
+    }
+
+    .footer-title {
+        font-weight: bold;
+        margin-bottom: 3px;
+    }
+
+    /* ดันตารางเกรดให้ร่นเยื้องขวามาเท่ากับข้อ 2 */
+    .grade-grid {
+        display: grid;
+        grid-template-columns: max-content 35px max-content auto;
+        gap: 1px 6px;
+        white-space: nowrap;
+        font-size: 10px;
+        align-items: center;
+
+        /*  บีบช่องตัวอักษรเกรดและเครื่องหมาย = ให้ขยับเข้ามาชิดกัน */
+        div:nth-child(4n + 1),
+        div:nth-child(4n + 3) {
+            display: inline-grid;
+            /* บีบตัวเกรดเหลือ 14px และเครื่องหมาย = เหลือ 8px */
+            grid-template-columns: 14px 8px auto;
+            gap: 0;
+            /* เอาช่องว่างออกเพื่อให้อยู่ชิดกันพอดี */
+            text-align: left;
+        }
+
+        div:nth-child(4n + 2),
+        div:nth-child(4n) {
+            text-align: left;
+        }
+    }
+
+    .qual-list {
+        font-size: 9pt;
+        line-height: 1.3;
+        padding-left: 20px;
+    }
+
+    .sig-container {
+        margin-top: 12px;
+        font-size: 9.5pt;
+    }
+
+    .sig-indent-0 {
+        margin-top: 1px;
+    }
+
+    .sig-indent-1 {
+        margin-left: 30px;
+    }
+
+    .sig-indent-2 {
+        margin-top: 8px;
+        margin-left: 60px;
+    }
+
+    .sig-indent-3 {
+        margin-top: 12px;
+        margin-left: 70px;
+    }
+</style>

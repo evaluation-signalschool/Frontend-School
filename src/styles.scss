@@ -24,7 +24,7 @@ body {
   --mat-sys-body-medium-font: 'Sarabun', sans-serif;
   --mat-sys-body-large-font: 'Sarabun', sans-serif;
   --mat-sys-label-large-font: 'Sarabun', sans-serif;
-  
+
   // 2. กำหนด font-family สำรองให้ตัว body เอง
   font-family: 'Sarabun', sans-serif;
 
@@ -61,21 +61,12 @@ body {
   font-family: 'Sarabun', sans-serif !important;
 }
 
-mat-icon, .material-icons, .material-symbols-outlined {
+mat-icon,
+.material-icons,
+.material-symbols-outlined {
   font-family: 'Material Icons' !important;
 }
 
 body {
   font-size: 16px;
-}
-
-/* ซ่อนปุ่มลูกศรขึ้น-ลงของ input number ทั่วทั้งระบบ */
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
-  -webkit-appearance: none !important;
-  margin: 0 !important;
-}
-
-input[type=number] {
-  -moz-appearance: textfield !important;
 }

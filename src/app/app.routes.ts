@@ -25,6 +25,7 @@ import { EvaluationFillComponent } from './main/student/evaluation-fill/evaluati
 
 import { Certificate } from './pages/certificate/certificate';
 import { EditProfile } from './pages/edit-profile/edit-profile';
+import { Transcript } from './pages/transcript/transcript';
 import { AdminProfileApprovals } from './pages/admin-profile-approvals/admin-profile-approvals';
 import { NewsManagement } from './main/admin/news-management/news-management';
 import { StudentRanking } from './pages/student-ranking/student-ranking';
@@ -110,6 +111,8 @@ export const routes: Routes = [
   { path: 'register', component: Register },
 
   {path:'edit-profile',component: EditProfile},
+
+  {path:'transcript',component: Transcript},
 
 
   // ส่วนของคะแนน (ทั่วไป)
