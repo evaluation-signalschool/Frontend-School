@@ -111,7 +111,8 @@
     }
   }
 
-  &.certificate-card {
+  &.certificate-card,
+  &.transcript-card {
     .card-details .card-title {
       color: #f57c00;
     }
@@ -321,6 +322,7 @@
       color: #1e293b;
     }
 
+    .user-username,
     .user-email {
       font-size: 13px;
       color: #64748b;

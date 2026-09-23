@@ -26,12 +26,20 @@ export class Admin implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    if (!this.authService.isAdminLoggedIn()) {
+      this.router.navigate(['/admin/login']);
+      return;
+    }
+
     const data = this.authService.getAdminData();
     if (data) {
       this.adminName = data.name || data.username || data.email || 'ผู้ดูแลระบบ';
       this.adminRole = data.role || 'admin';
       this.adminUsername = data.username || (data.email?.includes('@') ? data.email.split('@')[0] : data.email) || '';
       this.adminEmail = data.email || '';
+    } else {
+      this.router.navigate(['/admin/login']);
+      return;
     }
     this.cdr.detectChanges();
   }

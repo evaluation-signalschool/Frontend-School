@@ -131,7 +131,7 @@
       <section id="sec-results" class="section">
       <section class="results-section">
         <div class="section-header">
-          <h2>คะแนนประเมินการสอนแยกตามวิชา/อาจารย์</h2>
+          <h2>คะแนนประเมินการสอนแยกตามวิชา</h2>
           <button class="btn-expand" (click)="isResultsExpanded = !isResultsExpanded">
             <span *ngIf="!isResultsExpanded">⤢ ขยายเต็มจอ</span>
             <span *ngIf="isResultsExpanded">✕ ย่อขนาด</span>
@@ -143,7 +143,6 @@
             <thead>
               <tr>
                 <th class="col-course">ชื่อวิชา</th>
-                <th class="col-teacher">อาจารย์ผู้สอน</th>
                 <th class="text-center">บุคลิกภาพและลักษณะท่าทาง</th>
                 <th class="text-center">การพูดและการใช้นํ้าเสียง</th>
                 <th class="text-center">การเตรียมการสอน</th>
@@ -158,7 +157,6 @@
             <tbody>
               <tr *ngFor="let item of displayEvaluationResults; let i = index">
                 <td class="col-course">{{ item.courseName }}</td>
-                <td class="col-teacher">{{ item.instructorName || item.teacherName }}</td>
 
                 <!-- คะแนนประเมิน 7 ข้อ -->
                 <td class="col-q text-center">{{ item.scores.q1 !== '-' ? (item.scores.q1 | number:'1.2-2') : '-' }}</td>
@@ -192,7 +190,7 @@
             <tfoot>
               <!-- แถวที่ 1: ผลการประเมินโดยภาพรวม -->
               <tr class="summary-row">
-                <td colspan="2" class="text-center font-weight-bold">ผลการประเมินโดยภาพรวม</td>
+                <td class="text-center font-weight-bold">ผลการประเมินโดยภาพรวม</td>
                 <td class="text-center font-weight-bold">{{ getOverallQ('q1') }}</td>
                 <td class="text-center font-weight-bold">{{ getOverallQ('q2') }}</td>
                 <td class="text-center font-weight-bold">{{ getOverallQ('q3') }}</td>
@@ -218,7 +216,7 @@
 
               <!-- แถวที่ 2: จำนวนวิชาที่ประเมิน -->
               <tr class="summary-row">
-                <td colspan="2" class="text-center">
+                <td class="text-center">
                   ทั้งหมด {{ displayEvaluationResults.length }} วิชา จาก {{ totalCount }} วิชา
                 </td>
                 <td colspan="9"></td> <!-- ช่องว่างที่เหลือทางขวา -->
@@ -233,7 +231,7 @@
       <div *ngIf="isResultsExpanded" class="results-fullscreen-overlay" (click)="isResultsExpanded = false">
         <div class="results-fullscreen-panel" (click)="$event.stopPropagation()">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-shrink: 0;">
-            <h2 style="margin: 0;">คะแนนประเมินการสอนแยกตามวิชา/อาจารย์</h2>
+            <h2 style="margin: 0;">คะแนนประเมินการสอนแยกตามวิชา</h2>
             <button class="btn-expand" (click)="isResultsExpanded = false">✕ ย่อขนาด</button>
           </div>
           <div style="flex: 1; overflow: auto;">
@@ -241,7 +239,6 @@
               <thead>
                 <tr>
                   <th class="col-course">ชื่อวิชา</th>
-                  <th class="col-teacher">อาจารย์ผู้สอน</th>
                   <th class="text-center">บุคลิกภาพและลักษณะท่าทาง</th>
                   <th class="text-center">การพูดและการใช้นํ้าเสียง</th>
                   <th class="text-center">การเตรียมการสอน</th>
@@ -256,7 +253,6 @@
               <tbody>
                 <tr *ngFor="let item of displayEvaluationResults">
                   <td class="col-course">{{ item.courseName }}</td>
-                  <td class="col-teacher">{{ item.instructorName || item.teacherName }}</td>
                   <td class="col-q text-center">{{ item.scores.q1 !== '-' ? (item.scores.q1 | number:'1.2-2') : '-' }}</td>
                   <td class="col-q text-center">{{ item.scores.q2 !== '-' ? (item.scores.q2 | number:'1.2-2') : '-' }}</td>
                   <td class="col-q text-center">{{ item.scores.q3 !== '-' ? (item.scores.q3 | number:'1.2-2') : '-' }}</td>

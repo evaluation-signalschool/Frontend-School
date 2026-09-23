@@ -78,30 +78,46 @@ export class AuthService {
   // ส่วนของ Admin
   // ==========================================
 
+  // ==========================================
+  // ส่วนของ Admin (ใช้ sessionStorage เพื่อความปลอดภัย ปิดหน้าเว็บแล้วหมดอายุทันที)
+  // ==========================================
+
   // ฟังก์ชันยิง API Admin Login
   adminLogin(payload: any): Observable<any> {
     return this.http.post<any>(`${environment.apiUrl}/admin/login`, payload);
   }
 
-  // บันทึก Admin Token ลง localStorage
+  // บันทึก Admin Token ลง sessionStorage (ป้องกันการเข้าค้างไว้เมื่อปิดเบราว์เซอร์)
   saveAdminToken(token: string): void {
-    localStorage.setItem('admin_token', token);
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      sessionStorage.setItem('admin_token', token);
+      localStorage.removeItem('admin_token'); // เคลียร์ของเก่าใน localStorage เพื่อความปลอดภัย
+    }
   }
 
-  // ดึง Admin Token จาก localStorage
+  // ดึง Admin Token จาก sessionStorage
   getAdminToken(): string | null {
-    return localStorage.getItem('admin_token');
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      return sessionStorage.getItem('admin_token');
+    }
+    return null;
   }
 
-  // บันทึกข้อมูล Admin ลง localStorage
+  // บันทึกข้อมูล Admin ลง sessionStorage
   saveAdminData(data: any): void {
-    localStorage.setItem('admin_data', JSON.stringify(data));
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      sessionStorage.setItem('admin_data', JSON.stringify(data));
+      localStorage.removeItem('admin_data'); // เคลียร์ของเก่าใน localStorage
+    }
   }
 
-  // ดึงข้อมูล Admin จาก localStorage
+  // ดึงข้อมูล Admin จาก sessionStorage
   getAdminData(): any | null {
-    const data = localStorage.getItem('admin_data');
-    return data ? JSON.parse(data) : null;
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      const data = sessionStorage.getItem('admin_data');
+      return data ? JSON.parse(data) : null;
+    }
+    return null;
   }
 
   // ตรวจสอบว่าเป็น Super Admin หรือไม่
@@ -122,14 +138,29 @@ export class AuthService {
     return data?.name || data?.username || data?.email || 'ผู้ดูแลระบบ';
   }
 
-  // ตรวจสอบว่า Admin Login อยู่หรือไม่
+  // ตรวจสอบว่า Admin Login อยู่หรือไม่ (และ Token ยังไม่หมดอายุ)
   isAdminLoggedIn(): boolean {
-    return !!this.getAdminToken();
+    const token = this.getAdminToken();
+    if (!token) return false;
+
+    // ตรวจสอบวันหมดอายุของ JWT Token ถ้ามีฟิลด์ exp
+    try {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]));
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          this.adminLogout();
+          return false;
+        }
+      }
+    } catch (_) {}
+
+    return true;
   }
 
   // ออกจากระบบ Admin
   adminLogout(): void {
-    const token = this.getAdminToken();
+    const token = this.getAdminToken() || (typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null);
     if (token) {
       try {
         this.http.post(`${environment.apiUrl}/admin/logout`, {}).subscribe({
@@ -138,7 +169,11 @@ export class AuthService {
         });
       } catch (_) {}
     }
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_data');
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('admin_token');
+      sessionStorage.removeItem('admin_data');
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_data');
+    }
   }
 }
