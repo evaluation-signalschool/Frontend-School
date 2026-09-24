@@ -94,11 +94,24 @@ export class AdminUsersComponent implements OnInit {
           this.cdr.detectChanges();
           console.error('Load Admins Error:', err);
 
-          if (err.status === 401 || err.status === 403) {
+          if (err.status === 403) {
             Swal.fire({
               icon: 'warning',
-              title: 'ต้องเข้าสู่ระบบใหม่',
-              text: 'เซสชันหมดอายุ หรือต้องอัปเดตสิทธิ์ Super Admin กรุณาเข้าสู่ระบบใหม่อีกครั้ง',
+              title: 'ไม่มีสิทธิ์เข้าถึง',
+              text: 'เฉพาะผู้ดูแลระบบหลัก (Super Admin) เท่านั้นที่สามารถจัดการผู้ดูแลระบบได้',
+              confirmButtonText: 'กลับไปหน้าหลัก',
+              confirmButtonColor: '#4338ca',
+            }).then(() => {
+              this.router.navigate(['/admin']);
+            });
+            return;
+          }
+
+          if (err.status === 401) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'เซสชันหมดอายุ',
+              text: 'กรุณาเข้าสู่ระบบใหม่อีกครั้ง',
               confirmButtonText: 'ไปหน้าเข้าสู่ระบบ',
               confirmButtonColor: '#4338ca',
             }).then(() => {
