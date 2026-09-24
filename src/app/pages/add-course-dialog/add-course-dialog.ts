@@ -16,6 +16,15 @@ interface CourseBatch {
   isVisible: boolean;
 }
 
+export interface MultiGroupSubjectItem {
+  groupId: number | string;
+  groupName: string;
+  credits: number | null;
+  existingSubjects: any[];
+  newSubjects: { subject_name: string; is_su: boolean }[];
+  isExpanded: boolean;
+}
+
 @Component({
   selector: 'app-add-course',
   standalone: true,
@@ -66,6 +75,11 @@ export class AddCourse implements OnInit {
   filterSubjectGroupId: string = '';
   filterSubjectName: string = '';
 
+  // Multi-Group All-in-One Subject states
+  subjectEntryMode: 'all' | 'single' = 'all';
+  multiGroupSubjectList: MultiGroupSubjectItem[] = [];
+  isSavingAllSubjects: boolean = false;
+
   constructor(
     private location: Location, 
     private courseService: CourseService,
@@ -100,6 +114,9 @@ export class AddCourse implements OnInit {
       next: (res) => { 
         if(res.success) {
           this.groups = (res.data || []).sort((a: any, b: any) => this.compareGroupNames(a.group_name, b.group_name)); 
+          if (this.selectedBatchForSubject) {
+            this.initMultiGroupSubjectForm();
+          }
           this.cdr.detectChanges(); // บังคับให้ UI อัปเดตทันที
         }
       },
@@ -317,13 +334,26 @@ export class AddCourse implements OnInit {
     });
   }
 
+  selectOnFocus(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input) {
+      setTimeout(() => {
+        try {
+          input.select();
+        } catch (e) {
+          // ignore
+        }
+      }, 0);
+    }
+  }
+
   addGroupField() {
     // Smart auto-increment
     const lastGroup = this.groupsList[this.groupsList.length - 1];
     let newName = '';
-    let newCredits = lastGroup.credits;
+    let newCredits = lastGroup ? lastGroup.credits : null;
 
-    if (lastGroup.group_name) {
+    if (lastGroup && lastGroup.group_name) {
       // Find numbers at the end of the string
       const match = lastGroup.group_name.match(/^(.*?)(\d+)$/);
       if (match) {
@@ -338,6 +368,16 @@ export class AddCourse implements OnInit {
     }
 
     this.groupsList.push({ group_name: newName, credits: newCredits });
+    this.cdr.detectChanges();
+
+    setTimeout(() => {
+      const newIndex = this.groupsList.length - 1;
+      const targetInput = document.querySelector(`input[name="credits_${newIndex}"]`) as HTMLInputElement;
+      if (targetInput) {
+        targetInput.focus();
+        targetInput.select();
+      }
+    }, 50);
   }
 
   removeGroupField(index: number) {
@@ -450,6 +490,15 @@ export class AddCourse implements OnInit {
 
   addSubjectField() {
     this.subjectsList.push({ subject_name: '', is_su: false });
+    this.cdr.detectChanges();
+    setTimeout(() => {
+      const idx = this.subjectsList.length - 1;
+      const input = document.querySelector(`input[name="subject_name_${idx}"]`) as HTMLInputElement;
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }, 50);
   }
 
   removeSubjectField(index: number) {
@@ -683,47 +732,11 @@ export class AddCourse implements OnInit {
   }
 
   deleteBatch(batch: any) {
-    const adminData = this.authService.getAdminData();
-    if (!adminData || !adminData.email) {
-      Swal.fire('ข้อผิดพลาด', 'ไม่พบข้อมูลผู้ดูแลระบบ กรุณาเข้าสู่ระบบใหม่', 'error');
-      return;
-    }
-
     Swal.fire({
-      title: '⚠️ ยืนยันสิทธิ์',
-      text: 'กรุณากรอกรหัสผ่านแอดมินเพื่อยืนยันการลบรุ่น',
-      input: 'password',
-      inputPlaceholder: 'รหัสผ่านแอดมิน',
-      inputAttributes: {
-        autocapitalize: 'off',
-        autocorrect: 'off'
-      },
-      showCancelButton: true,
-      confirmButtonText: 'ยืนยัน',
-      cancelButtonText: 'ยกเลิก',
-      showLoaderOnConfirm: true,
-      preConfirm: (password) => {
-        if (!password) {
-          Swal.showValidationMessage('กรุณากรอกรหัสผ่าน');
-          return false;
-        }
-        return lastValueFrom(this.authService.adminLogin({ email: adminData.email, password }))
-          .then(res => {
-            if (!res.success) throw new Error(res.message);
-            return true;
-          })
-          .catch(error => {
-            Swal.showValidationMessage(`รหัสผ่านไม่ถูกต้อง`);
-          });
-      },
-      allowOutsideClick: () => !Swal.isLoading()
-    }).then((authResult) => {
-      if (authResult.isConfirmed) {
-        Swal.fire({
-          title: '⚠️ ลบรุ่นอย่างถาวร?',
+      title: '⚠️ ยืนยันการลบรุ่น?',
       html: `
         <p style="color: #d32f2f; margin-bottom: 8px; text-align: left;">
-          การลบรุ่น "${batch.batch_name}" จะส่งผลให้ข้อมูลต่อไปนี้ถูก <b>ลบทิ้งอย่างถาวร</b>:
+          การลบรุ่น "<b>${batch.batch_name}</b>" จะส่งผลให้ข้อมูลต่อไปนี้ถูก <b>ลบทิ้งอย่างถาวร</b>:
         </p>
         <ul style="color: #d32f2f; text-align: left; font-size: 14px; padding-left: 24px; margin-top: 0;">
           <li>รายชื่อนักเรียนทั้งหมดในรุ่นนี้</li>
@@ -770,8 +783,6 @@ export class AddCourse implements OnInit {
         });
       }
     });
-      }
-    });
   }
 
   // ==========================================
@@ -782,44 +793,8 @@ export class AddCourse implements OnInit {
   }
 
   deleteCourse(course: any) {
-    const adminData = this.authService.getAdminData();
-    if (!adminData || !adminData.email) {
-      Swal.fire('ข้อผิดพลาด', 'ไม่พบข้อมูลผู้ดูแลระบบ กรุณาเข้าสู่ระบบใหม่', 'error');
-      return;
-    }
-
     Swal.fire({
-      title: '⚠️ ยืนยันสิทธิ์',
-      text: 'กรุณากรอกรหัสผ่านแอดมินเพื่อยืนยันการลบหลักสูตร',
-      input: 'password',
-      inputPlaceholder: 'รหัสผ่านแอดมิน',
-      inputAttributes: {
-        autocapitalize: 'off',
-        autocorrect: 'off'
-      },
-      showCancelButton: true,
-      confirmButtonText: 'ยืนยัน',
-      cancelButtonText: 'ยกเลิก',
-      showLoaderOnConfirm: true,
-      preConfirm: (password) => {
-        if (!password) {
-          Swal.showValidationMessage('กรุณากรอกรหัสผ่าน');
-          return false;
-        }
-        return lastValueFrom(this.authService.adminLogin({ email: adminData.email, password }))
-          .then(res => {
-            if (!res.success) throw new Error(res.message);
-            return true;
-          })
-          .catch(error => {
-            Swal.showValidationMessage(`รหัสผ่านไม่ถูกต้อง`);
-          });
-      },
-      allowOutsideClick: () => !Swal.isLoading()
-    }).then((authResult) => {
-      if (authResult.isConfirmed) {
-        Swal.fire({
-          title: '⚠️ ลบหลักสูตรอย่างถาวร?',
+      title: '⚠️ ลบหลักสูตรอย่างถาวร?',
       html: `
         <p style="color: #d32f2f; margin-bottom: 8px; text-align: left;">
           การลบหลักสูตร "<b>${course.course_name} (ปี ${course.curriculum_year})</b>" จะส่งผลให้ข้อมูลต่อไปนี้ถูก <b>ลบทิ้งอย่างถาวร</b>:
@@ -870,8 +845,6 @@ export class AddCourse implements OnInit {
         });
       }
     });
-      }
-    });
   }
 
   // ==========================================
@@ -883,12 +856,6 @@ export class AddCourse implements OnInit {
       const res = await lastValueFrom(this.courseService.checkGroupScores(group.id));
       const hasScores = res.hasScores;
 
-      const adminData = this.authService.getAdminData();
-      if (!adminData || !adminData.email) {
-        Swal.fire('ข้อผิดพลาด', 'ไม่พบข้อมูลผู้ดูแลระบบ กรุณาเข้าสู่ระบบใหม่', 'error');
-        return;
-      }
-
       let confirmHtml = `คุณแน่ใจหรือไม่ว่าต้องการลบกลุ่มวิชา "<b>${group.group_name}</b>"?`;
       if (hasScores) {
         confirmHtml = `<p style="color: #d32f2f; margin-bottom: 8px; text-align: left; font-weight: bold;">⚠️ มีการกรอกคะแนนแล้ว!</p>
@@ -897,67 +864,38 @@ export class AddCourse implements OnInit {
       }
 
       Swal.fire({
-        title: '⚠️ ยืนยันสิทธิ์ลบกลุ่มวิชา',
-        text: 'กรุณากรอกรหัสผ่านแอดมินเพื่อยืนยันการลบ',
-        input: 'password',
-        inputPlaceholder: 'รหัสผ่านแอดมิน',
-        inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
+        title: '⚠️ ยืนยันการลบกลุ่มวิชา?',
+        html: confirmHtml,
+        icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'ยืนยัน',
+        confirmButtonText: 'ลบเลย!',
         cancelButtonText: 'ยกเลิก',
-        showLoaderOnConfirm: true,
-        preConfirm: (password) => {
-          if (!password) {
-            Swal.showValidationMessage('กรุณากรอกรหัสผ่าน');
-            return false;
-          }
-          return lastValueFrom(this.authService.adminLogin({ email: adminData.email, password }))
-            .then(authRes => {
-              if (!authRes.success) throw new Error(authRes.message);
-              return true;
-            })
-            .catch(error => {
-              Swal.showValidationMessage(`รหัสผ่านไม่ถูกต้อง`);
-            });
-        },
-        allowOutsideClick: () => !Swal.isLoading()
-      }).then((authResult) => {
-        if (authResult.isConfirmed) {
-          Swal.fire({
-            title: '⚠️ ยืนยันการลบ?',
-            html: confirmHtml,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'ลบเลย!',
-            cancelButtonText: 'ยกเลิก',
-            confirmButtonColor: '#d32f2f',
-            cancelButtonColor: '#9e9e9e',
-          }).then((result) => {
-            if (result.isConfirmed) {
-              this.courseService.deleteSubjectGroup(group.id).subscribe({
-                next: (delRes) => {
-                  if (delRes.success) {
-                    Swal.fire({
-                      icon: 'success',
-                      title: 'ลบสำเร็จ!',
-                      text: 'ลบกลุ่มวิชาเรียบร้อยแล้ว',
-                      timer: 1500,
-                      showConfirmButton: false
-                    });
-                    this.loadAllData();
-                    if (this.subjectForm.group_id === group.id) {
-                       this.subjectForm.group_id = '';
-                       this.subjectsInGroup = [];
-                    }
-                  } else {
-                    Swal.fire('ข้อผิดพลาด', delRes.message, 'error');
-                  }
-                },
-                error: (err) => {
-                  console.error('Error deleting group:', err);
-                  Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', 'error');
+        confirmButtonColor: '#d32f2f',
+        cancelButtonColor: '#9e9e9e',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.courseService.deleteSubjectGroup(group.id).subscribe({
+            next: (delRes) => {
+              if (delRes.success) {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'ลบสำเร็จ!',
+                  text: 'ลบกลุ่มวิชาเรียบร้อยแล้ว',
+                  timer: 1500,
+                  showConfirmButton: false
+                });
+                this.loadAllData();
+                if (this.subjectForm.group_id === group.id) {
+                   this.subjectForm.group_id = '';
+                   this.subjectsInGroup = [];
                 }
-              });
+              } else {
+                Swal.fire('ข้อผิดพลาด', delRes.message, 'error');
+              }
+            },
+            error: (err) => {
+              console.error('Error deleting group:', err);
+              Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', 'error');
             }
           });
         }
@@ -973,12 +911,6 @@ export class AddCourse implements OnInit {
       const res = await lastValueFrom(this.courseService.checkSubjectScores(subject.subject_id));
       const hasScores = res.hasScores;
 
-      const adminData = this.authService.getAdminData();
-      if (!adminData || !adminData.email) {
-        Swal.fire('ข้อผิดพลาด', 'ไม่พบข้อมูลผู้ดูแลระบบ กรุณาเข้าสู่ระบบใหม่', 'error');
-        return;
-      }
-
       let confirmHtml = `คุณแน่ใจหรือไม่ว่าต้องการลบรายวิชา "<b>${subject.subject_name}</b>"?`;
       if (hasScores) {
         confirmHtml = `<p style="color: #d32f2f; margin-bottom: 8px; text-align: left; font-weight: bold;">⚠️ มีการกรอกคะแนนแล้ว!</p>
@@ -987,66 +919,37 @@ export class AddCourse implements OnInit {
       }
 
       Swal.fire({
-        title: '⚠️ ยืนยันสิทธิ์ลบรายวิชา',
-        text: 'กรุณากรอกรหัสผ่านแอดมินเพื่อยืนยันการลบ',
-        input: 'password',
-        inputPlaceholder: 'รหัสผ่านแอดมิน',
-        inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
+        title: '⚠️ ยืนยันการลบรายวิชา?',
+        html: confirmHtml,
+        icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'ยืนยัน',
+        confirmButtonText: 'ลบเลย!',
         cancelButtonText: 'ยกเลิก',
-        showLoaderOnConfirm: true,
-        preConfirm: (password) => {
-          if (!password) {
-            Swal.showValidationMessage('กรุณากรอกรหัสผ่าน');
-            return false;
-          }
-          return lastValueFrom(this.authService.adminLogin({ email: adminData.email, password }))
-            .then(authRes => {
-              if (!authRes.success) throw new Error(authRes.message);
-              return true;
-            })
-            .catch(error => {
-              Swal.showValidationMessage(`รหัสผ่านไม่ถูกต้อง`);
-            });
-        },
-        allowOutsideClick: () => !Swal.isLoading()
-      }).then((authResult) => {
-        if (authResult.isConfirmed) {
-          Swal.fire({
-            title: '⚠️ ยืนยันการลบ?',
-            html: confirmHtml,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'ลบเลย!',
-            cancelButtonText: 'ยกเลิก',
-            confirmButtonColor: '#d32f2f',
-            cancelButtonColor: '#9e9e9e',
-          }).then((result) => {
-            if (result.isConfirmed) {
-              this.courseService.deleteSubject(subject.subject_id).subscribe({
-                next: (delRes) => {
-                  if (delRes.success) {
-                    Swal.fire({
-                      icon: 'success',
-                      title: 'ลบสำเร็จ!',
-                      text: 'ลบรายวิชาเรียบร้อยแล้ว',
-                      timer: 1500,
-                      showConfirmButton: false
-                    });
-                    this.onGroupChange(); // reload subjects in this group
-                    if (this.selectedBatchForSubject) {
-                      this.loadSubjectsForSelectedBatch();
-                    }
-                  } else {
-                    Swal.fire('ข้อผิดพลาด', delRes.message, 'error');
-                  }
-                },
-                error: (err) => {
-                  console.error('Error deleting subject:', err);
-                  Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', 'error');
+        confirmButtonColor: '#d32f2f',
+        cancelButtonColor: '#9e9e9e',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.courseService.deleteSubject(subject.subject_id).subscribe({
+            next: (delRes) => {
+              if (delRes.success) {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'ลบสำเร็จ!',
+                  text: 'ลบรายวิชาเรียบร้อยแล้ว',
+                  timer: 1500,
+                  showConfirmButton: false
+                });
+                this.onGroupChange(); // reload subjects in this group
+                if (this.selectedBatchForSubject) {
+                  this.loadSubjectsForSelectedBatch();
                 }
-              });
+              } else {
+                Swal.fire('ข้อผิดพลาด', delRes.message, 'error');
+              }
+            },
+            error: (err) => {
+              console.error('Error deleting subject:', err);
+              Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', 'error');
             }
           });
         }
@@ -1106,6 +1009,7 @@ export class AddCourse implements OnInit {
       this.loadSubjectsForSelectedBatch();
     } else {
       this.batchSubjectsList = [];
+      this.multiGroupSubjectList = [];
     }
     this.cdr.detectChanges();
   }
@@ -1113,6 +1017,7 @@ export class AddCourse implements OnInit {
   loadSubjectsForSelectedBatch() {
     if (!this.selectedBatchForSubject) {
       this.batchSubjectsList = [];
+      this.multiGroupSubjectList = [];
       this.cdr.detectChanges();
       return;
     }
@@ -1142,15 +1047,276 @@ export class AddCourse implements OnInit {
           this.batchSubjectsList = [];
         }
         this.isLoadingBatchSubjects = false;
+        this.initMultiGroupSubjectForm();
         this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading subjects for batch:', err);
         this.batchSubjectsList = [];
         this.isLoadingBatchSubjects = false;
+        this.initMultiGroupSubjectForm();
         this.cdr.detectChanges();
       }
     });
+  }
+
+  // ==========================================
+  // จัดการเพิ่มรายวิชาแบบรวมทุกกลุ่ม (Multi-Group All-in-One)
+  // ==========================================
+  setSubjectEntryMode(mode: 'all' | 'single') {
+    this.subjectEntryMode = mode;
+    if (mode === 'all' && this.multiGroupSubjectList.length === 0 && this.selectedBatchForSubject) {
+      this.initMultiGroupSubjectForm();
+    }
+    this.cdr.detectChanges();
+  }
+
+  initMultiGroupSubjectForm() {
+    if (!this.selectedBatchForSubject) {
+      this.multiGroupSubjectList = [];
+      return;
+    }
+
+    const batchGroups = this.getGroupsForBatch(this.selectedBatchForSubject);
+    
+    // บันทึกค่าที่ผู้ใช้เคยกรอกไว้ เพื่อไม่ให้หายเวลารีโหลดข้อมูล
+    const prevMap = new Map<string, { subject_name: string; is_su: boolean }[]>();
+    const prevExpandMap = new Map<string, boolean>();
+    for (const item of this.multiGroupSubjectList) {
+      prevMap.set(item.groupId.toString(), item.newSubjects);
+      prevExpandMap.set(item.groupId.toString(), item.isExpanded);
+    }
+
+    this.multiGroupSubjectList = batchGroups.map((g: any) => {
+      const existing = this.batchSubjectsList.filter(s => 
+        (s.group_id && s.group_id.toString() === g.id.toString()) ||
+        s.group_name === g.group_name
+      );
+
+      const savedNewSubjects = prevMap.get(g.id.toString());
+      const savedExpanded = prevExpandMap.get(g.id.toString());
+
+      return {
+        groupId: g.id,
+        groupName: g.group_name,
+        credits: g.credits,
+        existingSubjects: existing,
+        newSubjects: savedNewSubjects && savedNewSubjects.length > 0 ? savedNewSubjects : [{ subject_name: '', is_su: false }],
+        isExpanded: savedExpanded !== undefined ? savedExpanded : true
+      };
+    });
+  }
+
+  addSubjectToGroup(group: MultiGroupSubjectItem) {
+    group.newSubjects.push({ subject_name: '', is_su: false });
+    this.cdr.detectChanges();
+    setTimeout(() => {
+      const sIdx = group.newSubjects.length - 1;
+      const input = document.querySelector(`input[name="multi_sub_name_${group.groupId}_${sIdx}"]`) as HTMLInputElement;
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }, 50);
+  }
+
+  removeSubjectFromGroup(group: MultiGroupSubjectItem, index: number) {
+    if (group.newSubjects.length > 1) {
+      group.newSubjects.splice(index, 1);
+    } else {
+      group.newSubjects[0] = { subject_name: '', is_su: false };
+    }
+    this.cdr.detectChanges();
+  }
+
+  getValidNewSubjectsInGroup(group: MultiGroupSubjectItem): { subject_name: string; is_su: boolean }[] {
+    if (!group || !group.newSubjects) return [];
+    return group.newSubjects.filter(s => (s.subject_name || '').trim() !== '');
+  }
+
+  getTotalNewSubjectsCount(): number {
+    return this.multiGroupSubjectList.reduce((acc, g) => acc + this.getValidNewSubjectsInGroup(g).length, 0);
+  }
+
+  getGroupsWithNewSubjectsCount(): number {
+    return this.multiGroupSubjectList.filter(g => this.getValidNewSubjectsInGroup(g).length > 0).length;
+  }
+
+  getGroupsWithExistingCount(): number {
+    return this.multiGroupSubjectList.filter(g => g.existingSubjects && g.existingSubjects.length > 0).length;
+  }
+
+  toggleGroupExpand(group: MultiGroupSubjectItem) {
+    group.isExpanded = !group.isExpanded;
+  }
+
+  toggleAllGroupsExpand(expand: boolean) {
+    this.multiGroupSubjectList.forEach(g => g.isExpanded = expand);
+    this.cdr.detectChanges();
+  }
+
+  scrollToGroup(groupId: number | string) {
+    const el = document.getElementById(`group-card-${groupId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('highlight-pulse');
+      setTimeout(() => el.classList.remove('highlight-pulse'), 1500);
+    }
+  }
+
+  getGroupPrefix(name: string): string {
+    const upper = (name || '').trim().toUpperCase();
+    if (upper.startsWith('MN')) return 'MN';
+    if (upper.startsWith('M')) return 'M';
+    if (upper.startsWith('S')) return 'S';
+    if (upper.startsWith('P')) return 'P';
+    return 'OTHER';
+  }
+
+  getGroupLabelOnly(name: string): string {
+    const upper = (name || '').trim().toUpperCase();
+    if (upper.startsWith('MN')) return 'วิชารอง';
+    if (upper.startsWith('M')) return 'วิชาหลัก';
+    if (upper.startsWith('S')) return 'วิชาประกอบ';
+    if (upper.startsWith('P')) return 'ภาคปฏิบัติ';
+    return '';
+  }
+
+  async saveAllMultiGroupSubjects() {
+    const toSave: { groupId: number | string; groupName: string; subject_name: string; is_su: boolean }[] = [];
+    
+    for (const group of this.multiGroupSubjectList) {
+      for (const subj of group.newSubjects) {
+        const trimmed = (subj.subject_name || '').trim();
+        if (trimmed) {
+          toSave.push({
+            groupId: group.groupId,
+            groupName: group.groupName,
+            subject_name: trimmed,
+            is_su: Boolean(subj.is_su)
+          });
+        }
+      }
+    }
+
+    if (toSave.length === 0) {
+      Swal.fire('แจ้งเตือน', 'กรุณากรอกชื่อวิชาอย่างน้อย 1 วิชาในกลุ่มใดก็ได้ก่อนกดบันทึก', 'warning');
+      return;
+    }
+
+    // ตรวจสอบชื่อวิชาซ้ำในกลุ่มเดียวกันก่อนส่ง
+    const seen = new Set<string>();
+    for (const item of toSave) {
+      const key = `${item.groupId}_${item.subject_name.toLowerCase()}`;
+      if (seen.has(key)) {
+        Swal.fire('พบวิชาซ้ำ', `พบชื่อวิชา "<b>${item.subject_name}</b>" ซ้ำกันในกลุ่ม "${item.groupName}" กรุณาตรวจสอบ`, 'warning');
+        return;
+      }
+      seen.add(key);
+    }
+
+    this.isSavingAllSubjects = true;
+    Swal.fire({
+      title: 'กำลังบันทึกรายวิชา...',
+      html: `กำลังบันทึกทั้งหมด <b>${toSave.length}</b> วิชา ใน <b>${this.getGroupsWithNewSubjectsCount()}</b> กลุ่มวิชา กรุณารอสักครู่`,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    try {
+      const results = await Promise.allSettled(
+        toSave.map(item => lastValueFrom(this.courseService.addSubject({
+          group_id: item.groupId,
+          subject_name: item.subject_name,
+          is_su: item.is_su
+        })))
+      );
+
+      let successCount = 0;
+      let failCount = 0;
+      const failedMessages: string[] = [];
+
+      results.forEach((res, idx) => {
+        if (res.status === 'fulfilled' && res.value?.success !== false) {
+          successCount++;
+        } else {
+          failCount++;
+          const reason = res.status === 'rejected' ? (res.reason?.error?.message || res.reason?.message) : res.value?.message;
+          failedMessages.push(`- ${toSave[idx].groupName}: ${toSave[idx].subject_name} (${reason || 'เกิดข้อผิดพลาด'})`);
+        }
+      });
+
+      // รีเซ็ตช่องกรอกของทุกกลุ่ม
+      for (const group of this.multiGroupSubjectList) {
+        group.newSubjects = [{ subject_name: '', is_su: false }];
+      }
+
+      // โหลดข้อมูลรายวิชาใหม่
+      this.loadSubjectsForSelectedBatch();
+
+      if (failCount === 0) {
+        Swal.fire({
+          icon: 'success',
+          title: 'บันทึกสำเร็จทั้งหมด!',
+          html: `เพิ่มรายวิชาทั้งหมด <b>${successCount}</b> วิชา เรียบร้อยแล้ว`,
+          timer: 2000,
+          showConfirmButton: true
+        });
+      } else {
+        Swal.fire({
+          icon: 'warning',
+          title: `บันทึกสำเร็จ ${successCount} วิชา`,
+          html: `<div style="text-align: left; font-size: 14px;"><p>มี ${failCount} วิชาที่ไม่สามารถบันทึกได้:</p><div style="color: #d32f2f; max-height: 150px; overflow-y: auto;">${failedMessages.join('<br>')}</div></div>`,
+        });
+      }
+    } catch (err: any) {
+      console.error('Error saving all subjects:', err);
+      Swal.fire('เกิดข้อผิดพลาด', err?.message || 'ไม่สามารถบันทึกรายวิชาได้', 'error');
+    } finally {
+      this.isSavingAllSubjects = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  async saveGroupSubjects(group: MultiGroupSubjectItem) {
+    const valid = this.getValidNewSubjectsInGroup(group);
+    if (valid.length === 0) {
+      Swal.fire('แจ้งเตือน', `กรุณากรอกชื่อวิชาในกลุ่ม ${group.groupName} ก่อนกดบันทึก`, 'warning');
+      return;
+    }
+
+    Swal.fire({
+      title: 'กำลังบันทึก...',
+      html: `กำลังบันทึก ${valid.length} วิชาในกลุ่ม ${group.groupName}`,
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const promises = valid.map(s => lastValueFrom(this.courseService.addSubject({
+        group_id: group.groupId,
+        subject_name: s.subject_name.trim(),
+        is_su: Boolean(s.is_su)
+      })));
+
+      await Promise.all(promises);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'บันทึกสำเร็จ!',
+        text: `บันทึกรายวิชาในกลุ่ม ${group.groupName} จำนวน ${valid.length} วิชา เรียบร้อยแล้ว`,
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+      group.newSubjects = [{ subject_name: '', is_su: false }];
+      this.loadSubjectsForSelectedBatch();
+    } catch (err: any) {
+      const msg = err?.error?.message || 'ไม่สามารถบันทึกรายวิชาได้';
+      Swal.fire('เกิดข้อผิดพลาด', msg, 'error');
+    }
   }
 
   getSubjectsCountInGroup(groupName: string): number {

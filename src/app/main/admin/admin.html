@@ -29,7 +29,7 @@
             {{ isSuperAdmin ? 'ผู้ดูแลระบบหลัก (Super Admin)' : 'เจ้าหน้าที่ดูแลระบบ (Admin)' }}
           </span>
         </div>
-        <span class="user-email">@{{ adminUsername || adminEmail }}</span>
+        <span class="user-username" *ngIf="adminUsername">ชื่อผู้ใช้: {{ adminUsername }}</span>
       </div>
     </div>
   </div>
@@ -115,7 +115,7 @@
           <p class="card-subtitle">เช็คสถานะการส่งคะแนนของแต่ละรายวิชา ว่าอาจารย์ส่งครบแล้วหรือยัง</p>
         </div>
 
-        <button mat-raised-button class="btn-navigate" routerLink="/score-submission">
+        <button mat-raised-button class="btn-navigate" routerLink="/admin/score-submission">
           <mat-icon class="btn-icon">fact_check</mat-icon>
           <span>ตรวจสอบการส่งคะแนน</span>
         </button>
@@ -161,7 +161,7 @@
         </button>
       </div>
 
-      <!-- 🔵 หมวดหมู่: ประกาศนีบัตร (สีส้ม Orange) -->
+      <!-- 🔵 หมวดหมู่: ประกาศนียบัตรและเอกสารสำคัญ (สีส้ม Orange) -->
       <!-- ออกใบประกาศนีบัตร -->
       <div class="action-card certificate-card">
         <div class="card-details">
@@ -172,6 +172,19 @@
         <button mat-raised-button class="btn-navigate btn-orange" routerLink="/admin/certificate">
           <mat-icon class="btn-icon">card_membership</mat-icon>
           ไปยังหน้าออกใบประกาศฯ
+        </button>
+      </div>
+
+      <!-- ออกใบทรานสคริปต์ (Transcript) -->
+      <div class="action-card transcript-card">
+        <div class="card-details">
+          <h4 class="card-title">ออกใบทรานสคริปต์ (Transcript)</h4>
+          <p class="card-subtitle">พิมพ์และออกใบแสดงผลการฝึกอบรม (ระเบียบแสดงผลการฝึกอบรม) สำหรับผู้เรียน</p>
+        </div>
+
+        <button mat-raised-button class="btn-navigate btn-orange" routerLink="/admin/transcript">
+          <mat-icon class="btn-icon">description</mat-icon>
+          ไปยังหน้าออกใบทรานสคริปต์
         </button>
       </div>
 

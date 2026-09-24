@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -23,7 +23,7 @@ import { AuthService } from '../../services/auth.service';
   templateUrl: './admin-login.html',
   styleUrl: './admin-login.scss',
 })
-export class AdminLogin {
+export class AdminLogin implements OnInit {
   hidePassword = true;
   username: string = '';
   password: string = '';
@@ -33,7 +33,15 @@ export class AdminLogin {
   constructor(
     private authService: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
   ) {}
+
+  ngOnInit(): void {
+    // หากเข้าสู่ระบบไว้แล้ว และมีข้อมูลครบถ้วน ให้พาไปหน้าหลักแอดมินทันที
+    if (this.authService.isAdminLoggedIn() && this.authService.getAdminData()) {
+      this.router.navigate(['/admin']);
+    }
+  }
 
   onLogin(): void {
     if (!this.username.trim() || !this.password) {
@@ -46,7 +54,6 @@ export class AdminLogin {
 
     const payload = {
       username: this.username.trim(),
-      email: this.username.trim(),
       password: this.password,
     };
 
@@ -54,7 +61,7 @@ export class AdminLogin {
       next: (res) => {
         this.isLoading = false;
         if (res.success && res.token) {
-          // 1. บันทึก Token
+          // 1. บันทึก Token ลง sessionStorage
           this.authService.saveAdminToken(res.token);
 
           // 2. บันทึกข้อมูลแอดมิน (ถ้ามีส่งกลับมา)
@@ -62,8 +69,9 @@ export class AdminLogin {
             this.authService.saveAdminData(res.adminData);
           }
 
-          // นำทางไปยังหน้าแอดมินปกติหลังจากล็อกอินสำเร็จ
-          this.router.navigate(['/admin']);
+          // 3. นำทางไปยังหน้าปลายทางเดิมที่พยายามเข้า หรือ /admin
+          const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/admin';
+          this.router.navigateByUrl(returnUrl);
         } else {
           this.errorMessage = res.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
         }

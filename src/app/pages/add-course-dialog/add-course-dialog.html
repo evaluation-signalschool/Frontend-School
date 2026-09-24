@@ -31,7 +31,8 @@
             <!-- โหมดพิมพ์ชื่อหลักสูตรใหม่ -->
             <div *ngIf="isNewCourse" style="display: flex; gap: 8px;">
               <input type="text" [(ngModel)]="courseForm.course_name" name="course_name_input"
-                placeholder="พิมพ์ชื่อหลักสูตรใหม่ เช่น ชั้นนายพัน เหล่า ส." required style="flex: 1;">
+                placeholder="พิมพ์ชื่อหลักสูตรใหม่ เช่น ชั้นนายพัน เหล่า ส." required style="flex: 1;"
+                (focus)="selectOnFocus($event)" (click)="selectOnFocus($event)">
               <button type="button" (click)="cancelNewCourse()" style="padding: 0 12px; border-radius: 4px; border: 1px solid #ccc; background: #f5f5f5; cursor: pointer; color: #555; font-size: 13px; display: flex; align-items: center;">
                 <span class="material-icons" style="font-size: 16px; margin-right: 4px;">close</span> ยกเลิก
               </button>
@@ -40,6 +41,7 @@
           <div class="form-group short-input">
             <label>ปีหลักสูตร</label>
             <input type="number" [(ngModel)]="courseForm.curriculum_year" name="curriculum_year" placeholder="เช่น 2569"
+              (focus)="selectOnFocus($event)" (click)="selectOnFocus($event)"
               required>
           </div>
         </div>
@@ -69,7 +71,9 @@
               </select>
             </div>
             <div style="flex: 2;">
-              <input type="text" [(ngModel)]="filterCourseName" placeholder="ค้นหาชื่อหลักสูตร..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+              <input type="text" [(ngModel)]="filterCourseName" placeholder="ค้นหาชื่อหลักสูตร..." 
+                style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;"
+                (focus)="selectOnFocus($event)" (click)="selectOnFocus($event)">
             </div>
           </div>
 
@@ -136,6 +140,7 @@
           <div class="form-group">
             <label>ชื่อรุ่น</label>
             <input type="text" [(ngModel)]="batchForm.batch_name" name="batch_name" placeholder="เช่น รุ่นที่ 63"
+              (focus)="selectOnFocus($event)" (click)="selectOnFocus($event)"
               required>
           </div>
           <div class="form-group">
@@ -272,11 +277,18 @@
               <input type="text" [(ngModel)]="g.group_name" name="group_name_{{i}}" 
                 placeholder="รหัสกลุ่ม/ชื่อกลุ่มวิชา เช่น M01" 
                 (input)="onGroupNameInput(g, $event)"
+                (focus)="selectOnFocus($event)"
+                (click)="selectOnFocus($event)"
                 autocomplete="off"
                 required>
             </div>
             <div class="form-group mb-0" style="flex: 1;">
-              <input type="number" min="0" step="0.5" [(ngModel)]="g.credits" name="credits_{{i}}" placeholder="หน่วยกิต (ถ้า S/U ใส่ 0)" required>
+              <input type="number" min="0" step="0.5" [(ngModel)]="g.credits" name="credits_{{i}}" 
+                placeholder="หน่วยกิต (ถ้า S/U ใส่ 0)" 
+                (focus)="selectOnFocus($event)"
+                (click)="selectOnFocus($event)"
+                (keydown.enter)="$event.preventDefault(); isLast && addGroupField()"
+                required>
             </div>
             
             <div style="display: flex; align-items: center; gap: 6px;">
@@ -403,46 +415,270 @@
           </div>
         </div>
 
-        <!-- Cascading: เลือกกลุ่มวิชา -->
-        <div class="form-group">
-          <label>เลือกกลุ่มวิชา</label>
-          <div class="select-wrapper">
-            <select [(ngModel)]="subjectForm.group_id" name="group_id" [disabled]="!selectedBatchForSubject" (ngModelChange)="onGroupChange()" required>
-              <option value="" disabled selected>-- เลือกกลุ่มวิชา --</option>
-              <option *ngFor="let g of getGroupsForBatch(selectedBatchForSubject)" [value]="g.id" [ngStyle]="{'color': getGroupColor(g.group_name), 'font-weight': '500'}">
-                {{ getGroupLabel(g) }}
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Multiple Subjects Array -->
-        <div class="dynamic-list-container">
-          <label>รายชื่อวิชาในกลุ่มนี้ (เพิ่มได้หลายวิชา)</label>
-          <div class="dynamic-row" *ngFor="let subj of subjectsList; let i = index; let isLast = last" style="align-items: center; gap: 16px;">
-            <div class="form-group mb-0" style="flex: 1;">
-              <input type="text" [(ngModel)]="subj.subject_name" name="subject_name_{{i}}"
-                placeholder="เช่น ฝ่ายอำนวยการ" required>
-            </div>
-            
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <input type="checkbox" id="is_su_{{i}}" [(ngModel)]="subj.is_su" name="is_su_{{i}}" style="width: 16px; height: 16px; cursor: pointer;">
-              <label for="is_su_{{i}}" style="margin: 0; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text-dark);">ประเมินผลเป็น S/U</label>
-            </div>
-
-            <button type="button" class="btn-icon-action btn-add" (click)="addSubjectField()" *ngIf="isLast"
-              title="เพิ่มรายวิชา">
-              <span class="material-icons">add_circle</span>
+        <!-- ตัวเลือกโหมดการกรอก: กรอกรวมทุกกลุ่ม (เรียงยาว บันทึกทีเดียว) VS กรอกทีละกลุ่ม -->
+        <div class="subject-mode-selector" *ngIf="selectedBatchForSubject">
+          <div class="mode-tabs-container">
+            <button type="button" class="mode-tab-button" [class.active]="subjectEntryMode === 'all'" (click)="setSubjectEntryMode('all')">
+              <span class="material-icons">view_agenda</span>
+              <span class="tab-label">กรอกรวมทุกกลุ่ม (เรียงยาว บันทึกทีเดียว)</span>
+              <span class="badge-recommended">แนะนำ ✨</span>
             </button>
-            <button type="button" class="btn-icon-action btn-remove" (click)="removeSubjectField(i)"
-              *ngIf="subjectsList.length > 1" title="ลบรายวิชานี้">
-              <span class="material-icons">remove_circle</span>
+            <button type="button" class="mode-tab-button" [class.active]="subjectEntryMode === 'single'" (click)="setSubjectEntryMode('single')">
+              <span class="material-icons">filter_1</span>
+              <span class="tab-label">กรอกทีละกลุ่ม (แบบเดิม)</span>
             </button>
           </div>
         </div>
 
-        <div class="form-actions right" style="margin-top: 24px;">
-          <button type="submit" class="btn-submit">บันทึกรายวิชาทั้งหมด</button>
+        <!-- ======================================================== -->
+        <!-- โหมด 1: กรอกรวมทุกกลุ่ม (เรียงยาวๆ แยกกลุ่ม บันทึกทีเดียว) -->
+        <!-- ======================================================== -->
+        <div class="multi-group-entry-wrapper" *ngIf="subjectEntryMode === 'all' && selectedBatchForSubject">
+          
+          <!-- แถบสรุป & ทางลัดเลื่อนไปยังกลุ่มวิชา (Quick Jump Navigation) -->
+          <div class="multi-group-overview" *ngIf="multiGroupSubjectList.length > 0">
+            <div class="overview-header">
+              <div class="overview-title">
+                <span class="material-icons">dashboard</span>
+                <strong>กลุ่มวิชาทั้งหมดในรุ่นนี้ ({{ multiGroupSubjectList.length }} กลุ่ม)</strong>
+                <span class="overview-stats">
+                  <span class="stat-pill success">มีวิชาแล้ว {{ getGroupsWithExistingCount() }} กลุ่ม</span>
+                  <span class="stat-pill pending" *ngIf="multiGroupSubjectList.length - getGroupsWithExistingCount() > 0">
+                    ยังไม่มีวิชา {{ multiGroupSubjectList.length - getGroupsWithExistingCount() }} กลุ่ม
+                  </span>
+                </span>
+              </div>
+              <div class="overview-actions">
+                <button type="button" class="btn-text-action" (click)="toggleAllGroupsExpand(true)">
+                  <span class="material-icons">unfold_more</span> ขยายทั้งหมด
+                </button>
+                <button type="button" class="btn-text-action" (click)="toggleAllGroupsExpand(false)">
+                  <span class="material-icons">unfold_less</span> ย่อทั้งหมด
+                </button>
+              </div>
+            </div>
+
+            <!-- Quick Navigation Pills -->
+            <div class="group-pills-nav">
+              <button type="button" *ngFor="let g of multiGroupSubjectList" 
+                      class="nav-group-pill"
+                      [class.has-subjects]="g.existingSubjects.length > 0"
+                      [class.has-new]="getValidNewSubjectsInGroup(g).length > 0"
+                      (click)="scrollToGroup(g.groupId)">
+                <span class="pill-group-name" [style.color]="getGroupColor(g.groupName)">{{ g.groupName }}</span>
+                <span class="pill-status has-subs" *ngIf="g.existingSubjects.length > 0">
+                  ✓ {{ g.existingSubjects.length }}
+                </span>
+                <span class="pill-status empty" *ngIf="g.existingSubjects.length === 0 && getValidNewSubjectsInGroup(g).length === 0">
+                  ว่าง
+                </span>
+                <span class="pill-status adding" *ngIf="getValidNewSubjectsInGroup(g).length > 0">
+                  +{{ getValidNewSubjectsInGroup(g).length }}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <!-- แจ้งเตือนกรณีรุ่นนี้ยังไม่มีกลุ่มวิชา -->
+          <div *ngIf="multiGroupSubjectList.length === 0" class="empty-groups-notice">
+            <span class="material-icons">info</span>
+            <div>
+              <strong>รุ่นนี้ยังไม่มีกลุ่มวิชา</strong>
+              <p>กรุณาเพิ่มกลุ่มวิชาในหัวข้อ <b>"3. จัดการกลุ่มวิชา (Subject Groups)"</b> ด้านบนก่อน จึงจะสามารถเพิ่มรายวิชาได้</p>
+            </div>
+          </div>
+
+          <!-- รายการการ์ดของแต่ละกลุ่มวิชา (เรียงยาวๆ) -->
+          <div class="multi-group-cards-list" *ngIf="multiGroupSubjectList.length > 0">
+            <div *ngFor="let group of multiGroupSubjectList; let gIdx = index" 
+                 [id]="'group-card-' + group.groupId" 
+                 class="group-card"
+                 [style.border-left-color]="getGroupColor(group.groupName)">
+              
+              <!-- Card Header -->
+              <div class="group-card-header" (click)="toggleGroupExpand(group)">
+                <div class="header-left">
+                  <span [ngClass]="getGroupBadgeClass(group.groupName)" class="group-code-badge">
+                    {{ group.groupName }}
+                  </span>
+                  <span class="group-type-label">{{ getGroupLabelOnly(group.groupName) }}</span>
+                  <span class="group-credit-badge" *ngIf="group.credits !== null">{{ group.credits }} หน่วยกิต</span>
+                  
+                  <span class="status-chip existing" *ngIf="group.existingSubjects.length > 0">
+                    <span class="material-icons">check_circle</span> มีแล้ว {{ group.existingSubjects.length }} วิชา
+                  </span>
+                  <span class="status-chip empty" *ngIf="group.existingSubjects.length === 0">
+                    <span class="material-icons">radio_button_unchecked</span> ยังไม่มีวิชา
+                  </span>
+                </div>
+
+                <div class="header-right">
+                  <span class="new-count-pill" *ngIf="getValidNewSubjectsInGroup(group).length > 0">
+                    +{{ getValidNewSubjectsInGroup(group).length }} วิชาใหม่
+                  </span>
+                  <span class="material-icons chevron-icon">
+                    {{ group.isExpanded ? 'expand_less' : 'expand_more' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Card Body -->
+              <div class="group-card-body" *ngIf="group.isExpanded">
+                
+                <!-- 1. วิชาที่มีอยู่แล้วในกลุ่มนี้ -->
+                <div class="existing-subjects-box" *ngIf="group.existingSubjects.length > 0">
+                  <div class="box-label">
+                    <span class="material-icons">playlist_add_check</span>
+                    <span>วิชาที่มีอยู่แล้วในกลุ่ม {{ group.groupName }} ({{ group.existingSubjects.length }} วิชา):</span>
+                  </div>
+                  <div class="chips-wrap">
+                    <span class="existing-subject-chip" *ngFor="let s of group.existingSubjects">
+                      <span class="chip-name">{{ s.subject_name }}</span>
+                      <span class="chip-su" *ngIf="s.is_su">S/U</span>
+                      <button type="button" class="chip-delete-btn" (click)="deleteSubject(s); $event.stopPropagation();" title="ลบรายวิชานี้">
+                        <span class="material-icons">close</span>
+                      </button>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- 2. ช่องกรอกรายวิชาใหม่ในกลุ่มนี้ -->
+                <div class="new-subjects-input-area">
+                  <div class="input-area-header">
+                    <span class="material-icons">add_circle_outline</span>
+                    <strong>กรอกวิชาใหม่ในกลุ่ม {{ group.groupName }}:</strong>
+                    <span class="hint-text">(พิมพ์ชื่อวิชาแล้วกด Enter หรือกดปุ่ม + เพื่อเพิ่มแถวใหม่)</span>
+                  </div>
+
+                  <div class="subject-input-rows">
+                    <div class="subject-input-row" *ngFor="let subj of group.newSubjects; let sIdx = index; let isLast = last">
+                      <div class="row-num">{{ sIdx + 1 }}.</div>
+                      <div class="input-col">
+                        <input type="text" [(ngModel)]="subj.subject_name" 
+                               [name]="'multi_sub_name_' + group.groupId + '_' + sIdx"
+                               placeholder="เช่น ฝ่ายอำนวยการ (กด Enter เพื่อเพิ่มแถวถัดไป)"
+                               (focus)="selectOnFocus($event)"
+                               (click)="selectOnFocus($event)"
+                               (keydown.enter)="$event.preventDefault(); addSubjectToGroup(group)">
+                      </div>
+                      
+                      <div class="su-check-col">
+                        <label class="custom-checkbox">
+                          <input type="checkbox" [(ngModel)]="subj.is_su" 
+                                 [name]="'multi_sub_su_' + group.groupId + '_' + sIdx"
+                                 [id]="'multi_sub_su_' + group.groupId + '_' + sIdx">
+                          <span class="checkmark"></span>
+                          <span class="check-label">ประเมินผลเป็น S/U</span>
+                        </label>
+                      </div>
+
+                      <div class="row-actions">
+                        <button type="button" class="btn-row-add" (click)="addSubjectToGroup(group)" *ngIf="isLast" title="เพิ่มแถววิชา">
+                          <span class="material-icons">add_circle</span>
+                        </button>
+                        <button type="button" class="btn-row-del" (click)="removeSubjectFromGroup(group, sIdx)" 
+                                *ngIf="group.newSubjects.length > 1 || subj.subject_name" title="ลบแถวนี้">
+                          <span class="material-icons">remove_circle</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Quick Save for this group -->
+                  <div class="card-footer-actions" *ngIf="getValidNewSubjectsInGroup(group).length > 0">
+                    <span class="sub-counter-hint">
+                      กรอกแล้ว {{ getValidNewSubjectsInGroup(group).length }} วิชาในกลุ่มนี้
+                    </span>
+                    <button type="button" class="btn-save-group-only" (click)="saveGroupSubjects(group)">
+                      <span class="material-icons">save</span> บันทึกเฉพาะกลุ่ม {{ group.groupName }}
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- แถบปุ่มบันทึกทั้งหมดทุกกลุ่ม (Sticky Action Bar) -->
+          <div class="sticky-save-all-bar" *ngIf="multiGroupSubjectList.length > 0">
+            <div class="save-bar-content">
+              <div class="save-bar-info">
+                <span class="material-icons info-icon">playlist_add_check</span>
+                <div class="info-text">
+                  <div class="main-stat">
+                    รวมวิชาใหม่ที่พร้อมบันทึก: <strong>{{ getTotalNewSubjectsCount() }} วิชา</strong>
+                  </div>
+                  <div class="sub-stat" *ngIf="getTotalNewSubjectsCount() > 0">
+                    (จากทั้งหมด {{ getGroupsWithNewSubjectsCount() }} กลุ่มวิชาที่กรอก)
+                  </div>
+                  <div class="sub-stat pending" *ngIf="getTotalNewSubjectsCount() === 0">
+                    กรอกชื่อวิชาในกลุ่มต่างๆ ด้านบน แล้วกดปุ่มนี้เพื่อบันทึกพร้อมกันทั้งหมดในคลิกเดียว
+                  </div>
+                </div>
+              </div>
+
+              <div class="save-bar-btn-wrap">
+                <button type="button" class="btn-save-all-main" 
+                        [disabled]="getTotalNewSubjectsCount() === 0 || isSavingAllSubjects"
+                        (click)="saveAllMultiGroupSubjects()">
+                  <span class="material-icons">cloud_upload</span>
+                  <span>บันทึกรายวิชาทั้งหมดทุกกลุ่ม ({{ getTotalNewSubjectsCount() }} วิชา)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- โหมด 2: กรอกทีละกลุ่ม (แบบเดิม) -->
+        <!-- ======================================================== -->
+        <div class="single-group-entry-wrapper" *ngIf="subjectEntryMode === 'single' && selectedBatchForSubject">
+          <!-- Cascading: เลือกกลุ่มวิชา -->
+          <div class="form-group">
+            <label>เลือกกลุ่มวิชา</label>
+            <div class="select-wrapper">
+              <select [(ngModel)]="subjectForm.group_id" name="group_id" (ngModelChange)="onGroupChange()" required>
+                <option value="" disabled selected>-- เลือกกลุ่มวิชา --</option>
+                <option *ngFor="let g of getGroupsForBatch(selectedBatchForSubject)" [value]="g.id" [ngStyle]="{'color': getGroupColor(g.group_name), 'font-weight': '500'}">
+                  {{ getGroupLabel(g) }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Multiple Subjects Array -->
+          <div class="dynamic-list-container">
+            <label>รายชื่อวิชาในกลุ่มนี้ (เพิ่มได้หลายวิชา)</label>
+            <div class="dynamic-row" *ngFor="let subj of subjectsList; let i = index; let isLast = last" style="align-items: center; gap: 16px;">
+              <div class="form-group mb-0" style="flex: 1;">
+                <input type="text" [(ngModel)]="subj.subject_name" name="subject_name_{{i}}"
+                  placeholder="เช่น ฝ่ายอำนวยการ (กด Enter เพื่อเพิ่มแถวถัดไป)" 
+                  (focus)="selectOnFocus($event)"
+                  (click)="selectOnFocus($event)"
+                  (keydown.enter)="$event.preventDefault(); isLast && addSubjectField()"
+                  required>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox" id="is_su_{{i}}" [(ngModel)]="subj.is_su" name="is_su_{{i}}" style="width: 16px; height: 16px; cursor: pointer;">
+                <label for="is_su_{{i}}" style="margin: 0; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text-dark);">ประเมินผลเป็น S/U</label>
+              </div>
+
+              <button type="button" class="btn-icon-action btn-add" (click)="addSubjectField()" *ngIf="isLast"
+                title="เพิ่มรายวิชา">
+                <span class="material-icons">add_circle</span>
+              </button>
+              <button type="button" class="btn-icon-action btn-remove" (click)="removeSubjectField(i)"
+                *ngIf="subjectsList.length > 1" title="ลบรายวิชานี้">
+                <span class="material-icons">remove_circle</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-actions right" style="margin-top: 24px;">
+            <button type="submit" class="btn-submit">บันทึกรายวิชาในกลุ่มนี้</button>
+          </div>
         </div>
       </form>
 
@@ -478,7 +714,8 @@
             </div>
             <div style="flex: 1; min-width: 180px;">
               <input type="text" [(ngModel)]="filterSubjectName" placeholder="ค้นหาชื่อวิชา..." 
-                style="width: 100%; height: 36px; padding: 0 10px; font-size: 13px; border: 1px solid #ddd; border-radius: 6px; outline: none; box-sizing: border-box;">
+                style="width: 100%; height: 36px; padding: 0 10px; font-size: 13px; border: 1px solid #ddd; border-radius: 6px; outline: none; box-sizing: border-box;"
+                (focus)="selectOnFocus($event)" (click)="selectOnFocus($event)">
             </div>
           </div>
 

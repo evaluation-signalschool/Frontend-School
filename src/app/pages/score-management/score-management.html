@@ -93,6 +93,8 @@
             step="0.5"
             [(ngModel)]="inputMaxScore"
             (keyup.enter)="onMaxScoreConfirm()"
+            (focus)="onInputFocus($event)"
+            (click)="onInputFocus($event)"
             placeholder="0"
             [disabled]="isMaxScoreSaved || isSU"
           />
@@ -253,6 +255,7 @@
                         (input)="onScoreInputChange(student, $event)"
                         (blur)="onScoreInputBlur(student, $event)"
                         (focus)="onInputFocus($event)"
+                        (click)="onInputFocus($event)"
                         (keydown)="onScoreKeydown(i, $event)"
                         [disabled]="isSaved"
                         placeholder="0"
