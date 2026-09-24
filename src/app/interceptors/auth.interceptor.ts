@@ -2,62 +2,110 @@ import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
 
-  // ดึง Token ของ Admin (จาก sessionStorage เป็นหลัก)
+  // ดึง Token ของ Admin (ตรวจทั้ง sessionStorage และ localStorage)
   const adminToken =
     typeof window !== 'undefined'
       ? sessionStorage.getItem('admin_token') || localStorage.getItem('admin_token')
       : null;
 
+  // ดึง Token ของนักเรียน
   const studentToken =
     typeof window !== 'undefined'
       ? localStorage.getItem('student_token') || localStorage.getItem('token')
       : null;
 
-  // ตรวจสอบว่าผู้ใช้กำลังอยู่ในหน้า Admin หรือไม่
-  const isAdminPath =
-    typeof window !== 'undefined' &&
-    window.location.pathname.toLowerCase().includes('/admin');
+  const reqUrl = req.url.toLowerCase();
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname.toLowerCase() : '';
+  const routerUrl = router.url ? router.url.toLowerCase() : '';
 
+  // ตรวจสอบว่ากำลังทำงานในส่วนของนักเรียนหรือไม่
+  const isStudentArea =
+    currentPath.startsWith('/student') ||
+    routerUrl.startsWith('/student') ||
+    reqUrl.includes('/student/login') ||
+    reqUrl.includes('/student/register');
+
+  // ตัดสินใจเลือก Token ที่ถูกต้อง
+  // หากอยู่ในส่วนนักเรียนให้ใช้ studentToken
+  // หากอยู่ในส่วนอื่นๆ หรือแอดมิน ให้ใช้ adminToken เป็นลำดับแรกเสมอ เพื่อไม่ให้ชนกับ verifyAdmin บน Backend
   let tokenToUse: string | null = null;
-
-  if (isAdminPath) {
+  if (isStudentArea) {
+    tokenToUse = studentToken || adminToken;
+  } else if (adminToken) {
     tokenToUse = adminToken;
   } else {
-    tokenToUse = studentToken || adminToken;
+    tokenToUse = studentToken;
   }
 
-  // Fallback: ถ้ายังไม่มี ให้ใช้ Token ตัวใดตัวหนึ่งที่มีอยู่ในเครื่อง
-  if (!tokenToUse) {
-    tokenToUse = adminToken || studentToken;
-  }
-
-  // หาก Request ยังไม่มี Header Authorization หรือมีค่าไม่ถูกต้อง (เช่น "Bearer null") ให้ใส่ tokenToUse ที่ถูกต้อง
   let cloned = req;
   const currentAuth = req.headers.get('Authorization');
-  const isInvalidAuth =
-    !currentAuth ||
-    currentAuth === 'Bearer null' ||
-    currentAuth === 'Bearer undefined' ||
-    currentAuth.trim() === 'Bearer';
 
-  if (isInvalidAuth && tokenToUse) {
-    cloned = req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${tokenToUse}`,
-      },
-    });
+  // ตรวจสอบว่าเป็น Request ยิงไป Backend ของระบบเราหรือไม่ (ไม่แตะ API ภายนอก เช่น Google Gemini API)
+  const isBackendApi = req.url.startsWith(environment.apiUrl);
+
+  // ไม่แนบ Token ไปกับหน้า Login/Register โดยไม่จำเป็น
+  const isAuthEndpoint =
+    reqUrl.includes('/admin/login') ||
+    reqUrl.includes('/student/login') ||
+    reqUrl.includes('/student/register');
+
+  if (isBackendApi && !isAuthEndpoint && tokenToUse) {
+    const isInvalidAuth =
+      !currentAuth ||
+      currentAuth === 'Bearer null' ||
+      currentAuth === 'Bearer undefined' ||
+      currentAuth.trim() === 'Bearer';
+
+    const isInAdminOrHasAdminToken = !isStudentArea && adminToken;
+    const isRogueToken =
+      currentAuth &&
+      isInAdminOrHasAdminToken &&
+      currentAuth !== `Bearer ${adminToken}`;
+
+    // ถ้ายังไม่มี Authorization header, หรือมีค่าเป็น null, หรือส่ง Token ผิดตัวในส่วน Admin
+    // ให้บังคับใช้ Token ที่ถูกต้องทันที
+    if (isInvalidAuth || isRogueToken) {
+      cloned = req.clone({
+        setHeaders: {
+          Authorization: `Bearer ${tokenToUse}`,
+        },
+      });
+    }
   }
 
   return next(cloned).pipe(
     catchError((error: HttpErrorResponse) => {
-      // หากพบว่า Session หมดอายุ หรือไม่ได้รับอนุญาต (401/403) ขณะอยู่ในส่วน Admin
-      if ((error.status === 401 || error.status === 403) && typeof window !== 'undefined') {
-        const currentPath = window.location.pathname.toLowerCase();
-        if (currentPath.includes('/admin') && !currentPath.includes('/admin/login')) {
+      if (typeof window !== 'undefined' && isBackendApi) {
+        const path = window.location.pathname.toLowerCase();
+        const isInAdmin = path.includes('/admin') && !path.includes('/admin/login');
+
+        const errMsg = (error.error?.message || error.message || '').toLowerCase();
+        const currentStoredAdminToken =
+          sessionStorage.getItem('admin_token') || localStorage.getItem('admin_token');
+
+        // ตรวจสอบว่าเป็นการหมดอายุของเซสชันจริงๆ หรือไม่
+        // 1. ถ้าไม่มี Token ใน Storage เลยขณะอยู่ในหน้าแอดมิน
+        // 2. หรือเซิร์ฟเวอร์แจ้งว่า Token Expired / Invalid Token จริงๆ
+        const isRealSessionExpiration =
+          !currentStoredAdminToken ||
+          ((error.status === 401 || error.status === 403) &&
+            (errMsg.includes('expired') ||
+              errMsg.includes('หมดอายุ') ||
+              errMsg.includes('invalid') ||
+              errMsg.includes('เซสชันหมดอายุ')));
+
+        // ห้ามเตะออกหากเป็นเพียง Error การไม่มีสิทธิ์ Super Admin (Role insufficient)
+        const isPermissionOnly =
+          errMsg.includes('super admin access required') ||
+          errMsg.includes('สิทธิ์การเข้าถึงสำหรับผู้ดูแลระบบหลักเท่านั้น') ||
+          errMsg.includes('ถูกระงับการใช้งาน');
+
+        if (isInAdmin && isRealSessionExpiration && !isPermissionOnly) {
           sessionStorage.removeItem('admin_token');
           sessionStorage.removeItem('admin_data');
           localStorage.removeItem('admin_token');
@@ -69,3 +117,4 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     })
   );
 };
+

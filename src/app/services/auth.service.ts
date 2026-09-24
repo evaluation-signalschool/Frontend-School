@@ -87,11 +87,15 @@ export class AuthService {
     return this.http.post<any>(`${environment.apiUrl}/admin/login`, payload);
   }
 
-  // บันทึก Admin Token ลง sessionStorage (ป้องกันการเข้าค้างไว้เมื่อปิดเบราว์เซอร์)
+  // บันทึก Admin Token ทั้งใน sessionStorage และ localStorage เพื่อความเสถียรข้ามแท็บ
   saveAdminToken(token: string): void {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      sessionStorage.setItem('admin_token', token);
-      localStorage.removeItem('admin_token'); // เคลียร์ของเก่าใน localStorage เพื่อความปลอดภัย
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('admin_token', token);
+      } catch (_) {}
+      try {
+        localStorage.setItem('admin_token', token);
+      } catch (_) {}
     }
   }
 
@@ -106,37 +110,41 @@ export class AuthService {
     return null;
   }
 
-  // บันทึกข้อมูล Admin ลง sessionStorage
+  // บันทึกข้อมูล Admin ทั้งใน sessionStorage และ localStorage
   saveAdminData(data: any): void {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      sessionStorage.setItem('admin_data', JSON.stringify(data));
-      localStorage.removeItem('admin_data'); // เคลียร์ของเก่าใน localStorage
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('admin_data', JSON.stringify(data));
+      } catch (_) {}
+      try {
+        localStorage.setItem('admin_data', JSON.stringify(data));
+      } catch (_) {}
     }
   }
 
   // ถอดรหัส JWT Token อย่างปลอดภัย (รองรับ Base64URL และภาษาไทย)
   private decodeJwt(token: string): any | null {
     try {
+      if (!token) return null;
       const parts = token.split('.');
       if (parts.length !== 3) return null;
       let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
       while (base64.length % 4) {
         base64 += '=';
       }
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
-      );
-      return JSON.parse(jsonPayload);
-    } catch (_) {
       try {
-        const parts = token.split('.');
-        return JSON.parse(atob(parts[1]));
-      } catch (__) {
-        return null;
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+        );
+        return JSON.parse(jsonPayload);
+      } catch (_) {
+        return JSON.parse(atob(base64));
       }
+    } catch (_) {
+      return null;
     }
   }
 
@@ -169,9 +177,12 @@ export class AuthService {
           role: decoded.role || 'admin',
           status: decoded.status || 'active',
         };
-        if (typeof window !== 'undefined' && window.sessionStorage) {
+        if (typeof window !== 'undefined') {
           try {
             sessionStorage.setItem('admin_data', JSON.stringify(adminData));
+          } catch (_) {}
+          try {
+            localStorage.setItem('admin_data', JSON.stringify(adminData));
           } catch (_) {}
         }
         return adminData;
