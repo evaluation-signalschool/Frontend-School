@@ -37,8 +37,8 @@ export class AdminLogin implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // หากเข้าสู่ระบบไว้แล้ว ให้พาไปหน้าหลักแอดมินทันที
-    if (this.authService.isAdminLoggedIn()) {
+    // หากเข้าสู่ระบบไว้แล้ว และมีข้อมูลครบถ้วน ให้พาไปหน้าหลักแอดมินทันที
+    if (this.authService.isAdminLoggedIn() && this.authService.getAdminData()) {
       this.router.navigate(['/admin']);
     }
   }

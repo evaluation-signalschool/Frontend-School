@@ -38,6 +38,7 @@ export class Admin implements OnInit {
       this.adminUsername = data.username || (data.email?.includes('@') ? data.email.split('@')[0] : data.email) || '';
       this.adminEmail = data.email || '';
     } else {
+      this.authService.adminLogout();
       this.router.navigate(['/admin/login']);
       return;
     }

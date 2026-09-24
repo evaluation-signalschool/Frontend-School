@@ -69,19 +69,25 @@ export class ScoreService {
   // ==========================================
   private getHeaders(): HttpHeaders {
     const token = this.authService.getToken();
-    return new HttpHeaders({
+    const headersConfig: { [name: string]: string } = {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    });
+    };
+    if (token) {
+      headersConfig['Authorization'] = `Bearer ${token}`;
+    }
+    return new HttpHeaders(headersConfig);
   }
 
   // ✅ สร้าง Helper สำหรับ Admin Token โดยเฉพาะ เพื่อลดความซ้ำซ้อน
   private getAdminHeaders(): HttpHeaders {
-    const token = localStorage.getItem('admin_token');
-    return new HttpHeaders({
+    const token = this.authService.getAdminToken();
+    const headersConfig: { [name: string]: string } = {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    });
+    };
+    if (token) {
+      headersConfig['Authorization'] = `Bearer ${token}`;
+    }
+    return new HttpHeaders(headersConfig);
   }
 
   // ==========================================

@@ -95,10 +95,13 @@ export class AuthService {
     }
   }
 
-  // ดึง Admin Token จาก sessionStorage
+  // ดึง Admin Token จาก sessionStorage (หรือ localStorage)
   getAdminToken(): string | null {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      return sessionStorage.getItem('admin_token');
+    if (typeof window !== 'undefined') {
+      return (
+        sessionStorage.getItem('admin_token') ||
+        localStorage.getItem('admin_token')
+      );
     }
     return null;
   }
@@ -111,12 +114,70 @@ export class AuthService {
     }
   }
 
-  // ดึงข้อมูล Admin จาก sessionStorage
-  getAdminData(): any | null {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      const data = sessionStorage.getItem('admin_data');
-      return data ? JSON.parse(data) : null;
+  // ถอดรหัส JWT Token อย่างปลอดภัย (รองรับ Base64URL และภาษาไทย)
+  private decodeJwt(token: string): any | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      while (base64.length % 4) {
+        base64 += '=';
+      }
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      return JSON.parse(jsonPayload);
+    } catch (_) {
+      try {
+        const parts = token.split('.');
+        return JSON.parse(atob(parts[1]));
+      } catch (__) {
+        return null;
+      }
     }
+  }
+
+  // ดึงข้อมูล Admin จาก sessionStorage / localStorage หรือถอดรหัสจาก Token
+  getAdminData(): any | null {
+    if (typeof window !== 'undefined') {
+      const sessionData = sessionStorage.getItem('admin_data');
+      if (sessionData) {
+        try {
+          return JSON.parse(sessionData);
+        } catch (_) {}
+      }
+      const localData = localStorage.getItem('admin_data');
+      if (localData) {
+        try {
+          return JSON.parse(localData);
+        } catch (_) {}
+      }
+    }
+
+    // หากไม่มีใน Storage แต่มี Token อยู่ ให้ถอดรหัสข้อมูลจาก JWT Token
+    const token = this.getAdminToken();
+    if (token) {
+      const decoded = this.decodeJwt(token);
+      if (decoded) {
+        const adminData = {
+          admin_id: decoded.admin_id || decoded.id,
+          username: decoded.username || '',
+          name: decoded.name || decoded.username || 'ผู้ดูแลระบบ',
+          role: decoded.role || 'admin',
+          status: decoded.status || 'active',
+        };
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          try {
+            sessionStorage.setItem('admin_data', JSON.stringify(adminData));
+          } catch (_) {}
+        }
+        return adminData;
+      }
+    }
+
     return null;
   }
 
@@ -145,13 +206,10 @@ export class AuthService {
 
     // ตรวจสอบวันหมดอายุของ JWT Token ถ้ามีฟิลด์ exp
     try {
-      const parts = token.split('.');
-      if (parts.length === 3) {
-        const payload = JSON.parse(atob(parts[1]));
-        if (payload.exp && payload.exp * 1000 < Date.now()) {
-          this.adminLogout();
-          return false;
-        }
+      const payload = this.decodeJwt(token);
+      if (payload && payload.exp && payload.exp * 1000 < Date.now()) {
+        this.adminLogout();
+        return false;
       }
     } catch (_) {}
 

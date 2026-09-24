@@ -35,9 +35,16 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     tokenToUse = adminToken || studentToken;
   }
 
-  // หาก Request มีการแนบ Header Authorization มาก่อนแล้ว ไม่ต้องเขียนทับ
+  // หาก Request ยังไม่มี Header Authorization หรือมีค่าไม่ถูกต้อง (เช่น "Bearer null") ให้ใส่ tokenToUse ที่ถูกต้อง
   let cloned = req;
-  if (!req.headers.has('Authorization') && tokenToUse) {
+  const currentAuth = req.headers.get('Authorization');
+  const isInvalidAuth =
+    !currentAuth ||
+    currentAuth === 'Bearer null' ||
+    currentAuth === 'Bearer undefined' ||
+    currentAuth.trim() === 'Bearer';
+
+  if (isInvalidAuth && tokenToUse) {
     cloned = req.clone({
       setHeaders: {
         Authorization: `Bearer ${tokenToUse}`,

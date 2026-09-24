@@ -16,10 +16,13 @@ export class DropdownService {
   // สร้าง Headers แนบ Token ของแอดมินไปป้องกันความปลอดภัย
   private getAdminHeaders(): HttpHeaders {
     const token = this.authService.getAdminToken();
-    return new HttpHeaders({
+    const headersConfig: { [name: string]: string } = {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    });
+    };
+    if (token) {
+      headersConfig['Authorization'] = `Bearer ${token}`;
+    }
+    return new HttpHeaders(headersConfig);
   }
 
   // 1. ดึงหลักสูตรทั้งหมด
