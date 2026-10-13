@@ -581,19 +581,14 @@ export class StudentRanking implements OnInit {
     this.calculateRanking(false, savedSubjectIds || undefined);
   }
 
-  // กำหนดค่าการเลือกวิชา โดยให้อิงตามค่าที่บันทึกไว้ล่าสุด
+  // กำหนดค่าการเลือกวิชา โดยเริ่มต้นเป็นไม่เลือก (ผู้ใช้เป็นผู้กำหนดวิชาตัดสินเอง)
   private setupAvailableSubjects(subjectsList: any[], savedSubIds?: number[] | null): void {
     this.availableSubjects = subjectsList.map((sub: any) => {
-      let isSel: boolean;
+      let isSel = false;
       if (savedSubIds && savedSubIds.length > 0) {
         isSel = savedSubIds.includes(Number(sub.id));
       } else if (sub.selected !== undefined) {
         isSel = Boolean(sub.selected);
-      } else {
-        const gName = (sub.group_name || '').toUpperCase();
-        isSel =
-          (gName.startsWith('M') && !gName.startsWith('MN')) ||
-          (sub.group_name || '').includes('หลัก');
       }
 
       return {
@@ -605,11 +600,6 @@ export class StudentRanking implements OnInit {
         selected: isSel,
       };
     });
-
-    // ถ้าไม่มีวิชาหลัก ให้เลือกวิชาทั้งหมดที่ไม่ใช่ S/U เป็นค่าเริ่มต้น
-    if (!this.availableSubjects.some((s) => s.selected)) {
-      this.availableSubjects.forEach((s) => (s.selected = !s.is_su));
-    }
 
     this.appliedSubjectCount = this.availableSubjects.filter((s) => s.selected).length;
   }
