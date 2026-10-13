@@ -1,5 +1,5 @@
 import { CommonModule, Location } from '@angular/common';
-import { Component, OnInit, ChangeDetectorRef, ViewChild, ElementRef, HostListener } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ViewChild, ElementRef, HostListener, ApplicationRef, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -21,8 +21,14 @@ import { RouterLink } from '@angular/router';
 export class FormView implements OnInit {
   courseGroups: any[] = [];
   batches: any[] = [];
-  allForms: any[] = [];
-  filteredForms: any[] = [];
+
+  private _allForms = signal<any[]>([]);
+  get allForms(): any[] { return this._allForms(); }
+  set allForms(v: any[]) { this._allForms.set(v); }
+
+  private _filteredForms = signal<any[]>([]);
+  get filteredForms(): any[] { return this._filteredForms(); }
+  set filteredForms(v: any[]) { this._filteredForms.set(v); }
 
   formTypes = [
     { value: 'instructor', label: 'ประเมินอาจารย์ผู้สอน' },
@@ -65,12 +71,13 @@ export class FormView implements OnInit {
       ]
     }
   ];
-  availableSubjects: any[] = [];
-  groupedSubjects: {
-    group_name: string;
-    display_label: string;
-    subjects: any[];
-  }[] = [];
+  private _availableSubjects = signal<any[]>([]);
+  get availableSubjects(): any[] { return this._availableSubjects(); }
+  set availableSubjects(v: any[]) { this._availableSubjects.set(v); }
+
+  private _groupedSubjects = signal<{ group_name: string; display_label: string; subjects: any[] }[]>([]);
+  get groupedSubjects(): { group_name: string; display_label: string; subjects: any[] }[] { return this._groupedSubjects(); }
+  set groupedSubjects(v: { group_name: string; display_label: string; subjects: any[] }[]) { this._groupedSubjects.set(v); }
 
   private readonly CANONICAL_SUBJECT_ORDER: Record<string, number> = {
     // M01
@@ -187,18 +194,29 @@ export class FormView implements OnInit {
   selectedSubject: string | number = '';
   selectedFormId: string | number = '';
 
-  questions: any[] = [];
-  submissions: any[] = [];
-  isLoading = false;
+  private _questions = signal<any[]>([]);
+  get questions(): any[] { return this._questions(); }
+  set questions(v: any[]) { this._questions.set(v); }
 
-  isFullscreen = false;
+  private _submissions = signal<any[]>([]);
+  get submissions(): any[] { return this._submissions(); }
+  set submissions(v: any[]) { this._submissions.set(v); }
+
+  private _isLoading = signal<boolean>(false);
+  get isLoading(): boolean { return this._isLoading(); }
+  set isLoading(v: boolean) { this._isLoading.set(v); }
+
+  private _isFullscreen = signal<boolean>(false);
+  get isFullscreen(): boolean { return this._isFullscreen(); }
+  set isFullscreen(v: boolean) { this._isFullscreen.set(v); }
+
   @ViewChild('resultsCard') resultsCard?: ElementRef<HTMLDivElement>;
   @ViewChild('tableWrapper') tableWrapper?: ElementRef<HTMLDivElement>;
 
   @HostListener('document:fullscreenchange')
   onFullscreenChange(): void {
     this.isFullscreen = Boolean(document.fullscreenElement);
-    this.cdr.detectChanges();
+    this.triggerUiUpdate();
   }
 
   @HostListener('document:keydown.escape')
@@ -215,30 +233,30 @@ export class FormView implements OnInit {
         el.requestFullscreen()
           .then(() => {
             this.isFullscreen = true;
-            this.cdr.detectChanges();
+            this.triggerUiUpdate();
           })
           .catch(() => {
             this.isFullscreen = !this.isFullscreen;
-            this.cdr.detectChanges();
+            this.triggerUiUpdate();
           });
       } else {
         this.isFullscreen = !this.isFullscreen;
-        this.cdr.detectChanges();
+        this.triggerUiUpdate();
       }
     } else {
       if (document.fullscreenElement && document.exitFullscreen) {
         document.exitFullscreen()
           .then(() => {
             this.isFullscreen = false;
-            this.cdr.detectChanges();
+            this.triggerUiUpdate();
           })
           .catch(() => {
             this.isFullscreen = false;
-            this.cdr.detectChanges();
+            this.triggerUiUpdate();
           });
       } else {
         this.isFullscreen = false;
-        this.cdr.detectChanges();
+        this.triggerUiUpdate();
       }
     }
   }
@@ -255,8 +273,19 @@ export class FormView implements OnInit {
     private evalService: GeneralEvaluationService,
     private courseService: CourseService,
     private cdr: ChangeDetectorRef,
+    private appRef: ApplicationRef,
     private location: Location
   ) {}
+
+  triggerUiUpdate(): void {
+    this.cdr.markForCheck();
+    this.cdr.detectChanges();
+    try {
+      this.appRef.tick();
+    } catch {
+      // Ignore if tick is already running
+    }
+  }
 
   ngOnInit(): void {
     this.loadCourses();
@@ -268,6 +297,7 @@ export class FormView implements OnInit {
       next: (res: any) => {
         if (res.success) {
           this.courseGroups = res.data;
+          this.triggerUiUpdate();
         }
       },
       error: (err: any) => console.error('Error loading courses:', err)
@@ -280,6 +310,7 @@ export class FormView implements OnInit {
         if (res.success) {
           this.allForms = res.data;
           this.filterForms();
+          this.triggerUiUpdate();
         }
       },
       error: (err: any) => console.error('Error loading forms:', err)
@@ -304,6 +335,7 @@ export class FormView implements OnInit {
       }
     }
     this.filterForms();
+    this.triggerUiUpdate();
   }
 
   onBatchChange(): void {
@@ -313,6 +345,7 @@ export class FormView implements OnInit {
     this.availableSubjects = [];
     this.groupedSubjects = [];
     this.filterForms();
+    this.triggerUiUpdate();
   }
 
   onFormTypeChange(): void {
@@ -368,13 +401,13 @@ export class FormView implements OnInit {
             this.groupedSubjects = [];
             this.availableSubjects = [];
           }
-          this.cdr.detectChanges();
+          this.triggerUiUpdate();
         },
         error: (err: any) => {
           console.error('Error loading subjects:', err);
           this.groupedSubjects = [];
           this.availableSubjects = [];
-          this.cdr.detectChanges();
+          this.triggerUiUpdate();
         }
       });
     } else {
@@ -382,11 +415,13 @@ export class FormView implements OnInit {
       this.availableSubjects = [];
     }
     this.filterForms();
+    this.triggerUiUpdate();
   }
 
   onSubjectChange(): void {
     this.selectedFormId = '';
     this.filterForms();
+    this.triggerUiUpdate();
   }
 
   filterForms(): void {
@@ -411,6 +446,7 @@ export class FormView implements OnInit {
         this.selectedFormId = '';
         this.submissions = [];
         this.questions = [];
+        this.triggerUiUpdate();
       }
     } else {
       // แบบประเมินประเภทอื่น
@@ -425,28 +461,46 @@ export class FormView implements OnInit {
         this.selectedFormId = '';
         this.submissions = [];
         this.questions = [];
+        this.triggerUiUpdate();
       }
     }
   }
 
   onSearch(): void {
+    // Auto-resolve form ID if not yet assigned
+    if (!this.selectedFormId) {
+      if (this.filteredForms && this.filteredForms.length > 0) {
+        this.selectedFormId = this.filteredForms[0].id;
+      } else if (this.allForms && this.allForms.length > 0 && this.selectedBatch && this.selectedFormType) {
+        const match = this.allForms.find(
+          f => f.batch_id == this.selectedBatch && f.evaluation_type === this.selectedFormType
+        );
+        if (match) {
+          this.selectedFormId = match.id;
+        }
+      }
+    }
+
     if (!this.selectedFormId) return;
     this.isLoading = true;
-    this.cdr.detectChanges(); // บังคับให้ UI โชว์คำว่ากำลังโหลดทันที
+    this.triggerUiUpdate();
 
     this.evalService.getFormSubmissions(this.selectedFormId, this.selectedSubject).subscribe({
       next: (res: any) => {
-        if (res.success) {
-          this.questions = res.data.questions;
-          this.submissions = res.data.submissions;
+        if (res?.success && res.data) {
+          this.questions = res.data.questions || [];
+          this.submissions = res.data.submissions || [];
+        } else {
+          this.questions = [];
+          this.submissions = [];
         }
         this.isLoading = false;
-        this.cdr.detectChanges(); // บังคับให้ Angular วาดตารางข้อมูลทันที!
+        this.triggerUiUpdate();
       },
       error: (err: any) => {
         console.error('Error fetching submissions:', err);
         this.isLoading = false;
-        this.cdr.detectChanges();
+        this.triggerUiUpdate();
       }
     });
   }

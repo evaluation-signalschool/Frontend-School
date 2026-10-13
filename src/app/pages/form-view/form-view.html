@@ -144,6 +144,21 @@
             <mat-icon class="select-arrow">expand_more</mat-icon>
           </div>
         </div>
+
+        <!-- 5. ปุ่มค้นหา / ดึงข้อมูล -->
+        <div class="form-group form-group-action" *ngIf="selectedBatch && selectedFormType && (selectedFormType !== 'instructor' || selectedSubject)">
+          <label class="input-label action-label">&nbsp;</label>
+          <button
+            type="button"
+            class="btn-trigger-search"
+            (click)="onSearch()"
+            [disabled]="isLoading"
+            title="ค้นหาหรือโหลดข้อมูลคำตอบแบบประเมิน"
+          >
+            <mat-icon [class.spin-icon]="isLoading">{{ isLoading ? 'sync' : 'search' }}</mat-icon>
+            <span>{{ isLoading ? 'กำลังดึงข้อมูล...' : 'ค้นหาข้อมูล' }}</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -186,6 +201,17 @@
         </div>
 
         <div class="toolbar-right">
+          <!-- Refresh / Reload Button -->
+          <button
+            type="button"
+            class="btn-refresh-data"
+            (click)="onSearch()"
+            [disabled]="isLoading || !selectedFormId"
+            title="โหลดข้อมูลล่าสุดใหม่"
+          >
+            <mat-icon [class.spin-icon]="isLoading">refresh</mat-icon>
+          </button>
+
           <!-- Quick Horizontal Scroll Controls -->
           <div class="table-scroll-controls" *ngIf="submissions.length > 0 && !isLoading">
             <span class="scroll-label">เลื่อนตาราง:</span>

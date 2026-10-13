@@ -350,6 +350,63 @@ $gradient-excel: linear-gradient(135deg, #059669 0%, #10b981 60%, #34d399 100%);
           height: 20px;
         }
       }
+
+      &.form-group-action {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+
+        .action-label {
+          visibility: hidden;
+          height: 17px;
+        }
+
+        .btn-trigger-search {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          height: 42px;
+          padding: 0 20px;
+          border-radius: $radius-md;
+          border: none;
+          background: linear-gradient(135deg, $violet-600, $violet-800);
+          color: #ffffff;
+          font-family: inherit;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          white-space: nowrap;
+
+          &:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(124, 58, 237, 0.35);
+            background: linear-gradient(135deg, $violet-500, $violet-700);
+          }
+
+          &:active:not(:disabled) {
+            transform: translateY(0);
+          }
+
+          &:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+            transform: none;
+          }
+
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+
+            &.spin-icon {
+              animation: spin-icon-anim 1s linear infinite;
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -520,6 +577,49 @@ $gradient-excel: linear-gradient(135deg, #059669 0%, #10b981 60%, #34d399 100%);
 
           &:active {
             transform: translateY(0);
+          }
+        }
+      }
+
+      .btn-refresh-data {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: $radius-md;
+        border: 1.5px solid $violet-300;
+        background: #ffffff;
+        color: $violet-700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 6px rgba(124, 58, 237, 0.08);
+
+        &:hover:not(:disabled) {
+          background: $violet-50;
+          border-color: $violet-500;
+          color: $violet-800;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 10px rgba(124, 58, 237, 0.15);
+        }
+
+        &:active:not(:disabled) {
+          transform: translateY(0);
+        }
+
+        &:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+          background: #f8fafc;
+        }
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+
+          &.spin-icon {
+            animation: spin-icon-anim 1s linear infinite;
           }
         }
       }
@@ -1116,6 +1216,15 @@ $gradient-excel: linear-gradient(135deg, #059669 0%, #10b981 60%, #34d399 100%);
 }
 
 @keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-icon-anim {
+  from {
+    transform: rotate(0deg);
+  }
   to {
     transform: rotate(360deg);
   }
