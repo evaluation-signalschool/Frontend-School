@@ -30,6 +30,7 @@ export interface TiedGroup {
   minRank: number;
   maxRank: number;
   studentCodes: string;
+  isTop3Group?: boolean;
 }
 
 export interface RankedStudent {
@@ -130,10 +131,135 @@ export class StudentRanking implements OnInit {
   avgGpa: string = '0.00';
   tiedCount: number = 0;
 
+  // Storage Keys สำหรับจำค่าการเลือกและผลการคำนวณ เพื่อให้เข้าออกหน้าแล้วไม่รีเฟรชใหม่
+  private readonly STORAGE_KEY_SELECTION = 'student_ranking_last_selection';
+  private readonly STORAGE_KEY_SUBJECTS_PREFIX = 'student_ranking_subjects_batch_';
+  private readonly STORAGE_KEY_CACHE_PREFIX = 'student_ranking_cache_batch_';
+
+  // --- การตัดสินผู้ครองลำดับที่ 1, 2, 3 (ผู้ครองโล่รางวัลเกียรตินิยม / กรอบทอง) ---
+  get rank1Winner(): RankedStudent | null {
+    const completed = this.rankedStudents.filter((s) => s.is_completed !== false);
+    return completed.find((s) => s.manualRank === 1) || null;
+  }
+
+  get rank2Winner(): RankedStudent | null {
+    const completed = this.rankedStudents.filter((s) => s.is_completed !== false);
+    return completed.find((s) => s.manualRank === 2) || null;
+  }
+
+  get rank3Winner(): RankedStudent | null {
+    const completed = this.rankedStudents.filter((s) => s.is_completed !== false);
+    return completed.find((s) => s.manualRank === 3) || null;
+  }
+
+  get top3Winners(): RankedStudent[] {
+    const completed = this.rankedStudents.filter((s) => s.is_completed !== false);
+    return completed
+      .filter((s) => s.manualRank != null && s.manualRank >= 1 && s.manualRank <= 3)
+      .sort((a, b) => (a.manualRank as number) - (b.manualRank as number));
+  }
+
+  get topRankContenders(): RankedStudent[] {
+    if (!this.rankedStudents || this.rankedStudents.length === 0) return [];
+    const completed = this.rankedStudents.filter((s) => s.is_completed !== false);
+    if (completed.length === 0) return [];
+
+    const top3 = this.top3Winners;
+    const top3Gpas = new Set(top3.map((w) => w.gpa));
+    return completed.filter(
+      (s) => (s.manualRank != null && s.manualRank <= 3) || top3Gpas.has(s.gpa)
+    );
+  }
+
+  isRank1TiedGroup(groupId?: number): boolean {
+    if (!groupId) return false;
+    const tg = this.tiedGroups.find((g) => g.groupId === groupId);
+    return tg ? tg.minRank === 1 : false;
+  }
+
+  get rank1TiedGroup(): TiedGroup | undefined {
+    return this.tiedGroups.find((g) => g.minRank === 1);
+  }
+
+  get hasTop3Tie(): boolean {
+    return this.topRankContenders.length > 3;
+  }
+
+  get isTop3TieResolved(): boolean {
+    if (!this.hasTop3Tie) return true;
+    const top3 = this.top3Winners;
+    const hasUnresolved = top3.some((w) => w.isTrulyTied);
+    return !hasUnresolved && (this.appliedSubjectCount > 0 || this.hasManualAdjustments);
+  }
+
+  // รองรับการเรียกจาก template
+  get hasRank1Tie(): boolean {
+    return this.hasTop3Tie;
+  }
+
+  get isRank1TieResolved(): boolean {
+    return this.isTop3TieResolved;
+  }
+
+  get activeTieStatus(): { title: string; subtitle: string; level: number; count: number } {
+    const completed = this.rankedStudents.filter((s) => s.is_completed !== false);
+    if (completed.length === 0) {
+      return { title: 'ยังไม่มีข้อมูลนักเรียน', subtitle: '', level: 0, count: 0 };
+    }
+
+    const gpaMap = new Map<string, RankedStudent[]>();
+    completed.forEach((s) => {
+      if (!gpaMap.has(s.gpa)) gpaMap.set(s.gpa, []);
+      gpaMap.get(s.gpa)!.push(s);
+    });
+    const sortedGpas = Array.from(gpaMap.keys()).sort((a, b) => Number(b) - Number(a));
+
+    if (sortedGpas.length > 0 && gpaMap.get(sortedGpas[0])!.length > 1) {
+      const cluster = gpaMap.get(sortedGpas[0])!;
+      return {
+        title: `⚠️ ตรวจพบการแย่งลำดับที่ 1 (ชิงโล่รางวัลเกียรตินิยม - ${cluster.length} นาย)`,
+        subtitle: `มีนักเรียนได้เกรดเฉลี่ยสูงสุดเท่ากันที่อันดับ 1 (GPA ${sortedGpas[0]}) จำนวน ${cluster.length} นาย กรุณาติ๊กเลือกวิชาตัดสินเพิ่มด้านบน หรือใช้ปุ่ม ⬆️ ⬇️ เพื่อตัดสิน`,
+        level: 1,
+        count: cluster.length,
+      };
+    }
+
+    if (sortedGpas.length > 1 && gpaMap.get(sortedGpas[1])!.length > 1) {
+      const cluster = gpaMap.get(sortedGpas[1])!;
+      return {
+        title: `⚠️ ลำดับที่ 1 ไม่ซ้ำ แต่ตรวจพบการแย่งลำดับที่ 2 (ชิงโล่รางวัล - ${cluster.length} นาย)`,
+        subtitle: `ลำดับที่ 1 ได้ผู้ครองโล่เด็ดขาดแล้ว แต่ตรวจพบเกรดเท่ากันที่อันดับ 2 (GPA ${sortedGpas[1]}) จำนวน ${cluster.length} นาย กำลังแย่งชิงโล่อันดับ 2 และ 3`,
+        level: 2,
+        count: cluster.length,
+      };
+    }
+
+    if (sortedGpas.length > 2 && gpaMap.get(sortedGpas[2])!.length > 1) {
+      const cluster = gpaMap.get(sortedGpas[2])!;
+      return {
+        title: `⚠️ ลำดับที่ 1 และ 2 ไม่ซ้ำ แต่ตรวจพบการแย่งลำดับที่ 3 (ชิงโล่รางวัล - ${cluster.length} นาย)`,
+        subtitle: `ลำดับที่ 1 และ 2 ได้ผู้ครองโล่เด็ดขาดแล้ว แต่ตรวจพบเกรดเท่ากันที่อันดับ 3 (GPA ${sortedGpas[2]}) จำนวน ${cluster.length} นาย กำลังแย่งชิงโล่อันดับ 3`,
+        level: 3,
+        count: cluster.length,
+      };
+    }
+
+    return {
+      title: 'ผู้ครองโล่รางวัลเกียรตินิยม (อันดับ 1, 2, 3 - กรอบทอง)',
+      subtitle: 'ผลการตัดสินลำดับที่ 1, 2, 3 สำหรับรับมอบโล่รางวัลเกียรตินิยมครบทั้ง 3 อันดับเด็ดขาดแล้ว',
+      level: 0,
+      count: 3,
+    };
+  }
+
   get displayedStudents(): RankedStudent[] {
     let list = [...this.rankedStudents];
 
-    if (this.filterMode === 'tied-only') {
+    if (this.filterMode === 'rank1-only') {
+      const r1Contenders = this.topRankContenders;
+      const r1Ids = new Set(r1Contenders.map((c) => c.student_id));
+      list = list.filter((s) => r1Ids.has(s.student_id));
+    } else if (this.filterMode === 'tied-only') {
       list = list.filter((s) => s.isTiedGpa && s.is_completed !== false);
     } else if (this.filterMode === 'incomplete-only') {
       list = list.filter((s) => s.is_completed === false);
@@ -185,18 +311,115 @@ export class StudentRanking implements OnInit {
     return found ? found.studentCodes : '';
   }
 
-  ngOnInit(): void {
-    this.loadCourses();
+  // --- LocalStorage Persistence Helpers ---
+  private saveCurrentSelection(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      if (this.selectedCourse && this.selectedBatch) {
+        localStorage.setItem(
+          this.STORAGE_KEY_SELECTION,
+          JSON.stringify({
+            courseId: this.selectedCourse,
+            batchId: this.selectedBatch,
+          })
+        );
+      }
+    } catch (_) {}
+  }
 
-    // Support queryParams if coming from class-overview
+  private saveBatchSubjects(batchId: number, subjectIds: number[]): void {
+    if (typeof window === 'undefined' || !batchId) return;
+    try {
+      localStorage.setItem(
+        this.STORAGE_KEY_SUBJECTS_PREFIX + batchId,
+        JSON.stringify(subjectIds)
+      );
+    } catch (_) {}
+  }
+
+  private getSavedBatchSubjects(batchId: number): number[] | null {
+    if (typeof window === 'undefined' || !batchId) return null;
+    try {
+      const raw = localStorage.getItem(this.STORAGE_KEY_SUBJECTS_PREFIX + batchId);
+      if (raw) return JSON.parse(raw);
+    } catch (_) {}
+    return null;
+  }
+
+  private saveBatchCache(batchId: number, data: any): void {
+    if (typeof window === 'undefined' || !batchId) return;
+    try {
+      localStorage.setItem(
+        this.STORAGE_KEY_CACHE_PREFIX + batchId,
+        JSON.stringify({
+          data,
+          timestamp: Date.now(),
+        })
+      );
+    } catch (_) {}
+  }
+
+  private getBatchCache(batchId: number): any | null {
+    if (typeof window === 'undefined' || !batchId) return null;
+    try {
+      const raw = localStorage.getItem(this.STORAGE_KEY_CACHE_PREFIX + batchId);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.data && Date.now() - parsed.timestamp < 24 * 3600 * 1000) {
+          return parsed.data;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // ล้างการจำค่าตัวเลือกเพื่อเริ่มเลือกรุ่นใหม่
+  clearSavedSelection(): void {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem(this.STORAGE_KEY_SELECTION);
+      } catch (_) {}
+    }
+    this.selectedCourse = '';
+    this.selectedBatch = '';
+    this.batches = [];
+    this.rankedStudents = [];
+    this.rawStudentsData = [];
+    this.availableSubjects = [];
+    this.tiedGroups = [];
+    this.filterMode = 'all';
+    this.isLoading = false;
+    this.isTableLoading = false;
+    this.isRecalculating = false;
+    this.triggerViewUpdate();
+  }
+
+  ngOnInit(): void {
+    let paramCourse: any = null;
+    let paramBatch: any = null;
+
+    // ตรวจสอบ queryParams
     this.route.queryParams.subscribe((params) => {
-      if (params['courseId']) {
-        this.selectedCourse = params['courseId'];
-      }
-      if (params['batchId']) {
-        this.selectedBatch = Number(params['batchId']);
-      }
+      if (params['courseId']) paramCourse = params['courseId'];
+      if (params['batchId']) paramBatch = Number(params['batchId']);
     });
+
+    if (paramCourse) this.selectedCourse = paramCourse;
+    if (paramBatch) this.selectedBatch = paramBatch;
+
+    // ถ้าไม่มีใน queryParams ให้ดึงค่าที่เคยเลือกและคำนวณไว้ล่าสุดจาก Storage
+    if (!this.selectedCourse && typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(this.STORAGE_KEY_SELECTION);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.courseId) this.selectedCourse = parsed.courseId;
+          if (parsed.batchId) this.selectedBatch = Number(parsed.batchId);
+        }
+      } catch (_) {}
+    }
+
+    this.loadCourses();
   }
 
   loadCourses(): void {
@@ -225,7 +448,16 @@ export class StudentRanking implements OnInit {
     if (resetBatch) {
       this.selectedBatch = '';
       this.rankedStudents = [];
+      this.rawStudentsData = [];
       this.availableSubjects = [];
+      this.tiedGroups = [];
+      this.totalStudents = 0;
+      this.completedCount = 0;
+      this.incompleteCount = 0;
+      this.topPerformer = null;
+      this.avgGpa = '0.00';
+      this.tiedCount = 0;
+      this.hasTiedUnresolved = false;
       this.isLoading = false;
       this.isTableLoading = false;
       this.isRecalculating = false;
@@ -233,25 +465,31 @@ export class StudentRanking implements OnInit {
     this.batches = [];
 
     if (!this.selectedCourse) {
+      this.saveCurrentSelection();
       this.triggerViewUpdate();
       return;
     }
 
     const courseGroup = this.courseGroups.find(
       (c) =>
-        c.batches?.[0]?.course_id == this.selectedCourse ||
+        String(c.batches?.[0]?.course_id) === String(this.selectedCourse) ||
         c.course_name === this.selectedCourse
     );
+
+    const onBatchesReady = () => {
+      this.saveCurrentSelection();
+      if (this.selectedBatch && this.batches.some((b) => Number(b.id) === Number(this.selectedBatch))) {
+        this.onBatchChange();
+      }
+      this.triggerViewUpdate();
+    };
 
     if (courseGroup && courseGroup.batches && courseGroup.batches.length > 0) {
       this.batches = courseGroup.batches.map((b) => ({
         id: b.batch_id,
         name: b.batch_name || `รุ่นที่ ${b.batch_id}`,
       }));
-      if (this.selectedBatch) {
-        this.onBatchChange();
-      }
-      this.triggerViewUpdate();
+      onBatchesReady();
     } else {
       this.dropdownService.getBatches(this.selectedCourse).subscribe({
         next: (res) => {
@@ -260,10 +498,7 @@ export class StudentRanking implements OnInit {
               id: b.id || b.batch_id,
               name: b.name || b.batch_name || `รุ่นที่ ${b.id || b.batch_id}`,
             }));
-            if (this.selectedBatch) {
-              this.onBatchChange();
-            }
-            this.triggerViewUpdate();
+            onBatchesReady();
           }
         },
         error: (err) => {
@@ -277,20 +512,109 @@ export class StudentRanking implements OnInit {
   onBatchChange(): void {
     if (!this.selectedBatch) {
       this.rankedStudents = [];
+      this.rawStudentsData = [];
       this.availableSubjects = [];
+      this.tiedGroups = [];
+      this.totalStudents = 0;
+      this.completedCount = 0;
+      this.incompleteCount = 0;
+      this.topPerformer = null;
+      this.avgGpa = '0.00';
+      this.tiedCount = 0;
+      this.hasTiedUnresolved = false;
       this.isLoading = false;
       this.isTableLoading = false;
       this.isRecalculating = false;
+      this.saveCurrentSelection();
       this.triggerViewUpdate();
       return;
     }
 
-    this.availableSubjects = [];
-    this.calculateRanking(true);
+    this.saveCurrentSelection();
+
+    const batchId = Number(this.selectedBatch);
+    const savedSubjectIds = this.getSavedBatchSubjects(batchId);
+
+    // 1. ดึงข้อมูลจาก Cache ในเครื่องมาแสดงผลทันที (ไม่ให้หน้าจอดับหรือกะพริบ)
+    const cachedData = this.getBatchCache(batchId);
+    if (cachedData && cachedData.data && cachedData.data.length > 0) {
+      this.rankedStudents = cachedData.data;
+      this.rawStudentsData = cachedData.data;
+      this.tiedGroups = cachedData.tiedGroups || [];
+      this.totalStudents = cachedData.summary?.total_students ?? cachedData.data.length;
+      this.completedCount = cachedData.summary?.completed_students ?? cachedData.data.filter((s: any) => s.is_completed).length;
+      this.incompleteCount = cachedData.summary?.incomplete_students ?? cachedData.data.filter((s: any) => !s.is_completed).length;
+      this.appliedSubjectCount = cachedData.summary?.selected_subjects_count ?? (savedSubjectIds?.length ?? 0);
+
+      const completedList = cachedData.data.filter((s: any) => s.is_completed);
+      this.topPerformer = completedList.length > 0 ? completedList[0] : null;
+      this.tiedCount = cachedData.summary?.tiedCount ?? cachedData.data.filter((s: any) => s.isTiedGpa && s.is_completed).length;
+      this.hasTiedUnresolved = (cachedData.summary?.unresolvedTies || 0) > 0;
+
+      if (completedList.length > 0) {
+        const sumGpa = completedList.reduce((acc: number, curr: any) => acc + (Number(curr.gpa) || 0), 0);
+        this.avgGpa = (sumGpa / completedList.length).toFixed(2);
+      }
+
+      if (cachedData.availableSubjects && cachedData.availableSubjects.length > 0) {
+        this.setupAvailableSubjects(cachedData.availableSubjects, savedSubjectIds);
+      }
+      this.triggerViewUpdate();
+    } else {
+      // เคลียร์ข้อมูลรุ่นเดิมออกทั้งหมด เพื่อไม่ให้ข้อมูลรุ่นเก่าค้างอยู่ระหว่างโหลดรุ่นใหม่
+      this.rankedStudents = [];
+      this.rawStudentsData = [];
+      this.availableSubjects = [];
+      this.tiedGroups = [];
+      this.totalStudents = 0;
+      this.completedCount = 0;
+      this.incompleteCount = 0;
+      this.topPerformer = null;
+      this.avgGpa = '0.00';
+      this.tiedCount = 0;
+      this.hasTiedUnresolved = false;
+      this.isLoading = true;
+      this.triggerViewUpdate();
+    }
+
+    // 2. ซิงค์กับ Backend เสมอเพื่อตรวจสอบคะแนนที่เป็นปัจจุบันที่สุด
+    this.calculateRanking(false, savedSubjectIds || undefined);
+  }
+
+  // กำหนดค่าการเลือกวิชา โดยให้อิงตามค่าที่บันทึกไว้ล่าสุด
+  private setupAvailableSubjects(subjectsList: any[], savedSubIds?: number[] | null): void {
+    this.availableSubjects = subjectsList.map((sub: any) => {
+      let isSel: boolean;
+      if (savedSubIds && savedSubIds.length > 0) {
+        isSel = savedSubIds.includes(Number(sub.id));
+      } else if (sub.selected !== undefined) {
+        isSel = Boolean(sub.selected);
+      } else {
+        const gName = (sub.group_name || '').toUpperCase();
+        isSel =
+          (gName.startsWith('M') && !gName.startsWith('MN')) ||
+          (sub.group_name || '').includes('หลัก');
+      }
+
+      return {
+        id: sub.id,
+        name: sub.name,
+        max_score: Number(sub.max_score) || 0,
+        group_name: sub.group_name || '',
+        is_su: Boolean(sub.is_su),
+        selected: isSel,
+      };
+    });
+
+    // ถ้าไม่มีวิชาหลัก ให้เลือกวิชาทั้งหมดที่ไม่ใช่ S/U เป็นค่าเริ่มต้น
+    if (!this.availableSubjects.some((s) => s.selected)) {
+      this.availableSubjects.forEach((s) => (s.selected = !s.is_su));
+    }
+
+    this.appliedSubjectCount = this.availableSubjects.filter((s) => s.selected).length;
   }
 
   // --- จัดการการเลือกวิชาสำหรับคิดคะแนนตัดสิน (Tie-Breaking Subjects) ---
-  // เมื่อผู้ใช้ติ๊กเลือกวิชา จะยังไม่ประมวลผลทันที เพื่อไม่ให้หน้ารีเฟรชหรือตัวหมุนกวนใจ
   onSubjectToggle(): void {
     this.hasPendingSubjectChanges = true;
   }
@@ -329,7 +653,6 @@ export class StudentRanking implements OnInit {
   }
 
   // --- ปุ่มคำสั่งประมวลผลการจัดอันดับใหม่ (Recalculate Ranking) ---
-  // เมื่อกดปุ่มนี้ ส่วนตารางด้านล่างจะวาดหน้าใหม่พร้อมคำนวณอันดับตามวิชาที่เลือกทันที
   applyRecalculateRanking(): void {
     if (!this.selectedBatch) return;
 
@@ -338,12 +661,14 @@ export class StudentRanking implements OnInit {
       .filter((s) => s.selected)
       .map((s) => s.id);
 
-    // เปิดสถานะโหลดเฉพาะตารางด้านล่างเพื่อให้ผู้ใช้เห็นว่าระบบกำลังประมวลผล (แผงเลือกวิชาด้านบนไม่ปิด)
+    // บันทึกวิชาที่เลือกลงใน Storage เสมอ
+    this.saveBatchSubjects(batchId, selectedSubIds);
+
     this.isTableLoading = true;
     this.isRecalculating = true;
     this.triggerViewUpdate();
 
-    // หากมีข้อมูลนักเรียนในเครื่องแล้ว ให้คำนวณและวาดหน้าใหม่อย่างรวดเร็ว (แสดง Loading 250ms ให้ผู้ใช้เห็นการอัปเดตอย่างชัดเจน)
+    // หากมีข้อมูลนักเรียนในเครื่องแล้ว ให้คำนวณและวาดหน้าใหม่อย่างรวดเร็ว
     if (this.rawStudentsData && this.rawStudentsData.length > 0) {
       setTimeout(() => {
         this.calculateRankingLocal();
@@ -351,10 +676,26 @@ export class StudentRanking implements OnInit {
         this.isTableLoading = false;
         this.isRecalculating = false;
         this.hasPendingSubjectChanges = false;
+
+        // บันทึก Cache ลง Storage
+        this.saveBatchCache(batchId, {
+          data: this.rankedStudents,
+          tiedGroups: this.tiedGroups,
+          summary: {
+            total_students: this.totalStudents,
+            completed_students: this.completedCount,
+            incomplete_students: this.incompleteCount,
+            selected_subjects_count: this.appliedSubjectCount,
+            tiedCount: this.tiedCount,
+            unresolvedTies: this.hasTiedUnresolved ? 1 : 0,
+          },
+          availableSubjects: this.availableSubjects,
+        });
+
         this.triggerViewUpdate();
 
         const toastText = selectedSubIds.length > 0
-          ? `ใช้เกณฑ์วิชาที่เลือก ${selectedSubIds.length} วิชาในการประมวลผล`
+          ? `บันทึกและใช้เกณฑ์วิชาที่เลือก ${selectedSubIds.length} วิชาในการประมวลผล`
           : `ไม่ได้เลือกวิชาตัดสิน (จัดอันดับตาม GPA เท่านั้น)`;
 
         Swal.fire({
@@ -368,11 +709,12 @@ export class StudentRanking implements OnInit {
         });
       }, 250);
 
-      // ส่งไปบันทึก/ซิงค์กับ Backend เบื้องหลัง โดยไม่บล็อกหน้าจอผู้ใช้
+      // ซิงค์กับ Backend เบื้องหลัง
       this.scoreService.getBatchRanking(batchId, selectedSubIds).subscribe({
         next: (res: any) => {
           if (res?.success && res.data) {
             this.rawStudentsData = res.data;
+            this.saveBatchCache(batchId, res);
           }
         },
         error: (err) => {
@@ -382,7 +724,7 @@ export class StudentRanking implements OnInit {
       return;
     }
 
-    // หากยังไม่มีข้อมูล (กรณีเข้าสู่หน้าครั้งแรก) ให้ดึงจาก Backend
+    // กรณีเข้าสู่หน้าครั้งแรกที่ยังไม่มีข้อมูลในเครื่อง
     this.scoreService
       .getBatchRanking(batchId, selectedSubIds)
       .subscribe({
@@ -408,6 +750,8 @@ export class StudentRanking implements OnInit {
             } else {
               this.avgGpa = '0.00';
             }
+
+            this.saveBatchCache(batchId, res);
           } else {
             this.calculateRankingLocal();
           }
@@ -444,8 +788,8 @@ export class StudentRanking implements OnInit {
       });
   }
 
-  // --- คำนวณอันดับและแก้ไขลำดับซ้ำ (ย้ายมาคำนวณที่ Backend รวดเร็วใน Single Call) ---
-  calculateRanking(isBatchInit: boolean = false): void {
+  // --- คำนวณอันดับและแก้ไขลำดับซ้ำ ---
+  calculateRanking(isBatchInit: boolean = false, explicitSubIds?: number[]): void {
     if (!this.selectedBatch) {
       this.rankedStudents = [];
       this.isLoading = false;
@@ -456,10 +800,18 @@ export class StudentRanking implements OnInit {
     }
 
     const batchId = Number(this.selectedBatch);
-    const subjectIdsParam = isBatchInit ? undefined : this.availableSubjects.filter((s) => s.selected).map((s) => s.id);
+    const subjectIdsParam =
+      explicitSubIds !== undefined
+        ? explicitSubIds
+        : (isBatchInit ? undefined : this.availableSubjects.filter((s) => s.selected).map((s) => s.id));
 
-    this.isLoading = true;
-    this.isTableLoading = true;
+    // หากมีข้อมูลแสดงผลอยู่แล้วจากแคช ให้เปิดโหลดเฉพาะส่วนตาราง ไม่ให้หน้ากระพริบ
+    if (this.rankedStudents && this.rankedStudents.length > 0) {
+      this.isTableLoading = true;
+    } else {
+      this.isLoading = true;
+      this.isTableLoading = true;
+    }
     this.triggerViewUpdate();
 
     this.scoreService.getBatchRanking(batchId, subjectIdsParam).subscribe({
@@ -468,6 +820,7 @@ export class StudentRanking implements OnInit {
         this.isTableLoading = false;
         this.isRecalculating = false;
         this.hasPendingSubjectChanges = false;
+
         if (res?.success && res.data) {
           this.rankedStudents = res.data;
           this.rawStudentsData = res.data;
@@ -484,32 +837,12 @@ export class StudentRanking implements OnInit {
           this.hasTiedUnresolved = (res.summary?.unresolvedTies || 0) > 0;
           this.hasManualAdjustments = false;
 
-          // ถ้าเพิ่งเลือกรุ่นใหม่ ให้ตั้งค่ารายการวิชาให้ติ๊กเลือกจากข้อมูลที่ Backend ส่งกลับมา
-          if ((isBatchInit || this.availableSubjects.length === 0) && res.availableSubjects && res.availableSubjects.length > 0) {
-            this.availableSubjects = res.availableSubjects.map((sub: any) => {
-              const gName = (sub.group_name || '').toUpperCase();
-              const isMain =
-                (gName.startsWith('M') && !gName.startsWith('MN')) ||
-                (sub.group_name || '').includes('หลัก');
+          // บันทึก Cache ลง Storage
+          this.saveBatchCache(batchId, res);
 
-              const isSel = sub.selected !== undefined ? Boolean(sub.selected) : isMain;
-
-              return {
-                id: sub.id,
-                name: sub.name,
-                max_score: Number(sub.max_score) || 0,
-                group_name: sub.group_name || '',
-                is_su: Boolean(sub.is_su),
-                selected: isSel,
-              };
-            });
-
-            // ถ้าไม่มีวิชาหลัก ให้เลือกวิชาทั้งหมดที่ไม่ใช่ S/U เป็นค่าเริ่มต้น
-            if (!this.availableSubjects.some((s) => s.selected)) {
-              this.availableSubjects.forEach((s) => (s.selected = !s.is_su));
-            }
-
-            this.appliedSubjectCount = this.availableSubjects.filter((s) => s.selected).length;
+          // ตั้งค่ารายการวิชาและสถานะการติ๊กเลือก
+          if (res.availableSubjects && res.availableSubjects.length > 0) {
+            this.setupAvailableSubjects(res.availableSubjects, subjectIdsParam);
           }
 
           // คำนวณ GPA เฉลี่ยเฉพาะคนที่เรียนครบสมบูรณ์
@@ -529,7 +862,11 @@ export class StudentRanking implements OnInit {
         this.isLoading = false;
         this.isTableLoading = false;
         this.isRecalculating = false;
-        this.calculateRankingLocal();
+        if (this.rawStudentsData && this.rawStudentsData.length > 0) {
+          this.calculateRankingLocal();
+        } else {
+          this.rankedStudents = [];
+        }
         this.triggerViewUpdate();
       },
     });
@@ -619,12 +956,152 @@ export class StudentRanking implements OnInit {
     });
 
     const sortedGpas = Array.from(gpaMap.keys()).sort((a, b) => Number(b) - Number(a));
+
+
+    let currentTargetRank = 1;
+    let nextRankNumber = 1;
+    let tiedCases = 0;
+    let unresolvedTies = 0;
+
+    for (const gpa of sortedGpas) {
+      const cluster = gpaMap.get(gpa)!;
+
+      if (currentTargetRank <= 3) {
+        // กลุ่มนี้เข้าร่วมชิง Top 3 โล่รางวัลเกียรตินิยม (กรอบทอง)
+        cluster.sort((a, b) => {
+          if (selectedSubIds.size > 0) {
+            const tbDiff = b.tieBreakScore - a.tieBreakScore;
+            if (Math.abs(tbDiff) > 0.001) return tbDiff;
+          }
+          const rawDiff = b.total_raw_score - a.total_raw_score;
+          if (Math.abs(rawDiff) > 0.001) return rawDiff;
+          const codeA = parseInt(a.student_code, 10);
+          const codeB = parseInt(b.student_code, 10);
+          if (!isNaN(codeA) && !isNaN(codeB)) return codeA - codeB;
+          return a.student_code.localeCompare(b.student_code);
+        });
+
+        const slotsAvailable = 4 - currentTargetRank;
+        const takeCount = Math.min(cluster.length, slotsAvailable);
+
+        for (let i = 0; i < takeCount; i++) {
+          const s = cluster[i];
+          s.calculatedRank = currentTargetRank;
+          s.manualRank = currentTargetRank;
+          s.isTrulyTied = false;
+
+          if (cluster.length > 1) {
+            s.isTiedGpa = true;
+            tiedCases++;
+            const sameTbCount = cluster.filter(
+              (other) => Math.abs(other.tieBreakScore - s.tieBreakScore) <= 0.001
+            ).length;
+
+            if (selectedSubIds.size === 0) {
+              s.isTrulyTied = true;
+              unresolvedTies++;
+              s.tieBreakReason = `⚠️ เกรด ${s.gpa} เท่ากัน (แย่งชิงอันดับที่ ${s.calculatedRank} - กรุณาเลือกวิชาด้านบนเพื่อตัดสิน)`;
+            } else if (sameTbCount > 1) {
+              s.isTrulyTied = true;
+              unresolvedTies++;
+              s.tieBreakReason = `⚠️ คะแนนวิชาที่เลือกเท่ากัน (${s.tieBreakScore.toFixed(1)}) แย่งชิงอันดับที่ ${s.calculatedRank} เลือกวิชาเพิ่มเพื่อตัดสิน`;
+            } else {
+              s.tieBreakReason = `เกรด ${s.gpa} (ชนะด้วยคะแนนวิชาที่เลือก: ${s.tieBreakScore.toFixed(1)} / ${s.tieBreakMaxScore})`;
+            }
+          } else {
+            s.isTiedGpa = false;
+            s.tieBreakReason = `เกรดสะสม ${s.gpa} (อันดับที่ ${s.calculatedRank} เดี่ยว)`;
+          }
+
+          currentTargetRank++;
+        }
+
+        // กรณีมีคนในกลุ่มที่หลุดจาก Top 3
+        if (cluster.length > takeCount) {
+          const rankForRest = 4;
+          for (let i = takeCount; i < cluster.length; i++) {
+            const s = cluster[i];
+            s.calculatedRank = rankForRest;
+            s.manualRank = rankForRest;
+            s.isTiedGpa = true;
+            s.isTrulyTied = false;
+            s.tieBreakReason = `เกรดสะสม ${s.gpa} เท่ากัน ${cluster.length} คน (ได้ลำดับที่ ${rankForRest} ร่วมกัน)`;
+          }
+          nextRankNumber = rankForRest + 1;
+        } else {
+          nextRankNumber = currentTargetRank;
+        }
+      } else {
+        // ลำดับอื่นๆ ตั้งแต่อันดับ 4 เป็นต้นไป: ถ้าเกรดซ้ำกัน ให้ได้ลำดับที่เดียวกัน (Dense Ranking)
+        const assignedRank = nextRankNumber;
+        cluster.sort((a, b) => {
+          const codeA = parseInt(a.student_code, 10);
+          const codeB = parseInt(b.student_code, 10);
+          if (!isNaN(codeA) && !isNaN(codeB)) return codeA - codeB;
+          return a.student_code.localeCompare(b.student_code);
+        });
+
+        cluster.forEach((s) => {
+          s.calculatedRank = assignedRank;
+          s.manualRank = assignedRank;
+          s.isTrulyTied = false;
+          if (cluster.length > 1) {
+            s.isTiedGpa = true;
+            s.tieBreakReason = `เกรดสะสม ${s.gpa} เท่ากัน ${cluster.length} คน (ได้ลำดับที่ ${assignedRank} ร่วมกัน)`;
+          } else {
+            s.isTiedGpa = false;
+            s.tieBreakReason = `เกรดสะสม ${s.gpa}`;
+          }
+        });
+
+        nextRankNumber = assignedRank + 1;
+      }
+    }
+
+    // นักเรียนที่คะแนนไม่สมบูรณ์
+    incompleteStudents.sort((a, b) => (Number(b.gpa) || 0) - (Number(a.gpa) || 0));
+    incompleteStudents.forEach((s) => {
+      s.calculatedRank = null;
+      s.manualRank = null;
+      s.isTiedGpa = false;
+      s.isTrulyTied = false;
+      s.tieBreakReason = `⚠️ คะแนนยังไม่สมบูรณ์ (มีคะแนนเพียง ${s.completion_text} วิชา - ไม่นำมาจัดอันดับ)`;
+    });
+
+    // เรียงลำดับนักเรียนที่ครบสมบูรณ์
+    completeStudents.sort((a, b) => {
+      if (a.manualRank !== b.manualRank) {
+        return (a.manualRank as number) - (b.manualRank as number);
+      }
+      const tbDiff = b.tieBreakScore - a.tieBreakScore;
+      if (Math.abs(tbDiff) > 0.001) return tbDiff;
+      const codeA = parseInt(a.student_code, 10);
+      const codeB = parseInt(b.student_code, 10);
+      if (!isNaN(codeA) && !isNaN(codeB)) return codeA - codeB;
+      return a.student_code.localeCompare(b.student_code);
+    });
+
+    // กำหนดกลุ่มที่เกรดซ้ำ (เฉพาะกลุ่มที่เกี่ยวข้องกับการชิงอันดับ 1, 2, 3 โล่รางวัลเกียรตินิยม)
     const tiedGroupsList: TiedGroup[] = [];
     let groupCounter = 0;
 
     sortedGpas.forEach((gpa) => {
       const cluster = gpaMap.get(gpa)!;
       if (cluster.length > 1) {
+        const isTop3 = cluster.some((m) => (m.manualRank as number) <= 3);
+        if (!isTop3) {
+          // ลำดับอื่นๆ (อันดับ 4 เป็นต้นไป) ไม่นำมาทำเป็นการ์ดกลุ่มซ้ำ
+          cluster.forEach((s) => {
+            s.isTiedGpa = false;
+            delete s.tiedGroupId;
+            delete s.tiedGroupColor;
+            delete s.tiedGroupBg;
+            delete s.tiedGroupText;
+            delete s.tiedGroupCount;
+          });
+          return;
+        }
+
         groupCounter++;
         const palette = this.GROUP_PALETTES[(groupCounter - 1) % this.GROUP_PALETTES.length];
         const gId = groupCounter;
@@ -638,79 +1115,20 @@ export class StudentRanking implements OnInit {
           s.tiedGroupCount = cluster.length;
         });
 
+        const minR = Math.min(...cluster.map((m) => m.manualRank as number));
+        const maxR = Math.max(...cluster.map((m) => m.manualRank as number));
+
         tiedGroupsList.push({
           groupId: gId,
           gpa: gpa,
           studentCount: cluster.length,
           color: palette,
-          isResolved: false,
-          minRank: 0,
-          maxRank: 0,
+          isTop3Group: true,
+          isResolved: selectedSubIds.size > 0 && !cluster.filter((m) => (m.manualRank as number) <= 3).some((m) => m.isTrulyTied),
+          minRank: minR,
+          maxRank: maxR,
           studentCodes: cluster.map((s) => s.student_code).join(', '),
         });
-      }
-    });
-
-    // 2. เรียงลำดับนักเรียนกลุ่มที่ครบสมบูรณ์
-    completeStudents.sort((a, b) => {
-      const gpaDiff = Number(b.gpa) - Number(a.gpa);
-      if (Math.abs(gpaDiff) > 0.0001) return gpaDiff;
-
-      if (selectedSubIds.size > 0) {
-        const tbDiff = b.tieBreakScore - a.tieBreakScore;
-        if (Math.abs(tbDiff) > 0.001) return tbDiff;
-      }
-      return 0;
-    });
-
-    let tiedCases = 0;
-    let unresolvedTies = 0;
-
-    completeStudents.forEach((s, idx) => {
-      s.calculatedRank = idx + 1;
-      s.manualRank = idx + 1;
-      s.isTrulyTied = false;
-
-      if (s.isTiedGpa) {
-        tiedCases++;
-        const cluster = gpaMap.get(s.gpa)!;
-        const sameScoreCount = cluster.filter(
-          (other) => Math.abs(other.tieBreakScore - s.tieBreakScore) <= 0.001
-        ).length;
-
-        if (selectedSubIds.size === 0) {
-          s.isTrulyTied = true;
-          unresolvedTies++;
-          s.tieBreakReason = `⚠️ เกรด ${s.gpa} เท่ากัน (ยังไม่ได้เลือกวิชาตัดสิน กรุณาติ๊กเลือกวิชาด้านบน)`;
-        } else if (sameScoreCount > 1) {
-          s.isTrulyTied = true;
-          unresolvedTies++;
-          s.tieBreakReason = `⚠️ คะแนนวิชาที่เลือกเท่ากัน (${s.tieBreakScore.toFixed(1)}) ติ๊กเลือกวิชาเพิ่มเพื่อตัดสิน`;
-        } else {
-          s.tieBreakReason = `เกรด ${s.gpa} (ชนะด้วยคะแนนวิชาที่เลือก: ${s.tieBreakScore.toFixed(1)} / ${s.tieBreakMaxScore})`;
-        }
-      } else {
-        s.tieBreakReason = `เกรดสะสม ${s.gpa}`;
-      }
-    });
-
-    // นักเรียนที่คะแนนไม่สมบูรณ์
-    incompleteStudents.sort((a, b) => (Number(b.gpa) || 0) - (Number(a.gpa) || 0));
-    incompleteStudents.forEach((s) => {
-      s.calculatedRank = null;
-      s.manualRank = null;
-      s.isTiedGpa = false;
-      s.isTrulyTied = false;
-      s.tieBreakReason = `⚠️ คะแนนยังไม่สมบูรณ์ (มีคะแนนเพียง ${s.completion_text} วิชา - ไม่นำมาจัดอันดับ)`;
-    });
-
-    tiedGroupsList.forEach((tg) => {
-      const members = completeStudents.filter((s) => s.tiedGroupId === tg.groupId);
-      if (members.length > 0) {
-        tg.minRank = Math.min(...members.map((m) => m.manualRank as number));
-        tg.maxRank = Math.max(...members.map((m) => m.manualRank as number));
-        tg.studentCodes = members.map((m) => m.student_code).join(', ');
-        tg.isResolved = selectedSubIds.size > 0 && !members.some((m) => m.isTrulyTied);
       }
     });
 
@@ -723,7 +1141,7 @@ export class StudentRanking implements OnInit {
     this.completedCount = completeStudents.length;
     this.incompleteCount = incompleteStudents.length;
     this.topPerformer = completeStudents.length > 0 ? completeStudents[0] : null;
-    this.tiedCount = tiedCases;
+    this.tiedCount = completeStudents.filter((s) => (s.manualRank as number) <= 3 && s.isTiedGpa).length;
     this.appliedSubjectCount = selectedSubIds.size;
     this.hasPendingSubjectChanges = false;
     this.isRecalculating = false;
@@ -770,14 +1188,36 @@ export class StudentRanking implements OnInit {
   }
 
   reindexManualRanks(): void {
-    let rankCounter = 1;
-    this.rankedStudents.forEach((s) => {
-      if (s.is_completed !== false) {
-        s.manualRank = rankCounter++;
-        if (s.manualRank !== s.calculatedRank) {
-          s.tieBreakReason = `ปรับลำดับเฉพาะบุคคล (เดิมคำนวณได้ที่ ${s.calculatedRank})`;
-        }
+    const complete = this.rankedStudents.filter((s) => s.is_completed !== false);
+    let nextDenseRank = 4;
+    let prevGpa = '';
+
+    complete.forEach((s, idx) => {
+      if (idx < 3) {
+        s.manualRank = idx + 1;
+        prevGpa = s.gpa;
       } else {
+        if (idx === 3) {
+          s.manualRank = 4;
+          prevGpa = s.gpa;
+          nextDenseRank = 5;
+        } else {
+          if (s.gpa === prevGpa) {
+            s.manualRank = nextDenseRank - 1;
+          } else {
+            s.manualRank = nextDenseRank;
+            prevGpa = s.gpa;
+            nextDenseRank++;
+          }
+        }
+      }
+      if (s.manualRank !== s.calculatedRank) {
+        s.tieBreakReason = `ปรับลำดับเฉพาะบุคคล (เดิมคำนวณได้ที่ ${s.calculatedRank})`;
+      }
+    });
+
+    this.rankedStudents.forEach((s) => {
+      if (s.is_completed === false) {
         s.manualRank = null;
       }
     });
@@ -788,6 +1228,10 @@ export class StudentRanking implements OnInit {
       if (members.length > 0) {
         tg.minRank = Math.min(...members.map((m) => m.manualRank as number));
         tg.maxRank = Math.max(...members.map((m) => m.manualRank as number));
+        tg.isTop3Group = members.some((m) => (m.manualRank as number) <= 3);
+        tg.isResolved = tg.isTop3Group
+          ? !members.filter((m) => (m.manualRank as number) <= 3).some((m) => m.isTrulyTied)
+          : true;
       }
     });
   }
