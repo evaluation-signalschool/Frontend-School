@@ -148,7 +148,7 @@
     </div>
 
     <!-- Results Section Card -->
-    <div class="results-card">
+    <div class="results-card" #resultsCard [class.is-fullscreen]="isFullscreen">
       <!-- Toolbar Header -->
       <div class="results-toolbar">
         <div class="toolbar-left">
@@ -157,6 +157,10 @@
             <span class="count-pill" *ngIf="submissions.length > 0">
               <mat-icon class="pill-icon">person</mat-icon>
               ผู้ตอบทั้งหมด {{ submissions.length }} ราย
+            </span>
+            <span class="fullscreen-pill" *ngIf="isFullscreen">
+              <mat-icon>fullscreen</mat-icon>
+              โหมดเต็มจอ (กด ESC เพื่อออก)
             </span>
           </div>
 
@@ -182,6 +186,39 @@
         </div>
 
         <div class="toolbar-right">
+          <!-- Quick Horizontal Scroll Controls -->
+          <div class="table-scroll-controls" *ngIf="submissions.length > 0 && !isLoading">
+            <span class="scroll-label">เลื่อนตาราง:</span>
+            <button
+              type="button"
+              class="btn-scroll-arrow"
+              (click)="scrollTable('left')"
+              title="เลื่อนตารางไปทางซ้าย"
+            >
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <button
+              type="button"
+              class="btn-scroll-arrow"
+              (click)="scrollTable('right')"
+              title="เลื่อนตารางไปทางขวา"
+            >
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </div>
+
+          <!-- Fullscreen Toggle Button -->
+          <button
+            type="button"
+            class="btn-fullscreen-toggle"
+            (click)="toggleFullscreen()"
+            [class.active]="isFullscreen"
+            [title]="isFullscreen ? 'ออกจากโหมดเต็มจอ (ESC)' : 'ดูผลการประเมินแบบเต็มจอ'"
+          >
+            <mat-icon>{{ isFullscreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+            <span>{{ isFullscreen ? 'ย่อหน้าจอ' : 'ดูเต็มจอ' }}</span>
+          </button>
+
           <button
             class="btn-export-excel"
             (click)="onExport()"
@@ -211,6 +248,7 @@
         <!-- 2. ตารางแสดงข้อมูลคำตอบเมื่อพบข้อมูล -->
         <div
           class="table-responsive-wrapper"
+          #tableWrapper
           *ngIf="!isLoading && submissions.length > 0"
         >
           <table class="modern-table">
@@ -281,8 +319,7 @@
                         class="score-rating-pill"
                         [ngClass]="'score-' + sub.answers['q_' + q.id]"
                       >
-                        <mat-icon class="star-mini-icon">star</mat-icon>
-                        <span>{{ sub.answers['q_' + q.id] }}</span>
+                        <span class="score-number">{{ sub.answers['q_' + q.id] }}</span>
                       </div>
                     </ng-container>
                     <ng-template #textAns>

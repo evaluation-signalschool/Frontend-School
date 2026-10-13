@@ -1,5 +1,5 @@
 import { CommonModule, Location } from '@angular/common';
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -190,6 +190,66 @@ export class FormView implements OnInit {
   questions: any[] = [];
   submissions: any[] = [];
   isLoading = false;
+
+  isFullscreen = false;
+  @ViewChild('resultsCard') resultsCard?: ElementRef<HTMLDivElement>;
+  @ViewChild('tableWrapper') tableWrapper?: ElementRef<HTMLDivElement>;
+
+  @HostListener('document:fullscreenchange')
+  onFullscreenChange(): void {
+    this.isFullscreen = Boolean(document.fullscreenElement);
+    this.cdr.detectChanges();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapePress(): void {
+    if (this.isFullscreen) {
+      this.toggleFullscreen();
+    }
+  }
+
+  toggleFullscreen(): void {
+    const el = this.resultsCard?.nativeElement || (document.querySelector('.results-card') as HTMLElement);
+    if (!this.isFullscreen) {
+      if (el && el.requestFullscreen) {
+        el.requestFullscreen()
+          .then(() => {
+            this.isFullscreen = true;
+            this.cdr.detectChanges();
+          })
+          .catch(() => {
+            this.isFullscreen = !this.isFullscreen;
+            this.cdr.detectChanges();
+          });
+      } else {
+        this.isFullscreen = !this.isFullscreen;
+        this.cdr.detectChanges();
+      }
+    } else {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen()
+          .then(() => {
+            this.isFullscreen = false;
+            this.cdr.detectChanges();
+          })
+          .catch(() => {
+            this.isFullscreen = false;
+            this.cdr.detectChanges();
+          });
+      } else {
+        this.isFullscreen = false;
+        this.cdr.detectChanges();
+      }
+    }
+  }
+
+  scrollTable(direction: 'left' | 'right'): void {
+    if (this.tableWrapper?.nativeElement) {
+      const el = this.tableWrapper.nativeElement;
+      const amount = direction === 'left' ? -380 : 380;
+      el.scrollBy({ left: amount, behavior: 'smooth' });
+    }
+  }
 
   constructor(
     private evalService: GeneralEvaluationService,
