@@ -6,9 +6,11 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatMenuModule } from '@angular/material/menu';
 
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
+import { RouterLink, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { CourseService } from '../services/course.service';
+import { AdminLayoutService } from '../services/admin-layout.service';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-header',
@@ -20,7 +22,6 @@ import { CourseService } from '../services/course.service';
     MatToolbarModule,
     MatMenuModule,
     RouterLink,
-    RouterLinkActive,
   ],
   templateUrl: './header.html',
   styleUrls: ['./header.scss'],
@@ -41,7 +42,7 @@ export class Header implements OnInit {
       submenus: [], // เราจะเอาข้อมูล API มายัดใส่ตรงนี้
     },
     {
-      title: 'สำหรับคณะกับกำหลักสูตร',
+      title: 'สำหรับคณะกำกับหลักสูตร',
       path: '/committee',
       submenus: [], // เราจะเอาข้อมูล API มายัดใส่ตรงนี้
     },
@@ -52,7 +53,7 @@ export class Header implements OnInit {
     },
     {
       title: 'สรุปผลการฝึกอบรม',
-      path: '/training-results',
+      path: '/training-results/training-summary',
       simpleItems: [], // เราจะเอาข้อมูล API มายัดใส่ตรงนี้
     },
     {
@@ -65,6 +66,8 @@ export class Header implements OnInit {
   constructor(
     private courseService: CourseService,
     private router: Router,
+    public adminLayoutService: AdminLayoutService,
+    public authService: AuthService,
   ) {
     // เช็ก URL ตั้งแต่เปิดหน้าเว็บครั้งแรก
     this.checkRoute(this.router.url);
@@ -83,7 +86,7 @@ export class Header implements OnInit {
     this.fetchCourses();
   }
 
-  // ⚡ แก้ไขฟังก์ชัน checkRoute ในไฟล์ header.ts ของคุณให้เป็นแบบนี้
+  // ฟังก์ชัน checkRoute สำหรับตรวจสอบเส้นทาง URL ปัจจุบัน
   private checkRoute(url: string): void {
     if (!url) return;
 
@@ -94,6 +97,23 @@ export class Header implements OnInit {
 
     // เปิดคอนโซลใน Browser (กด F12) ดูว่าหน้าปัจจุบัน URL คืออะไร และระบบมองว่าเป็นแอดมินไหม
     console.log('Current URL:', lowerUrl, 'Is Admin?:', this.isAdmin);
+  }
+
+  get isSuperAdmin(): boolean {
+    return this.authService.isSuperAdmin();
+  }
+
+  get adminName(): string {
+    return this.authService.getAdminName();
+  }
+
+  get adminUsername(): string {
+    const data = this.authService.getAdminData();
+    return data?.username || '';
+  }
+
+  toggleAdminSidebar(): void {
+    this.adminLayoutService.toggleMobile();
   }
 
   fetchCourses(): void {
@@ -185,6 +205,6 @@ export class Header implements OnInit {
   // ใช้เช็คว่า Menu นี้กำลัง Active อยู่หรือไม่ โดยเทียบจาก URL
   isActive(path: string): boolean {
     if (!path) return false;
-    return this.router.url.includes(path);
+    return this.router.url.includes(path) || (path.includes('/training-results') && this.router.url.includes('/training-results'));
   }
 }

@@ -37,6 +37,35 @@ $primary-focus: #8378ed; // สี Highlight ตอน Focus ช่องกร�
     align-items: center;
     margin-bottom: 32px;
     width: 100%;
+    position: relative;
+
+    .header-nav {
+      width: 100%;
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 12px;
+
+      .back-nav-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        color: #4b5563;
+        font-size: 0.925rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: #e5e7eb;
+          color: #1f2937;
+          transform: translateX(-2px);
+        }
+      }
+    }
 
     .title {
       font-size: 2rem;
@@ -66,6 +95,44 @@ $primary-focus: #8378ed; // สี Highlight ตอน Focus ช่องกร�
         }
       }
     }
+
+    .google-notice-banner {
+      margin-top: 16px;
+      padding: 16px 20px;
+      background: #f5f3ff;
+      border: 1.5px solid #ddd6fe;
+      border-radius: 16px;
+      width: 100%;
+      text-align: left;
+      box-sizing: border-box;
+
+      .banner-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #ede9fe;
+        color: #6d28d9;
+        font-size: 0.85rem;
+        font-weight: 700;
+        padding: 4px 12px;
+        border-radius: 12px;
+        margin-bottom: 6px;
+
+        .dot {
+          width: 8px;
+          height: 8px;
+          background: #10b981;
+          border-radius: 50%;
+        }
+      }
+
+      .banner-desc {
+        margin: 0;
+        font-size: 0.92rem;
+        color: #5b21b6;
+        line-height: 1.45;
+      }
+    }
   }
 
   /* Form Content */
@@ -93,6 +160,26 @@ $primary-focus: #8378ed; // สี Highlight ตอน Focus ช่องกร�
       display: flex;
       flex-direction: column;
       width: 100%;
+
+      .label-with-tag {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+
+        label {
+          margin-bottom: 0;
+        }
+
+        .verified-tag {
+          font-size: 0.8rem;
+          color: #059669;
+          background: #d1fae5;
+          padding: 2px 10px;
+          border-radius: 10px;
+          font-weight: 600;
+        }
+      }
 
       label {
         display: block;
@@ -129,6 +216,14 @@ $primary-focus: #8378ed; // สี Highlight ตอน Focus ช่องกร�
           border-color: $primary-focus;
           background-color: #ffffff;
           box-shadow: 0 0 0 4px rgba(156, 146, 248, 0.2);
+        }
+
+        &:disabled {
+          background-color: #f3f4f6;
+          color: #6b7280;
+          cursor: not-allowed;
+          border-color: #e5e7eb;
+          box-shadow: none;
         }
       }
 
@@ -179,15 +274,41 @@ $primary-focus: #8378ed; // สี Highlight ตอน Focus ช่องกร�
     }
   }
 
-  /* Submit Button Area */
+  /* Submit & Cancel Button Area */
   .action-container {
     display: flex;
     justify-content: center;
-    margin-top: 16px;
+    align-items: center;
+    gap: 14px;
+    margin-top: 20px;
+
+    .cancel-btn {
+      min-width: 120px;
+      height: 50px;
+      padding: 0 20px;
+      background-color: #f3f4f6;
+      color: #4b5563;
+      border: 1px solid #d1d5db;
+      border-radius: 14px;
+      font-size: 1.05rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: #e5e7eb;
+        color: #1f2937;
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+    }
 
     .submit-btn {
-      width: 200px;
+      min-width: 180px;
       height: 50px;
+      padding: 0 24px;
       background-color: $button-bg;
       color: #ffffff;
       border: none;

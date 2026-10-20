@@ -139,6 +139,23 @@ export class TrainingSummary implements OnInit, AfterViewInit {
 
   loadTrainingSummary(courseId?: number, courseName?: string): void {
     this.isLoading = true;
+    // ล้างข้อมูลเก่าออกทันที เพื่อไม่ให้ข้อมูลหลักสูตรเดิมค้าง
+    this.batches = [];
+    this.pairwiseComparisons = [];
+    this.subjects = [];
+    this.totalAvg = 0;
+    this.topImproved = null;
+    this.topDeclined = null;
+    this.actionPlans = [];
+    this.hasSavedSummary = false;
+    this.savedExecutiveSummary = '';
+    this.savedActionPlans = [];
+    this.adminExecutiveSummary = '';
+    this.adminActionPlanText = '';
+    if (this.mainChart) {
+      this.mainChart.destroy();
+      this.mainChart = null;
+    }
     this.cdr.detectChanges();
 
     this.courseService.getTrainingSummary(courseId, courseName).subscribe({
@@ -749,10 +766,17 @@ ${this.adminExecutiveSummary}
 
   renderChart(): void {
     const ctx = document.getElementById('mainChart') as HTMLCanvasElement;
-    if (!ctx || this.subjects.length === 0) return;
+    if (!ctx || this.subjects.length === 0) {
+      if (this.mainChart) {
+        this.mainChart.destroy();
+        this.mainChart = null;
+      }
+      return;
+    }
 
     if (this.mainChart) {
       this.mainChart.destroy();
+      this.mainChart = null;
     }
 
     const chartSubjects = this.getFilteredChartSubjects();
@@ -865,7 +889,7 @@ ${this.adminExecutiveSummary}
     if (this.isAdmin) {
       this.router.navigate(['/admin']);
     } else {
-      window.history.back();
+      this.router.navigate(['/']);
     }
   }
 }

@@ -64,7 +64,7 @@ $white: #ffffff;
   box-shadow: 0 4px 20px rgba(142, 68, 173, 0.05); 
 }
 
-/* 🔍 การ์ดฟิลเตอร์กรองข้อมูล 2 Dropdowns */
+/* การ์ดตัวกรองข้อมูลแบบ 2 ดรอปดาวน์ */
 .filter-card {
   background-color: #fcfaff;
   border: 1px solid $border-purple;
@@ -141,7 +141,7 @@ $white: #ffffff;
   }
 }
 
-/* ⚠️ Empty State เมื่อยังไม่ได้เลือกรุ่น */
+/* รูปแบบเมื่อยังไม่ได้เลือกรุ่น */
 .empty-state-container {
   display: flex;
   flex-direction: column;
@@ -188,7 +188,7 @@ $white: #ffffff;
   }
 }
 
-/* ⏳ Loading State */
+/* รูปแบบระหว่างกำลังโหลดข้อมูล */
 .loading-state {
   display: flex;
   align-items: center;
@@ -208,7 +208,7 @@ $white: #ffffff;
   to { transform: rotate(360deg); }
 }
 
-/* 🗂️ MatTabs Styling */
+/* รูปแบบสไตล์ของแท็บ (MatTabs) */
 .tabs-wrapper {
   margin-top: 10px;
 
@@ -321,7 +321,7 @@ $white: #ffffff;
   }
 }
 
-/* 📊 Tab 1: Overview Table */
+/* แท็บ 1: ตารางสรุปภาพรวม */
 .table-responsive {
   width: 100%;
   overflow-x: auto;
@@ -385,7 +385,7 @@ $white: #ffffff;
   }
 }
 
-/* Action Button 👁️ ดูเกรด */
+/* ปุ่มสำหรับดูผลการเรียน */
 .btn-eye-action {
   display: inline-flex;
   align-items: center;
@@ -413,7 +413,7 @@ $white: #ffffff;
   }
 }
 
-/* ❄️ Tab 2: Master Grid Table with Freeze Pane (sticky 3 columns) */
+/* แท็บ 2: ตารางคะแนนรวมพร้อมตรึง 3 คอลัมน์แรก */
 .freeze-pane-wrapper {
   max-height: 600px;
   overflow: auto;
@@ -434,30 +434,32 @@ $white: #ffffff;
     white-space: nowrap;
   }
 
-  /* 🧊 Lock 3 คอลัมน์แรกไว้ด้านซ้ายด้วย position: sticky */
+  /* ตรึง 2 คอลัมน์แรกไว้ทางซ้าย */
   .sticky-col-1 {
     position: sticky;
     left: 0;
+    width: 70px;
     min-width: 70px;
     max-width: 70px;
     background-color: $white;
+    z-index: 10;
+    box-sizing: border-box;
   }
 
   .sticky-col-2 {
     position: sticky;
     left: 70px;
-    min-width: 120px;
-    max-width: 120px;
+    width: 280px;
+    min-width: 280px;
+    max-width: 280px;
     background-color: $white;
-  }
-
-  .sticky-col-3 {
-    position: sticky;
-    left: 190px;
-    min-width: 240px;
-    max-width: 240px;
-    background-color: $white;
+    z-index: 10;
     box-shadow: 4px 0 8px -2px rgba(142, 68, 173, 0.18);
+    border-right: 2px solid $border-purple !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    box-sizing: border-box;
   }
 
   thead {
@@ -469,12 +471,17 @@ $white: #ffffff;
       color: $text-dark;
       font-weight: 600;
 
-      &.sticky-col-1, &.sticky-col-2, &.sticky-col-3 {
+      &.sticky-col-1, &.sticky-col-2 {
         z-index: 30; // คอลัมน์หัวตารางที่ล็อก ต้องอยู่ชั้นบนสุด
         background-color: #eae0f5;
       }
 
-      /* 🌸 วิชาเดี่ยว = หัวชมพู */
+      &.sticky-col-2 {
+        box-shadow: 4px 0 8px -2px rgba(142, 68, 173, 0.18);
+        border-right: 2px solid $border-purple !important;
+      }
+
+      /* วิชาเดี่ยว: แถบสีชมพู */
       &.group-header-single {
         background-color: #fce4ec;
         border-bottom: 2px solid #e91e63;
@@ -490,7 +497,7 @@ $white: #ffffff;
         }
       }
 
-      /* 🌿 วิชากลุ่ม = หัวเขียว */
+      /* วิชากลุ่ม: แถบสีเขียว */
       &.group-header-multi {
         background-color: #e8f5e9;
         border-bottom: 2px solid #43a047;
@@ -541,12 +548,24 @@ $white: #ffffff;
   tbody tr {
     &:hover td {
       background-color: #f9f5fc;
-      &.sticky-col-1, &.sticky-col-2, &.sticky-col-3 {
+      &.sticky-col-1, &.sticky-col-2 {
         background-color: #f9f5fc;
       }
     }
 
     td {
+      &.student-name-cell {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        .rank-tag {
+          color: $primary-purple;
+          font-weight: 600;
+          margin-right: 6px;
+        }
+      }
+
       .raw-score {
         font-weight: 600;
         margin-right: 4px;

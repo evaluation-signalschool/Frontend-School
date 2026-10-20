@@ -14,20 +14,11 @@ export class TrainingResults {
   constructor(private router: Router) {}
 
   goBack(): void {
-    // นำทางกลับหน้าก่อนหน้า
-    window.history.back();
+    this.router.navigate(['/']);
   }
 
   // ในไฟล์ .ts
   selectMenu(menuType: string): void {
-    // ตรวจสอบว่ากำหนดเป็น string
-    switch (menuType) {
-      case 'statistics':
-        this.router.navigate(['/training-results/training-statistics']);
-        break;
-      case 'summary':
-        this.router.navigate(['/training-results/training-summary']);
-        break;
-    }
+    this.router.navigate(['/training-results/training-summary'], { queryParamsHandling: 'preserve' });
   }
 }

@@ -1,15 +1,15 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { DropdownService } from '../../services/dropdown.service';
 import { CourseService, CourseGroup } from '../../services/course.service';
 import { ScoreService } from '../../services/score.service';
-import { StudentGradeDialog, SubjectScoreDetail } from '../student-grade-dialog/student-grade-dialog';
+import { StudentGradeDialog, SubjectScoreDetail, CANONICAL_SUBJECT_ORDER } from '../student-grade-dialog/student-grade-dialog';
 import { SpecialScoreDialog } from '../special-score-dialog/special-score-dialog';
 import Swal from 'sweetalert2';
 import * as ExcelJS from 'exceljs';
@@ -50,6 +50,40 @@ export interface StudentOverview {
   behaviorScore?: number;
 }
 
+function getGroupPrefixOrder(name: string): number {
+  const upper = (name || '').trim().toUpperCase();
+  if (upper.startsWith('MN') || upper.includes('รอง')) return 2;
+  if (upper.startsWith('M') || upper.includes('หลัก')) return 1;
+  if (upper.startsWith('S') || upper.includes('ประกอบ')) return 3;
+  if (upper.startsWith('P') || upper.includes('ปฏิบัติ')) return 4;
+  return 5;
+}
+
+function compareGroupNames(aName: string, bName: string): number {
+  const a = (aName || '').trim();
+  const b = (bName || '').trim();
+  const orderA = getGroupPrefixOrder(a);
+  const orderB = getGroupPrefixOrder(b);
+  if (orderA !== orderB) return orderA - orderB;
+  const matchA = a.match(/\d+/);
+  const matchB = b.match(/\d+/);
+  if (matchA && matchB) {
+    const numA = parseInt(matchA[0], 10);
+    const numB = parseInt(matchB[0], 10);
+    if (numA !== numB) return numA - numB;
+  }
+  return a.localeCompare(b, 'th', { numeric: true, sensitivity: 'base' });
+}
+
+function compareSubjectsInGroup(a: any, b: any): number {
+  const aName = (a.name || a.subject_name || '').trim();
+  const bName = (b.name || b.subject_name || '').trim();
+  const orderA = CANONICAL_SUBJECT_ORDER[aName] ?? 999;
+  const orderB = CANONICAL_SUBJECT_ORDER[bName] ?? 999;
+  if (orderA !== orderB) return orderA - orderB;
+  return (a.id || a.subject_id || 0) - (b.id || b.subject_id || 0);
+}
+
 @Component({
   selector: 'app-class-overview',
   standalone: true,
@@ -88,8 +122,18 @@ export class ClassOverview implements OnInit {
     private dropdownService: DropdownService,
     private scoreService: ScoreService,
     private dialog: MatDialog,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private location: Location,
+    private router: Router
   ) {}
+
+  goBack(): void {
+    if (window.history.length > 1) {
+      this.location.back();
+    } else {
+      this.router.navigate(['/admin']);
+    }
+  }
 
   ngOnInit(): void {
     this.loadCourses();
@@ -170,14 +214,36 @@ export class ClassOverview implements OnInit {
     this.scoreService.getBatchScoresSummary(batchId).subscribe({
       next: (res: any) => {
         if (res?.success) {
-          // ใช้งานข้อมูลผลลัพธ์ที่คำนวณจาก Backend โดยตรง
-          this.subjectGroups = res.summary.subjectGroups || [];
-          this.masterSubjects = (res.summary.masterSubjects || []).map((sub: any) => {
+          // จัดเรียงกลุ่มวิชาและวิชาย่อยตามลำดับหลักสูตรที่แท้จริง
+          this.subjectGroups = (res.summary.subjectGroups || []).sort((a: any, b: any) => {
+            return compareGroupNames(a.groupCode || a.groupName, b.groupCode || b.groupName);
+          });
+          this.subjectGroups.forEach((grp: any) => {
+            if (grp.subjects && Array.isArray(grp.subjects)) {
+              grp.subjects.sort(compareSubjectsInGroup);
+            }
+          });
+
+          // สร้าง masterSubjects ตามลำดับ subjectGroups
+          const flatMaster: any[] = [];
+          this.subjectGroups.forEach((grp: any) => {
+            (grp.subjects || []).forEach((sub: any) => {
+              flatMaster.push({
+                ...sub,
+                credit: grp.credit || 0,
+                groupId: grp.groupId,
+                groupName: grp.groupCode || grp.groupName
+              });
+            });
+          });
+
+          this.masterSubjects = flatMaster.length > 0 ? flatMaster : (res.summary.masterSubjects || []).map((sub: any) => {
             const group = this.subjectGroups.find(g => g.subjects.some((s: any) => s.id === sub.id));
             return {
               ...sub,
               credit: group ? group.credit : 0,
-              groupId: group ? group.groupId : null
+              groupId: group ? group.groupId : null,
+              groupName: group ? (group.groupCode || group.groupName) : ''
             };
           });
           
@@ -217,6 +283,7 @@ export class ClassOverview implements OnInit {
                 letterGrade: originalLetterGrade, // เก็บเกรดตัวอักษรไว้แสดงในหน้ารายงานเดี่ยว
                 indexValue: indexValue,
                 groupId: sub.groupId,
+                groupName: sub.groupName,
                 is_su: sub.is_su
               };
             });
@@ -316,7 +383,7 @@ export class ClassOverview implements OnInit {
         courseName: this.getSelectedCourseName(),
         batchName: this.getSelectedBatchName()
       },
-      width: '760px',
+      width: '820px',
       maxWidth: '95vw',
       panelClass: 'custom-dialog-container'
     });

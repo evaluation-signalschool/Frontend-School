@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatSelectModule } from '@angular/material/select';
+import { ActivatedRoute } from '@angular/router';
 import { Chart, registerables } from 'chart.js';
 
 Chart.register(...registerables);
@@ -12,10 +13,11 @@ Chart.register(...registerables);
   templateUrl: './training-statistics.html',
   styleUrl: './training-statistics.scss',
 })
-export class TrainingStatistics {// State Variables
+export class TrainingStatistics implements OnInit {// State Variables
   selectedCohort: string = 'all';
   chartType: 'bar' | 'line' = 'bar';
   mainChart: any;
+  courseName: string = 'ชั้นนายพัน เหล่า ส.';
 
   // Data Source สำหรับแสดงผลกราฟ
   chartData = {
@@ -40,9 +42,15 @@ export class TrainingStatistics {// State Variables
     ]
   };
 
-  constructor() {}
+  constructor(private route: ActivatedRoute) {}
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.route.queryParams.subscribe((params: any) => {
+      if (params['course']) {
+        this.courseName = params['course'];
+      }
+    });
+  }
 
   ngAfterViewInit(): void {
     this.renderChart();

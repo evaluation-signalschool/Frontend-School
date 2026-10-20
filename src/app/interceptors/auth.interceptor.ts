@@ -23,18 +23,37 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const currentPath = typeof window !== 'undefined' ? window.location.pathname.toLowerCase() : '';
   const routerUrl = router.url ? router.url.toLowerCase() : '';
 
+  // ตรวจสอบว่าอยู่ในส่วนของ Admin หรือไม่ (ทั้งหน้าเว็บ และ API Endpoint)
+  const isInAdminPage = currentPath.startsWith('/admin') || routerUrl.startsWith('/admin');
+  const isAdminEndpoint =
+    reqUrl.includes('/admin/') ||
+    reqUrl.includes('/edit-profile/requests') ||
+    reqUrl.includes('/logs') ||
+    reqUrl.includes('/users');
+
   // ตรวจสอบว่ากำลังทำงานในส่วนของนักเรียนหรือไม่
+  // หากอยู่ในหน้า Admin หรือยิง API ฝั่ง Admin จะต้องไม่เป็น student area เด็ดขาด
   const isStudentArea =
-    currentPath.startsWith('/student') ||
-    routerUrl.startsWith('/student') ||
-    reqUrl.includes('/student/login') ||
-    reqUrl.includes('/student/register');
+    !isInAdminPage &&
+    !isAdminEndpoint &&
+    (currentPath.startsWith('/student') ||
+      routerUrl.startsWith('/student') ||
+      currentPath === '/edit-profile' ||
+      routerUrl === '/edit-profile' ||
+      currentPath === '/score' ||
+      routerUrl === '/score' ||
+      currentPath === '/register' ||
+      routerUrl === '/register' ||
+      (reqUrl.includes('/edit-profile') && !reqUrl.includes('/edit-profile/requests')) ||
+      reqUrl.includes('/student/'));
 
   // ตัดสินใจเลือก Token ที่ถูกต้อง
-  // หากอยู่ในส่วนนักเรียนให้ใช้ studentToken
-  // หากอยู่ในส่วนอื่นๆ หรือแอดมิน ให้ใช้ adminToken เป็นลำดับแรกเสมอ เพื่อไม่ให้ชนกับ verifyAdmin บน Backend
+  // หากอยู่ในส่วนแอดมิน ให้ใช้ adminToken เป็นลำดับแรกเสมอ เพื่อไม่ให้ชนกับ verifyAdmin บน Backend
+  // หากอยู่ในส่วนนักเรียน ให้ใช้ studentToken
   let tokenToUse: string | null = null;
-  if (isStudentArea) {
+  if (isInAdminPage || isAdminEndpoint) {
+    tokenToUse = adminToken;
+  } else if (isStudentArea) {
     tokenToUse = studentToken || adminToken;
   } else if (adminToken) {
     tokenToUse = adminToken;
@@ -61,7 +80,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       currentAuth === 'Bearer undefined' ||
       currentAuth.trim() === 'Bearer';
 
-    const isInAdminOrHasAdminToken = !isStudentArea && adminToken;
+    const isInAdminOrHasAdminToken = (isInAdminPage || isAdminEndpoint) && adminToken;
     const isRogueToken =
       currentAuth &&
       isInAdminOrHasAdminToken &&
@@ -99,10 +118,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
               errMsg.includes('invalid') ||
               errMsg.includes('เซสชันหมดอายุ')));
 
-        // ห้ามเตะออกหากเป็นเพียง Error การไม่มีสิทธิ์ Super Admin (Role insufficient)
+        // ห้ามเตะออกหากเป็นเพียง Error การไม่มีสิทธิ์ (Role insufficient)
         const isPermissionOnly =
           errMsg.includes('super admin access required') ||
           errMsg.includes('สิทธิ์การเข้าถึงสำหรับผู้ดูแลระบบหลักเท่านั้น') ||
+          errMsg.includes('admin access required') ||
+          errMsg.includes('สิทธิ์การเข้าถึงสำหรับแอดมินเท่านั้น') ||
           errMsg.includes('ถูกระงับการใช้งาน');
 
         if (isInAdmin && isRealSessionExpiration && !isPermissionOnly) {

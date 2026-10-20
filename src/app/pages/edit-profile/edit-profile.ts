@@ -1,7 +1,8 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Location, CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, FormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { StudentService } from '../../services/student.service';
 import Swal from 'sweetalert2';
@@ -9,7 +10,7 @@ import Swal from 'sweetalert2';
 @Component({
   selector: 'app-edit-profile',
   standalone: true,
-  imports: [MatIconModule, CommonModule, ReactiveFormsModule],
+  imports: [MatIconModule, CommonModule, ReactiveFormsModule, FormsModule],
   templateUrl: './edit-profile.html',
   styleUrl: './edit-profile.scss',
 })
@@ -28,6 +29,7 @@ export class EditProfile implements OnInit {
 
   constructor(
     private location: Location,
+    private router: Router,
     private fb: FormBuilder,
     private authService: AuthService,
     private studentService: StudentService,
@@ -37,10 +39,10 @@ export class EditProfile implements OnInit {
       docType: [''],
       rank: ['', Validators.required],
       firstName: ['', Validators.required],
-      lastName: ['', Validators.required],
-      confirmPassword: ['']
+      lastName: ['', Validators.required]
     });
   }
+
 
   ngOnInit(): void {
     this.studentData = this.authService.getStudentData();
@@ -73,16 +75,22 @@ export class EditProfile implements OnInit {
         this.cdr.detectChanges();
       },
       error: (err) => {
-        console.error("Error checking status", err);
+        console.warn("Could not check edit status:", err);
         this.isLoading = false;
         this.cdr.detectChanges();
         
-        // Show warning if API fails (e.g. backend not deployed)
-        Swal.fire({
-          icon: 'error',
-          title: 'ข้อผิดพลาดการเชื่อมต่อ',
-          text: 'ไม่สามารถโหลดข้อมูลสถานะการแก้ไขโปรไฟล์ได้ (API อาจจะยังไม่ได้อัปเดต หรือ เซิร์ฟเวอร์มีปัญหา)'
-        });
+        if (err.status === 401 || err.status === 403) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'เซสชันหมดอายุ',
+            text: 'กรุณาเข้าสู่ระบบใหม่อีกครั้งเพื่อความปลอดภัย',
+            confirmButtonText: 'เข้าสู่ระบบ',
+            confirmButtonColor: '#5c41e2'
+          }).then(() => {
+            this.authService.logout();
+            this.router.navigate(['/']);
+          });
+        }
       }
     });
   }
@@ -105,47 +113,121 @@ export class EditProfile implements OnInit {
     this.editForm.patchValue({ docType: type });
   }
   
-  openConfirmModal(): void {
-    if (this.editForm.invalid) {
-      Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณากรอก ยศ ชื่อ และนามสกุล ให้ครบถ้วน', 'warning');
-      return;
-    }
-    
-    const originalRank = this.studentData.rank_name || '';
-    const newRank = this.editForm.value.rank;
-    if (originalRank !== newRank && !this.selectedFile) {
-      Swal.fire('ข้อมูลไม่ครบถ้วน', 'เนื่องจากคุณมีการเปลี่ยนยศ กรุณาแนบไฟล์เอกสารหลักฐานด้วยครับ', 'warning');
-      return;
+  validateForm(): boolean {
+    const rank = (this.editForm.value.rank || '').trim();
+    const firstName = (this.editForm.value.firstName || '').trim();
+    const lastName = (this.editForm.value.lastName || '').trim();
+
+    // 1. ตรวจสอบการเว้นว่างช่องชื่อ-นามสกุล / ยศ
+    if (!rank) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ข้อมูลไม่ครบถ้วน',
+        text: 'กรุณากรอกยศ / คำนำหน้า',
+        confirmButtonText: 'ตกลง'
+      });
+      return false;
     }
 
+    if (!firstName || !lastName) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ข้อมูลไม่ครบถ้วน',
+        text: 'กรุณากรอกชื่อ-นามสกุล',
+        confirmButtonText: 'ตกลง'
+      });
+      return false;
+    }
+
+    // 2. ตรวจสอบตัวเลข (ห้ามมีตัวเลขทั้งใน ยศ, ชื่อ, นามสกุล)
+    const numberRegex = /[0-9\u0E50-\u0E59]/;
+    if (numberRegex.test(rank)) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ข้อมูลไม่ถูกต้อง',
+        text: 'ยศต้องเป็นตัวอักษรเท่านั้น ห้ามใส่ตัวเลข',
+        confirmButtonText: 'ตกลง'
+      });
+      return false;
+    }
+
+    if (numberRegex.test(firstName) || numberRegex.test(lastName)) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ข้อมูลไม่ถูกต้อง',
+        text: 'ชื่อ-นามสกุลต้องเป็นตัวอักษรเท่านั้น ห้ามใส่ตัวเลข',
+        confirmButtonText: 'ตกลง'
+      });
+      return false;
+    }
+
+    // 3. ตรวจสอบอักขระพิเศษ (ห้ามมีสัญลักษณ์พิเศษ)
+    // สำหรับยศ: อนุญาตเฉพาะตัวอักษรไทย-อังกฤษ จุด ช่องว่าง วงเล็บ และขีด เช่น ร้อยตำรวจเอก (ร.ต.อ.)
+    const rankSpecialCharRegex = /[^a-zA-Z\u0E01-\u0E3A\u0E40-\u0E4E\s.()\-]/;
+    if (rankSpecialCharRegex.test(rank)) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ข้อมูลไม่ถูกต้อง',
+        text: 'ยศต้องไม่มีอักขระพิเศษ',
+        confirmButtonText: 'ตกลง'
+      });
+      return false;
+    }
+
+    // สำหรับชื่อ-นามสกุล: อนุญาตเฉพาะตัวอักษรไทย-อังกฤษ และช่องว่าง
+    const nameSpecialCharRegex = /[^a-zA-Z\u0E01-\u0E3A\u0E40-\u0E4E\s]/;
+    if (nameSpecialCharRegex.test(firstName) || nameSpecialCharRegex.test(lastName)) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ข้อมูลไม่ถูกต้อง',
+        text: 'ชื่อ-นามสกุลต้องไม่มีอักขระพิเศษ',
+        confirmButtonText: 'ตกลง'
+      });
+      return false;
+    }
+
+    // 4. ตรวจสอบการแนบไฟล์กรณีเปลี่ยนยศ
+    const originalRank = (this.studentData?.rank_name || '').trim();
+    const docType = this.editForm.value.docType;
+    const isRankChanged = (rank !== originalRank || docType === 'change-rank');
+
+    if (isRankChanged && !this.selectedFile) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ข้อมูลไม่ครบถ้วน',
+        text: 'กรุณาแนบไฟล์เอกสารยืนยันการเลื่อนยศ',
+        confirmButtonText: 'ตกลง'
+      });
+      return false;
+    }
+
+    return true;
+  }
+
+  openConfirmModal(): void {
+    if (!this.validateForm()) {
+      return;
+    }
     this.showConfirmModal = true;
   }
   
   closeConfirmModal(): void {
     this.showConfirmModal = false;
-    this.editForm.patchValue({ confirmPassword: '' });
   }
 
   submitForm(): void {
-    if (this.editForm.invalid) return;
-    
-    const originalRank = this.studentData.rank_name || '';
-    const newRank = this.editForm.value.rank;
-    if (originalRank !== newRank && !this.selectedFile) {
-       return;
+    if (!this.validateForm()) {
+      return;
     }
-    
-    // In a real app we'd verify the password here. For this demo we'll assume it's correct if provided.
-    // Assuming backend endpoint /student-login verifies, but we can skip strong auth for this edit unless required.
-    // The user's backend doesn't currently require password for this, but we'll send the request anyway.
     
     this.isSubmitting = true;
     
     const formData = new FormData();
     formData.append('student_id', this.studentData.student_id.toString());
-    formData.append('new_rank', this.editForm.value.rank);
-    formData.append('new_first_name', this.editForm.value.firstName);
-    formData.append('new_last_name', this.editForm.value.lastName);
+    formData.append('new_rank', (this.editForm.value.rank || '').trim());
+    formData.append('new_first_name', (this.editForm.value.firstName || '').trim());
+    formData.append('new_last_name', (this.editForm.value.lastName || '').trim());
+    
     if (this.selectedFile) {
       formData.append('document', this.selectedFile);
     }

@@ -61,13 +61,13 @@
       <table class="detail-grade-table">
         <thead>
           <tr>
-            <th class="text-center" style="width: 60px;">ลำดับ</th>
-            <th class="text-left">รายวิชา</th>
-            <th class="text-center" style="width: 90px;">หน่วยกิต</th>
-            <th class="text-center" style="width: 100px;">คะแนนดิบ</th>
-            <th class="text-center" style="width: 90px;">เกรด</th>
-            <th class="text-center" style="width: 90px;">ผลการฝึก</th>
-            <th class="text-center" style="width: 100px;">Index</th>
+            <th class="text-center col-no">ลำดับ</th>
+            <th class="text-left col-subject">รายวิชา</th>
+            <th class="text-center col-credit">หน่วยกิต</th>
+            <th class="text-center col-raw">คะแนนดิบ</th>
+            <th class="text-center col-grade">เกรด</th>
+            <th class="text-center col-point">ผลการฝึก</th>
+            <th class="text-center col-index">Index</th>
           </tr>
         </thead>
         <tbody>
@@ -93,8 +93,11 @@
             
             <ng-container *ngIf="subject.isFirstInGroup">
               <td class="text-center text-bold grade-text text-purple" [attr.rowspan]="subject.rowspan">{{ subject.letterGrade || subject.grade || '-' }}</td>
-              <td class="text-center text-bold text-primary" [attr.rowspan]="subject.rowspan">{{ getNumericGrade(subject.grade) }}</td>
-              <td class="text-center text-bold index-text" [attr.rowspan]="subject.rowspan">({{ subject.indexValue || '0.00' }})</td>
+              <td class="text-center text-bold text-primary" [attr.rowspan]="subject.rowspan">{{ getNumericGrade(subject.letterGrade || subject.grade) }}</td>
+              <td class="text-center text-bold index-text" [attr.rowspan]="subject.rowspan">
+                <ng-container *ngIf="subject.is_su; else normalIndex">-</ng-container>
+                <ng-template #normalIndex>({{ subject.indexValue || '0.00' }})</ng-template>
+              </td>
             </ng-container>
           </tr>
         </tbody>

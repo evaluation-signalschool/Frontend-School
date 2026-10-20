@@ -1,4 +1,4 @@
-// Variables & Colors (Purple Theme 🟣🌸)
+// ตัวแปรและชุดสี (ธีมสีม่วง)
 $primary-purple: #7c3aed;
 $primary-dark-purple: #6d28d9;
 $light-purple-bg: #f3e8ff;
@@ -199,7 +199,7 @@ $red-bg: #fef2f2;
         border-radius: 2px;
       }
 
-      // 🔵 ปรับกล่องสีให้ตรงกับแท่งกราฟจริง
+      // ปรับกล่องสีให้ตรงกับแท่งกราฟจริง
       &.light-blue .square { background-color: #60a5fa; } // รุ่นที่ 1 (ฟ้าอ่อน)
       &.blue .square { background-color: #3b82f6; }       // รุ่นที่ 2 (ฟ้าสด)
       &.dark-blue .square { background-color: #1d4ed8; }  // รุ่นที่ 3 (น้ำเงินเข้ม)
@@ -383,7 +383,7 @@ $red-bg: #fef2f2;
   box-shadow: 0 10px 25px rgba(124, 58, 237, 0.1) !important;
   padding: 6px 0 !important;
 
-  // ❌ ซ่อนเครื่องหมายติ๊กถูก (Checkmark) ของ Angular Material
+  // ซ่อนเครื่องหมายถูกของ Angular Material
   .mat-pseudo-checkbox,
   .mat-mdc-option-pseudo-checkbox,
   .mdc-list-item__start,
@@ -397,13 +397,13 @@ $red-bg: #fef2f2;
     font-family: 'Sarabun', sans-serif !important;
     font-size: 0.88rem !important;
     color: #1e1b4b !important;
-    background-color: #ffffff !important; // ⚪ ตัวเลือกปกติเป็นสีขาว
+    background-color: #ffffff !important; // ตัวเลือกปกติกำหนดเป็นพื้นหลังสีขาว
     border-radius: 6px !important;
     margin: 2px 6px !important;
     padding-left: 12px !important; // ปรับระยะชิดซ้ายให้สวยงามหลังจากเอาติ๊กถูกออก
     transition: all 0.2s ease !important;
 
-    // 🟣 เวลาเลื่อนเมาส์ผ่าน (Hover) / Focus
+    // รูปแบบเมื่อเลื่อนเมาส์ผ่านหรือเลือกใช้งาน (Hover / Focus)
     &:hover,
     &.cdk-focused,
     &.mat-mdc-option-active {
@@ -411,7 +411,7 @@ $red-bg: #fef2f2;
       color: #6d28d9 !important; // ข้อความเปลี่ยนเป็นม่วงเข้ม
     }
 
-    // 🟣 รายการที่เลือกอยู่ปัจจุบัน (Selected)
+    // รูปแบบสำหรับรายการที่ถูกเลือกในปัจจุบัน (Selected)
     &.mdc-list-item--selected,
     &.mat-selected {
       background-color: #ede9fe !important; // สีม่วงพาสเทลเน้น

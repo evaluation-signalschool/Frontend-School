@@ -57,7 +57,7 @@
                     <label>อัปโหลดเอกสารหลักฐานเปลี่ยนยศ (ถ้ามี)</label>
                     <div class="file-upload-wrapper">
                         <input type="file" id="fileUpload" class="file-input-hidden" accept=".pdf,.png,.jpg,.jpeg" (change)="onFileSelected($event)">
-                        <label for="fileUpload" class="file-upload-box" [ngStyle]="{'background': selectedFile ? '#f0f4ff' : '#fafafa'}">
+                        <label for="fileUpload" class="file-upload-box" [ngStyle]="{'background': selectedFile ? '#f0fdf4' : '#fafafa'}">
                             <div class="upload-icon" *ngIf="!selectedFile">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"
                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -68,13 +68,13 @@
                                 </svg>
                             </div>
                             <div class="upload-icon" *ngIf="selectedFile">
-                                <mat-icon style="color: #4caf50;">check_circle</mat-icon>
+                                <mat-icon style="color: #16a34a;">check_circle</mat-icon>
                             </div>
                             <div class="upload-text" *ngIf="!selectedFile">
                                 <span class="highlight">คลิกเพื่อเลือกไฟล์</span>
                             </div>
                             <span class="file-hint" *ngIf="!selectedFile">รองรับไฟล์ PDF, PNG, JPG (ขนาดไม่เกิน 5MB)</span>
-                            <span class="file-name-display" *ngIf="selectedFile" style="font-weight: bold; color: #1976d2; margin-top: 8px; display: block;">{{ fileName }}</span>
+                            <span class="file-name-display" *ngIf="selectedFile" style="font-weight: bold; color: #15803d; margin-top: 8px; display: block;">{{ fileName }}</span>
                         </label>
                     </div>
                 </div>
@@ -100,7 +100,7 @@
 
                 <!-- 5. ปุ่มยืนยันด้านล่าง -->
                 <div class="form-actions">
-                    <button type="button" class="btn btn-primary" (click)="openConfirmModal()" [disabled]="editForm.invalid">
+                    <button type="button" id="submitEditProfileBtn" class="btn btn-primary" (click)="openConfirmModal()" [disabled]="isSubmitting">
                         ยืนยันแก้ไขข้อมูล
                     </button>
                 </div>
@@ -108,7 +108,7 @@
         </div>
     </div>
 
-    <!-- 6. Modal Popup ยืนยันด้วยรหัสผ่าน -->
+    <!-- 6. Modal Popup ยืนยันการส่งคำร้อง -->
     <div class="modal-overlay" *ngIf="showConfirmModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -119,16 +119,13 @@
                     <strong>หมายเหตุ:</strong> ข้อมูลนี้สามารถส่งขอแก้ไขได้เพียง <strong>1 ครั้ง</strong> เท่านั้น
                     หากยืนยันแล้วจะไม่สามารถแก้ไขหรือส่งคำร้องใหม่ได้อีกจนกว่าจะติดต่อผู้ดูแลระบบ
                 </p>
-                <form [formGroup]="editForm">
-                    <div class="form-group">
-                        <label for="confirmPassword">กรุณากรอกรหัสผ่านเพื่อยืนยัน:</label>
-                        <input type="password" id="confirmPassword" formControlName="confirmPassword" class="form-control" placeholder="ระบุรหัสผ่านของคุณ">
-                    </div>
-                </form>
+                <p style="color: #4b5563; font-size: 14.5px; margin-bottom: 0; line-height: 1.5;">
+                    กรุณาตรวจสอบความถูกต้องของข้อมูลก่อนกดยืนยัน ท่านต้องการส่งคำร้องขอแก้ไขข้อมูลส่วนตัวใช่หรือไม่?
+                </p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" (click)="closeConfirmModal()" [disabled]="isSubmitting">ยกเลิก</button>
-                <button type="button" class="btn btn-danger" (click)="submitForm()" [disabled]="isSubmitting || !editForm.value.confirmPassword">
+                <button type="button" class="btn btn-danger" (click)="submitForm()" [disabled]="isSubmitting">
                     <span *ngIf="!isSubmitting">ยืนยันส่งข้อมูล</span>
                     <span *ngIf="isSubmitting">กำลังส่ง...</span>
                 </button>

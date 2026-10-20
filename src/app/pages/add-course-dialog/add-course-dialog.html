@@ -32,6 +32,8 @@
             <div *ngIf="isNewCourse" style="display: flex; gap: 8px;">
               <input type="text" [(ngModel)]="courseForm.course_name" name="course_name_input"
                 placeholder="พิมพ์ชื่อหลักสูตรใหม่ เช่น ชั้นนายพัน เหล่า ส." required style="flex: 1;"
+                (keydown)="onCourseNameKeyDown($event)"
+                (input)="onCourseNameInput($event)"
                 (focus)="selectOnFocus($event)" (click)="selectOnFocus($event)">
               <button type="button" (click)="cancelNewCourse()" style="padding: 0 12px; border-radius: 4px; border: 1px solid #ccc; background: #f5f5f5; cursor: pointer; color: #555; font-size: 13px; display: flex; align-items: center;">
                 <span class="material-icons" style="font-size: 16px; margin-right: 4px;">close</span> ยกเลิก
@@ -40,12 +42,16 @@
           </div>
           <div class="form-group short-input">
             <label>ปีหลักสูตร</label>
-            <input type="number" [(ngModel)]="courseForm.curriculum_year" name="curriculum_year" placeholder="เช่น 2569"
+            <input type="text" [(ngModel)]="courseForm.curriculum_year" name="curriculum_year" placeholder="เช่น 2569"
+              inputmode="numeric" maxlength="4"
+              (keypress)="onlyNumberKey($event)"
+              (input)="onCurriculumYearInput($event)"
               (focus)="selectOnFocus($event)" (click)="selectOnFocus($event)"
               required>
           </div>
         </div>
         <div class="form-actions right">
+          <button type="button" class="btn-cancel" (click)="resetCourseForm()">ยกเลิก</button>
           <button type="submit" class="btn-submit">บันทึกหลักสูตร</button>
         </div>
       </form>
@@ -150,6 +156,9 @@
           <div class="form-group">
             <label>วันที่สิ้นสุด</label>
             <app-thai-datepicker [(ngModel)]="batchForm.end_date" name="end_date"></app-thai-datepicker>
+            <div *ngIf="isBatchEndDateInvalid()" style="color: #e53935; font-size: 12px; margin-top: 4px; display: flex; align-items: center; gap: 4px; font-weight: 500;">
+              <span>* วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น</span>
+            </div>
           </div>
         </div>
         <div class="form-actions right">
@@ -174,7 +183,6 @@
               <th style="padding: 8px; border: 1px solid #ddd;">ชื่อรุ่น</th>
               <th style="padding: 8px; border: 1px solid #ddd;">วันที่เริ่ม-สิ้นสุด</th>
               <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 140px;">สถานะหลักสูตร</th>
-              <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 140px;">เปิดรับสมัคร</th>
               <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 100px;">จัดการ</th>
             </tr>
           </thead>
@@ -188,12 +196,6 @@
               <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
                 <label class="toggle-switch" style="display: inline-block; vertical-align: middle; margin: 0;">
                   <input type="checkbox" [checked]="batch.is_active" (change)="onToggleBatch(batch, $event)" />
-                  <span class="slider"></span>
-                </label>
-              </td>
-              <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
-                <label class="toggle-switch" style="display: inline-block; vertical-align: middle; margin: 0;">
-                  <input type="checkbox" [checked]="batch.is_registration_open" (change)="onToggleRegistration(batch, $event)" />
                   <span class="slider"></span>
                 </label>
               </td>

@@ -79,6 +79,39 @@ $white: #ffffff;
     cursor: pointer;
     transition: all 0.2s;
 
+    &.btn-behavior {
+      background: linear-gradient(135deg, #78288c 0%, #8e44ad 100%);
+      color: #ffffff;
+      border: 1px solid #78288c;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(142, 68, 173, 0.25);
+
+      mat-icon {
+        color: #ffffff;
+      }
+
+      &:hover {
+        background: linear-gradient(135deg, #6c237d 0%, #7e3b99 100%);
+        box-shadow: 0 4px 12px rgba(142, 68, 173, 0.35);
+      }
+    }
+
+    &.btn-time {
+      background-color: #ffffff;
+      color: #1e3a8a;
+      border: 1.5px solid #bfdbfe;
+      font-weight: 600;
+
+      mat-icon {
+        color: #2563eb;
+      }
+
+      &:hover {
+        background-color: #eff6ff;
+        border-color: #2563eb;
+      }
+    }
+
     &:hover {
       background-color: #f0e6f7;
     }
@@ -87,6 +120,76 @@ $white: #ffffff;
       font-size: 20px;
       width: 20px;
       height: 20px;
+    }
+  }
+}
+
+.batch-quick-actions {
+  margin-top: 18px;
+  padding: 12px 18px;
+  background-color: #fdfaf6;
+  border: 1px dashed #dcd0ea;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  .quick-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: #f59e0b;
+    }
+  }
+
+  .btn-quick-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    &.btn-chip-purple {
+      background-color: #f3e8ff;
+      color: #7e22ce;
+      border: 1px solid #d8b4fe;
+
+      &:hover {
+        background-color: #7e22ce;
+        color: #ffffff;
+      }
+    }
+
+    &.btn-chip-blue {
+      background-color: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+
+      &:hover {
+        background-color: #1d4ed8;
+        color: #ffffff;
+      }
     }
   }
 }
@@ -597,7 +700,7 @@ tbody tr.failing-row td.col-code {
   position: fixed;
   bottom: 28px;
   right: 28px;
-  z-index: 999;
+  z-index: 1050;
   display: flex;
   flex-direction: column;
   gap: 10px;

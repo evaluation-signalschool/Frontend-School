@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตัวอย่างคู่มือการปฏิบัติงานสำหรับผู้ดูแลระบบ (Admin Operation Manual) - โรงเรียนทหารสื่อสาร</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4a154b;
+      --primary-dark: #320d33;
+      --primary-light: #6b256d;
+      --primary-subtle: #f8f4f9;
+      --accent-gold: #c89528;
+      --accent-blue: #1976d2;
+      --accent-teal: #00897b;
+      --accent-orange: #f57c00;
+      --accent-green: #2e7d32;
+      --accent-red: #d32f2f;
+      --text-main: #2b2b2b;
+      --text-muted: #666666;
+      --border-color: #e0d8e2;
+      --bg-body: #f4f5f8;
+      --bg-card: #ffffff;
+      --shadow-sm: 0 2px 6px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 24px rgba(74, 21, 75, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Prompt', sans-serif;
+      color: var(--primary-dark);
+      font-weight: 600;
+    }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      width: 280px;
+      background: #ffffff;
+      border-right: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 24px 16px;
+      flex-shrink: 0;
+    }
+
+    .brand-box {
+      padding-bottom: 20px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--primary-subtle);
+      text-align: center;
+    }
+
+    .brand-icon {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      font-size: 24px;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 12px rgba(74,21,75,0.25);
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary);
+      line-height: 1.3;
+    }
+
+    .brand-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .nav-group-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--primary-light);
+      margin: 16px 0 8px 8px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      color: #444;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 13.5px;
+      transition: all 0.2s ease;
+      margin-bottom: 4px;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      background: var(--primary-subtle);
+      color: var(--primary);
+      font-weight: 600;
+      transform: translateX(4px);
+    }
+
+    .nav-link .badge-num {
+      background: var(--border-color);
+      color: var(--primary);
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: auto;
+      font-weight: 700;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      padding: 40px;
+      max-width: 1050px;
+      margin: 0 auto;
+    }
+
+    /* Header Banner */
+    .doc-hero {
+      background: linear-gradient(135deg, #320d33 0%, #5c1b5e 100%);
+      color: #ffffff;
+      padding: 36px 40px;
+      border-radius: 16px;
+      margin-bottom: 32px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .doc-hero::after {
+      content: 'ADMIN';
+      position: absolute;
+      right: 20px;
+      bottom: -15px;
+      font-size: 90px;
+      font-weight: 900;
+      font-family: 'Prompt', sans-serif;
+      color: rgba(255, 255, 255, 0.04);
+      letter-spacing: 4px;
+      pointer-events: none;
+    }
+
+    .doc-hero-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .doc-badge {
+      background: rgba(255,255,255,0.2);
+      backdrop-filter: blur(4px);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .doc-badge.gold {
+      background: var(--accent-gold);
+      color: #fff;
+    }
+
+    .doc-hero h1 {
+      color: #ffffff;
+      font-size: 26px;
+      margin-bottom: 8px;
+    }
+
+    .doc-hero p {
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 14.5px;
+      max-width: 700px;
+    }
+
+    .doc-hero-actions {
+      margin-top: 20px;
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-action {
+      background: #ffffff;
+      color: var(--primary);
+      border: none;
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-family: 'Prompt', sans-serif;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      text-decoration: none;
+    }
+
+    .btn-action:hover {
+      background: var(--primary-subtle);
+      transform: translateY(-2px);
+    }
+
+    /* Content Cards / Chapters */
+    .chapter-section {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 36px 40px;
+      margin-bottom: 32px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .chapter-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--primary-subtle);
+    }
+
+    .chapter-number {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--primary);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-family: 'Prompt', sans-serif;
+      font-weight: 700;
+      flex-shrink: 0;
+      box-shadow: 0 4px 10px rgba(74,21,75,0.2);
+    }
+
+    .chapter-header-text h2 {
+      font-size: 21px;
+      color: var(--primary);
+    }
+
+    .chapter-header-text p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Subheadings */
+    h3.subtopic-title {
+      font-size: 17px;
+      color: var(--primary-dark);
+      margin: 28px 0 14px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h3.subtopic-title::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 18px;
+      background: var(--accent-gold);
+      border-radius: 2px;
+    }
+
+    p.lead-paragraph {
+      font-size: 15px;
+      color: #444;
+      margin-bottom: 16px;
+    }
+
+    /* Steps List */
+    .steps-container {
+      margin: 20px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      background: #faf8fb;
+      padding: 16px 20px;
+      border-radius: 12px;
+      border-left: 4px solid var(--primary);
+    }
+
+    .step-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .step-content h4 {
+      font-size: 15px;
+      color: var(--primary-dark);
+      margin-bottom: 4px;
+    }
+
+    .step-content p {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.6;
+    }
+
+    /* UI Mockup Simulation Box */
+    .ui-mockup-box {
+      background: #ffffff;
+      border: 1px solid #dcd3df;
+      border-radius: 12px;
+      margin: 24px 0;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+
+    .ui-mockup-header {
+      background: #2d1330;
+      color: #ffffff;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12.5px;
+      font-weight: 500;
+    }
+
+    .window-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .window-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot-red { background: #ff5f56; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green { background: #27c93f; }
+
+    .ui-mockup-body {
+      padding: 20px;
+      background: #fdfcfe;
+    }
+
+    /* Tables */
+    .custom-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 14px;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    .custom-table th {
+      background: var(--primary-subtle);
+      color: var(--primary-dark);
+      font-family: 'Prompt', sans-serif;
+      font-weight: 600;
+      text-align: left;
+      padding: 12px 16px;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .custom-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+      color: #444;
+      vertical-align: top;
+    }
+
+    .custom-table tr:hover td {
+      background: #faf8fb;
+    }
+
+    /* Callouts */
+    .callout {
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 20px 0;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      font-size: 14px;
+    }
+
+    .callout-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+      line-height: 1.2;
+    }
+
+    .callout-title {
+      font-weight: 700;
+      font-family: 'Prompt', sans-serif;
+      margin-bottom: 4px;
+    }
+
+    .callout.tip {
+      background: #e8f5e9;
+      border-left: 4px solid var(--accent-green);
+      color: #1b5e20;
+    }
+
+    .callout.caution {
+      background: #fff3e0;
+      border-left: 4px solid var(--accent-orange);
+      color: #b26a00;
+    }
+
+    .callout.important {
+      background: #f3e5f5;
+      border-left: 4px solid var(--primary);
+      color: var(--primary-dark);
+    }
+
+    .tag-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      font-weight: 600;
+      margin: 2px 0;
+    }
+
+    .tag-teal { background: #e0f2f1; color: #00695c; }
+    .tag-blue { background: #e3f2fd; color: #1565c0; }
+    .tag-purple { background: #f3e5f5; color: #6a1b9a; }
+    .tag-gold { background: #fff8e1; color: #b78103; }
+
+    /* Footer */
+    .doc-footer {
+      text-align: center;
+      padding: 40px 0 20px;
+      color: var(--text-muted);
+      font-size: 13px;
+      border-top: 1px solid var(--border-color);
+      margin-top: 40px;
+    }
+
+    /* Print media */
+    @media print {
+      .sidebar, .doc-hero-actions { display: none !important; }
+      .main-content { padding: 0 !important; max-width: 100% !important; }
+      body { background: #fff !important; font-size: 13px !important; }
+      .chapter-section { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand-box">
+      <div class="brand-icon">🛡️</div>
+      <div class="brand-title">คู่มือผู้ดูแลระบบ</div>
+      <div class="brand-subtitle">โรงเรียนทหารสื่อสาร กสท.ทบ.</div>
+    </div>
+
+    <div class="nav-group-title">โครงสร้างสารบัญทั้งหมด</div>
+    <a href="#overview" class="nav-link active"><span>📌</span> ภาพรวมระบบแอดมิน</a>
+    <a href="#chap2" class="nav-link"><span>👥</span> บทที่ 2 ข้อมูลนักเรียน & Excel <span class="badge-num">2.2</span></a>
+    <a href="#chap5" class="nav-link"><span>🎖️</span> บทที่ 5 จัดลำดับ & Tie-Break <span class="badge-num">5.1</span></a>
+    <a href="#chap6" class="nav-link"><span>🏢</span> บทที่ 6 เลือกลงหน่วย & โควตา <span class="badge-num">6.1</span></a>
+    <a href="#button-ref" class="nav-link"><span>⌨️</span> ตารางสรุปปุ่มฟังก์ชัน</a>
+    <a href="#faq" class="nav-link"><span>❓</span> ข้อควรระวัง & FAQ</a>
+
+    <div class="nav-group-title" style="margin-top: 24px;">เครื่องมือเอกสาร</div>
+    <a href="javascript:window.print()" class="nav-link"><span>🖨️</span> พิมพ์คู่มือ / บันทึก PDF</a>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Document Hero -->
+    <header class="doc-hero" id="overview">
+      <div class="doc-hero-meta">
+        <span class="doc-badge gold">คู่มือปฏิบัติการ (Operational Manual)</span>
+        <span class="doc-badge">ระบบแจ้งผลการเรียนและประเมินออนไลน์</span>
+        <span class="doc-badge">เวอร์ชัน 2.5</span>
+      </div>
+      <h1>คู่มือการปฏิบัติงานสำหรับผู้ดูแลระบบ (Admin Operation Manual)</h1>
+      <p>
+        เอกสารแนะนำขั้นตอนการควบคุมและบริหารจัดการระบบสำหรับผู้ดูแลระบบ (Admin & Super Admin) โรงเรียนทหารสื่อสาร กรมการทหารสื่อสาร
+        ครอบคลุมตั้งแต่การนำเข้าข้อมูลนักเรียน, การจัดลำดับคะแนน, การบริหารโควตาเลือกลงหน่วย ไปจนถึงการออกเอกสารสำเร็จการศึกษา
+      </p>
+      <div class="doc-hero-actions">
+        <button class="btn-action" onclick="window.print()">
+          <span>🖨️</span> สั่งพิมพ์ / บันทึกเป็น PDF
+        </button>
+        <a href="#chap5" class="btn-action" style="background: rgba(255,255,255,0.15); color: #fff; box-shadow: none;">
+          <span>⚡</span> ข้ามไปยังบทตัวอย่างสำคัญ
+        </a>
+      </div>
+    </header>
+
+    <!-- SECTION: ภาพรวมวงรอบการทำงาน -->
+    <section class="chapter-section">
+      <div class="chapter-header">
+        <div class="chapter-number">📌</div>
+        <div class="chapter-header-text">
+          <h2>วงรอบการปฏิบัติงานของแอดมินตามรุ่นการศึกษา (Admin Operational Lifecycle)</h2>
+          <p>ลำดับขั้นตอน 5 ช่วงเวลาหลักที่ผู้ดูแลระบบต้องดำเนินการในแต่ละรุ่น</p>
+        </div>
+      </div>
+
+      <p class="lead-paragraph">
+        เพื่อให้การบริหารข้อมูลในระบบดำเนินไปด้วยความถูกต้องสมบูรณ์ การทำงานของแอดมินจะแบ่งออกเป็น 5 ช่วงตามวงรอบจริงดังนี้:
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 20px 0;">
+        <div style="background: #e0f2f1; padding: 14px; border-radius: 10px; border-top: 4px solid #00897b;">
+          <div style="font-size: 11.5px; font-weight: 700; color: #00695c;">ช่วงที่ 1: ก่อนเปิดรุ่น</div>
+          <div style="font-weight: 600; font-size: 13.5px; color: #004d40; margin: 4px 0;">นำเข้าข้อมูล & จัดวิชา</div>
+          <p style="font-size: 12px; color: #555;">สร้างรุ่น นำเข้า Excel รายชื่อนักเรียน และผูกรายวิชาในหลักสูตร</p>
+        </div>
+        <div style="background: #f3e5f5; padding: 14px; border-radius: 10px; border-top: 4px solid #8e24aa;">
+          <div style="font-size: 11.5px; font-weight: 700; color: #7b1fa2;">ช่วงที่ 2: ระหว่างเรียน</div>
+          <div style="font-weight: 600; font-size: 13.5px; color: #4a148c; margin: 4px 0;">แบบประเมิน & โปรไฟล์</div>
+          <p style="font-size: 12px; color: #555;">เปิดระบบให้นักเรียนประเมินผู้สอน และอนุมัติคำขอแก้ไขยศ/ชื่อ</p>
+        </div>
+        <div style="background: #e3f2fd; padding: 14px; border-radius: 10px; border-top: 4px solid #1976d2;">
+          <div style="font-size: 11.5px; font-weight: 700; color: #1565c0;">ช่วงที่ 3: สิ้นสุดการสอบ</div>
+          <div style="font-weight: 600; font-size: 13.5px; color: #0d47a1; margin: 4px 0;">บันทึกคะแนน & จัดลำดับ</div>
+          <p style="font-size: 12px; color: #555;">ลงคะแนนดิบ เวลาฝึกอบรม ตรวจสอบการส่งคะแนน และรันสูตรจัดอันดับ</p>
+        </div>
+        <div style="background: #fff8e1; padding: 14px; border-radius: 10px; border-top: 4px solid #fbc02d;">
+          <div style="font-size: 11.5px; font-weight: 700; color: #b78103;">ช่วงที่ 4: การเลือกลงหน่วย</div>
+          <div style="font-weight: 600; font-size: 13.5px; color: #6d4c41; margin: 4px 0;">โควตา & บรรจุหน่วย</div>
+          <p style="font-size: 12px; color: #555;">(เฉพาะ นนส./ช่าง) เปิดจอ Fullscreen ให้นักเรียนเลือกลงหน่วยตามอันดับ</p>
+        </div>
+        <div style="background: #fbe9e7; padding: 14px; border-radius: 10px; border-top: 4px solid #d84315;">
+          <div style="font-size: 11.5px; font-weight: 700; color: #bf360c;">ช่วงที่ 5: สำเร็จการศึกษา</div>
+          <div style="font-weight: 600; font-size: 13.5px; color: #3e2723; margin: 4px 0;">เอกสาร & สรุป AI</div>
+          <p style="font-size: 12px; color: #555;">พิมพ์ทรานสคริปต์ A4 ออกใบประกาศ และให้ AI ร่างบทสรุปผลการอบรม</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHAPTER 2.2: การจัดการข้อมูลนักเรียนและการนำเข้า EXCEL -->
+    <section class="chapter-section" id="chap2">
+      <div class="chapter-header">
+        <div class="chapter-number">2</div>
+        <div class="chapter-header-text">
+          <h2>บทที่ 2.2 การจัดการข้อมูลนักเรียนและการนำเข้าด้วยไฟล์ Excel</h2>
+          <p>เมนู: ข้อมูลพื้นฐาน &gt; จัดการข้อมูลนักเรียน (URL: <code>/admin/addstudent</code>)</p>
+        </div>
+      </div>
+
+      <p class="lead-paragraph">
+        ระบบรองรับการลงทะเบียนนักเรียนเข้าสู่รุ่น 2 รูปแบบ คือ <strong>การกรอกข้อมูลทีละคน (Manual)</strong> สำหรับเพิ่มรายบุคคลภายหลัง
+        และ <strong>การนำเข้าด้วยไฟล์ Excel (.xlsx)</strong> ซึ่งเป็นแนวทางหลักที่สะดวกรวดเร็วสำหรับการเปิดรุ่นใหม่ทั้งรุ่น
+      </p>
+
+      <h3 class="subtopic-title">ขั้นตอนการนำเข้าไฟล์ Excel รายชื่อนักเรียนทั้งรุ่น</h3>
+
+      <div class="steps-container">
+        <div class="step-item">
+          <div class="step-badge">1</div>
+          <div class="step-content">
+            <h4>เลือกหลักสูตรและรุ่นเป้าหมาย</h4>
+            <p>ที่แถบด้านบนของหน้าจอ ให้เลือก <strong>"หลักสูตร"</strong> และ <strong>"รุ่นการศึกษา"</strong> ที่ต้องการนำเข้ารายชื่อให้ถูกต้อง</p>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">2</div>
+          <div class="step-content">
+            <h4>สลับไปยัง "แท็บ 3: นำเข้าด้วยไฟล์"</h4>
+            <p>คลิกที่แท็บ <strong>"นำเข้าด้วยไฟล์"</strong> จะพบกล่องอัปโหลดไฟล์พร้อมลิงก์ดาวน์โหลดไฟล์ตัวอย่าง (Template)</p>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">3</div>
+          <div class="step-content">
+            <h4>ตรวจสอบโครงสร้างคอลัมน์ในไฟล์ Excel (.xlsx)</h4>
+            <p>เพื่อให้ระบบแปลงข้อมูลได้อย่างถูกต้อง หัวตารางในไฟล์ Excel ต้องจัดเรียงตามมาตรฐานดังตารางด้านล่างนี้</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Excel Columns Table -->
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th style="width: 15%;">ชื่อคอลัมน์ Excel</th>
+            <th style="width: 25%;">ตัวอย่างข้อมูล</th>
+            <th style="width: 15%;">ชนิดข้อมูล</th>
+            <th>คำอธิบายและการตรวจสอบ (Validation)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>student_code</strong></td>
+            <td><code>67001</code> หรือ <code>01</code></td>
+            <td><span class="tag-badge tag-teal">Text (ข้อความ)</span></td>
+            <td>เลขประจำตัวนักเรียน หรือลำดับที่นั่งเรียน (ห้ามซ้ำกันในรุ่นเดียวกัน)</td>
+          </tr>
+          <tr>
+            <td><strong>rank_name</strong></td>
+            <td><code>ส.อ.</code>, <code>จ.ส.ต.</code>, <code>นาย</code></td>
+            <td><span class="tag-badge tag-teal">Text</span></td>
+            <td>ยศหรือคำนำหน้าชื่อทางการทหาร</td>
+          </tr>
+          <tr>
+            <td><strong>first_name</strong></td>
+            <td><code>สมชาย</code></td>
+            <td><span class="tag-badge tag-teal">Text</span></td>
+            <td>ชื่อจริง (ห้ามเว้นว่าง)</td>
+          </tr>
+          <tr>
+            <td><strong>last_name</strong></td>
+            <td><code>รักชาติ</code></td>
+            <td><span class="tag-badge tag-teal">Text</span></td>
+            <td>นามสกุลจริง (ห้ามเว้นว่าง)</td>
+          </tr>
+          <tr>
+            <td><strong>id_card</strong></td>
+            <td><code>1409900123456</code></td>
+            <td><span class="tag-badge tag-teal">Text (13 หลัก)</span></td>
+            <td>เลขประจำตัวประชาชน สำหรับใช้เชื่อมโยงการล็อกอิน Google Sign-In</td>
+          </tr>
+          <tr>
+            <td><strong>original_affiliation</strong></td>
+            <td><code>ส.พัน.๑</code>, <code>กสท.ทบ.</code></td>
+            <td><span class="tag-badge tag-blue">Text (ตัวเลือก)</span></td>
+            <td>สังกัดเดิมของนักเรียนก่อนเข้ารับการศึกษา</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- UI Mockup Box -->
+      <div class="ui-mockup-box">
+        <div class="ui-mockup-header">
+          <div class="window-dots">
+            <span class="window-dot dot-red"></span>
+            <span class="window-dot dot-yellow"></span>
+            <span class="window-dot dot-green"></span>
+          </div>
+          <span>หน้าจอจำลอง: ระบบนำเข้าและตรวจสอบรายชื่อนักเรียน (Excel Import Preview)</span>
+        </div>
+        <div class="ui-mockup-body">
+          <div style="background: #eef2ff; border: 1px dashed #6366f1; padding: 20px; text-align: center; border-radius: 8px;">
+            <div style="font-size: 28px; margin-bottom: 6px;">📂</div>
+            <strong style="color: #4338ca;">ลากไฟล์ Excel (.xlsx) มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์</strong>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">รองรับเฉพาะไฟล์ .xlsx ขนาดไม่เกิน 15 MB</div>
+          </div>
+          <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 13px; color: #166534; font-weight: 600;">✓ พบข้อมูลนักเรียนในไฟล์ทั้งหมด 85 นาย (พร้อมนำเข้า)</span>
+            <button style="background: #059669; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-weight: 600; cursor: pointer;">
+              ยืนยันการนำเข้าข้อมูลสู่ระบบ
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout caution">
+        <div class="callout-icon">⚠️</div>
+        <div>
+          <div class="callout-title">ข้อควรระวังในการเตรียมไฟล์ Excel</div>
+          ฟอร์แมตของคอลัมน์รหัสประจำตัว (student_code) และเลขบัตรประชาชน (id_card) ต้องกำหนดเป็นประเภท <strong>"ข้อความ (Text)"</strong> 
+          เสมอ หากตั้งเป็นตัวเลข โปรแกรม Excel อาจตัดเลข 0 ด้านหน้าออก ซึ่งจะส่งผลให้นักเรียนล็อกอินเข้าสู่ระบบไม่ได้
+        </div>
+      </div>
+    </section>
+
+    <!-- CHAPTER 5: การจัดลำดับผลการเรียนและ TIE-BREAKING -->
+    <section class="chapter-section" id="chap5">
+      <div class="chapter-header">
+        <div class="chapter-number">5</div>
+        <div class="chapter-header-text">
+          <h2>บทที่ 5 การจัดลำดับผลการเรียนและระบบปลดล็อคคะแนนเท่ากัน (Student Rankings)</h2>
+          <p>เมนู: คะแนนและผลการเรียน &gt; จัดลำดับผลการเรียน (URL: <code>/admin/ranking</code>)</p>
+        </div>
+      </div>
+
+      <p class="lead-paragraph">
+        ระบบจัดลำดับผลการเรียนได้รับการพัฒนาขึ้นเพื่อรองรับกฎเกณฑ์ทางทหารอย่างเคร่งครัด
+        โดยจะประมวลผลอันดับที่ 1 ถึง N จากเกรดเฉลี่ยสะสม (GPA) และคะแนนรวม
+        พร้อมระบบพิเศษ <strong>"Tie-Breaking Panel"</strong> สำหรับแก้ปัญหาคะแนนซ้ำกัน โดยเฉพาะกลุ่มผู้มีสิทธิ์ชิงโล่เกียรตินิยม อันดับ 1, 2 และ 3
+      </p>
+
+      <h3 class="subtopic-title">ขั้นตอนการจัดลำดับและการพิจารณา Tie-Breaking</h3>
+
+      <div class="steps-container">
+        <div class="step-item">
+          <div class="step-badge">1</div>
+          <div class="step-content">
+            <h4>เลือกรุ่นการศึกษาที่ปิดการบันทึกคะแนนแล้ว</h4>
+            <p>เลือกโครงสร้างหลักสูตรและรุ่นที่ต้องการคำนวณอันดับ ระบบจะดึงเกรดเฉลี่ยและคะแนนรวมของนักเรียนทุกคนขึ้นมาแสดงผล</p>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">2</div>
+          <div class="step-content">
+            <h4>ตรวจสอบ "กล่องเด่นพิเศษ: ผู้ครองโล่รางวัลเกียรตินิยม 1, 2, 3 (กรอบทอง)"</h4>
+            <p>ด้านบนของหน้าจอจะสรุปรายชื่อ 3 อันดับแรกที่มีสิทธิ์รับโล่รางวัลเกียรตินิยม พร้อมเกรดเฉลี่ยและสถิติภาพรวม</p>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">3</div>
+          <div class="step-content">
+            <h4>การปลดล็อคลำดับซ้ำด้วย "แผงตั้งค่าเลือกวิชาสำหรับ Tie-Breaking"</h4>
+            <p>
+              หากพบว่านักเรียนอันดับต้นๆ มีเกรดเฉลี่ยและคะแนนรวมเท่ากัน ระบบจะแสดงกล่องแจ้งเตือนสีส้ม
+              ให้แอดมินคลิกที่ <strong>"แผง Tie-Breaking"</strong> แล้วติ๊กเลือก <em>"รายวิชาหลักที่มีน้ำหนักสำคัญ"</em> (เช่น วิชาภาคทฤษฎีเฉพาะเหล่า)
+              จากนั้นกดปุ่ม <strong>"คำนวณอันดับใหม่"</strong> ระบบจะนำคะแนนเฉพาะวิชานั้นมาชี้ขาดอันดับทันที
+            </p>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">4</div>
+          <div class="step-content">
+            <h4>การปรับลำดับด้วยตนเอง (Manual Rank Override)</h4>
+            <p>
+              กรณีที่คณะกรรมการมีมติเป็นเอกฉันท์ในการจัดลำดับ แอดมินสามารถใช้ปุ่มลูกศร <strong>⬆️ (เลื่อนขึ้น)</strong> หรือ <strong>⬇️ (เลื่อนลง)</strong>
+              ที่แถวของนักเรียนคนนั้นเพื่อสลับอันดับได้โดยตรง โดยระบบจะขึ้นป้ายเตือนกำกับว่า <em>"มีการปรับด้วยมือ"</em>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- UI Mockup Tie-Breaking -->
+      <div class="ui-mockup-box">
+        <div class="ui-mockup-header">
+          <div class="window-dots">
+            <span class="window-dot dot-red"></span>
+            <span class="window-dot dot-yellow"></span>
+            <span class="window-dot dot-green"></span>
+          </div>
+          <span>หน้าจอจำลอง: แผงเลือกวิชาชี้ขาดกรณีคะแนนเท่ากัน (Tie-Breaking Controls)</span>
+        </div>
+        <div class="ui-mockup-body">
+          <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px;">
+            <div style="font-weight: 700; color: #1e293b; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+              <span style="color: #6366f1;">🎯</span> เลือกรายวิชาสำหรับใช้เปรียบเทียบชี้ขาด (เกรดเท่ากัน):
+            </div>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+              <label style="background: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox" checked> <span>วิทยุสื่อสารทางยุทธวิธี (M01)</span>
+              </label>
+              <label style="background: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox"> <span>ระบบสายและโครงข่าย (M02)</span>
+              </label>
+              <label style="background: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox"> <span>สงครามอิเล็กทรอนิกส์ (M03)</span>
+              </label>
+            </div>
+            <div style="margin-top: 14px; text-align: right;">
+              <button style="background: #4a154b; color: #fff; border: none; padding: 7px 18px; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                🔄 รันสูตรคำนวณอันดับใหม่
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div>
+          <div class="callout-title">เทคนิคการส่งออกผลการจัดอันดับ</div>
+          เมื่อคำนวณอันดับเสร็จสมบูรณ์ สามารถคลิกปุ่ม <strong>"ส่งออก Excel"</strong> หรือ <strong>"พิมพ์รายงานอันดับ"</strong> 
+          ที่มุมขวาบนของตาราง เพื่อนำเอกสารไปเสนอผู้บังคับบัญชาลงนามรับรองผลได้ทันที
+        </div>
+      </div>
+    </section>
+
+    <!-- CHAPTER 6: ระบบการเลือกลงหน่วยและโควตา -->
+    <section class="chapter-section" id="chap6">
+      <div class="chapter-header">
+        <div class="chapter-number">6</div>
+        <div class="chapter-header-text">
+          <h2>บทที่ 6 ระบบการเลือกลงหน่วยและการจัดสรรโควตา (Unit Selection)</h2>
+          <p>เมนู: คะแนนและผลการเรียน &gt; เลือกลงหน่วย (URL: <code>/admin/unit-selection</code>)</p>
+        </div>
+      </div>
+
+      <p class="lead-paragraph">
+        ระบบเลือกลงหน่วยถูกออกแบบขึ้นเป็นพิเศษสำหรับหลักสูตร <strong>นนส.ทบ.</strong> และ <strong>ช่างอิเล็กทรอนิกส์</strong>
+        เพื่อให้กระบวนการเลือกลงหน่วยบรรจุหลังสำเร็จการศึกษาเป็นไปอย่างโปร่งใส ยุติธรรม และตรวจสอบได้ตามลำดับคะแนนอันดับ 1 ถึง N
+      </p>
+
+      <div class="callout important">
+        <div class="callout-icon">📌</div>
+        <div>
+          <div class="callout-title">สูตรการคิดคะแนนสำหรับเลือกลงหน่วย</div>
+          คะแนนรวมสำหรับการจัดอันดับเลือกลงหน่วยคิดจากสูตร: <br>
+          <code>คะแนนสุทธิ 100% = คะแนนวิชาการ (80%) + คะแนนความประพฤติ (20%)</code>
+        </div>
+      </div>
+
+      <h3 class="subtopic-title">ขั้นตอนการบริหารโควตาและการบันทึกผลเลือกลงหน่วย</h3>
+
+      <div class="steps-container">
+        <div class="step-item">
+          <div class="step-badge">1</div>
+          <div class="step-content">
+            <h4>กำหนดโควตาหน่วยใน "แผงกำหนดสิทธิ์เลือกลงหน่วย (Quota Allocation Panel)"</h4>
+            <p>
+              ก่อนเริ่มการประชุมเลือกลงหน่วย แอดมินต้องเพิ่มรายชื่อหน่วยทหารที่เปิดรับ (เช่น ส.พัน.๑, ศสส., พล.ร.๙) 
+              และระบุจำนวนอัตราที่เปิดรับ (Total Quota) ให้ครบตามยอดนักเรียนทั้งหมด
+            </p>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">2</div>
+          <div class="step-content">
+            <h4>เปิดใช้งาน "โหมดเต็มหน้าจอ (Fullscreen Mode)" สำหรับฉายโปรเจกเตอร์</h4>
+            <p>
+              คลิกปุ่ม <strong>"ดูแบบเต็มจอ (Fullscreen)"</strong> หน้าจอจะซ่อนเมนูที่ไม่จำเป็น ขยายตารางรายชื่อและแถบโควตาให้เห็นชัดเจนจากระยะไกล
+              เหมาะสำหรับการฉายขึ้นจอประชุมต่อหน้าคณะกรรมการและนักเรียนทั้งรุ่น
+            </p>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">3</div>
+          <div class="step-content">
+            <h4>บันทึกผลการเลือกลงหน่วยเรียงตามลำดับ 1 ถึง N</h4>
+            <p>
+              เรียกนักเรียนตามลำดับอันดับที่ 1 ลงมา เมื่อนักเรียนแจ้งความประสงค์ ให้แอดมินพิมพ์ชื่อหน่วยในช่อง <strong>"เลือกลงหน่วย"</strong>
+              ระบบจะมีระบบแนะนำคำอัตโนมัติ (Autocomplete) ช่วยค้นหาชื่อหน่วยอย่างรวดเร็ว
+            </p>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">4</div>
+          <div class="step-content">
+            <h4>ระบบตัดยอดโควตาคงเหลือแบบ Real-time</h4>
+            <p>
+              เมื่อมีการเลือกหน่วยใด กล่อง <strong>"Units Quota Tracker"</strong> ด้านบนจะหักลบจำนวนคงเหลือทันที 
+              หากหน่วยใดโควตาเต็มแล้ว ระบบจะล็อกไม่ให้เลือกหน่วยนั้นซ้ำได้อีก
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-icon">🧭</div>
+        <div>
+          <div class="callout-title">การใช้งานแถบเลื่อนด่วน (Quick Navigation Toolbar)</div>
+          ตารางเลือกลงหน่วยมีคอลัมน์คะแนนรายวิชาจำนวนมาก แอดมินสามารถคลิกปุ่มลัด <strong>"« ซ้ายสุด"</strong>, 
+          <strong>"คะแนนรวม"</strong> หรือ <strong>"ช่องเลือกลงหน่วย »"</strong> บนแถบ Toolbar เพื่อกระโดดไปยังคอลัมน์ที่ต้องการได้ทันทีโดยไม่ต้องลาก Scrollbar ด้วยตนเอง
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: ตารางสรุปปุ่มฟังก์ชันการทำงาน -->
+    <section class="chapter-section" id="button-ref">
+      <div class="chapter-header">
+        <div class="chapter-number">⌨️</div>
+        <div class="chapter-header-text">
+          <h2>ตารางอ้างอิงปุ่มคำสั่งสำคัญของผู้ดูแลระบบ (Button Reference Sheet)</h2>
+          <p>รวมฟังก์ชันและปุ่มลัดสำคัญในทุกหน้าจอของระบบแอดมิน</p>
+        </div>
+      </div>
+
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th style="width: 25%;">ชื่อปุ่ม / ฟังก์ชัน</th>
+            <th style="width: 25%;">หน้าจอที่พบ</th>
+            <th>ผลลัพธ์และคำแนะนำในการใช้งาน</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>คำนวณอันดับใหม่</strong></td>
+            <td><code>/admin/ranking</code></td>
+            <td>ประมวลผลจัดอันดับ 1 ถึง N ใหม่ตามเงื่อนไขวิชา Tie-Breaking ที่ติ๊กเลือกไว้</td>
+          </tr>
+          <tr>
+            <td><strong>เปิดโหมดเต็มจอ</strong></td>
+            <td><code>/admin/unit-selection</code></td>
+            <td>ขยายตารางเลือกลงหน่วยเต็มหน้าจอ ตัด Sidebar ออก เหมาะสำหรับฉายขึ้นโปรเจกเตอร์</td>
+          </tr>
+          <tr>
+            <td><strong>พิมพ์ทั้งรุ่น (Batch Print)</strong></td>
+            <td><code>/admin/transcript</code></td>
+            <td>พิมพ์ใบทรานสคริปต์ขนาด A4 ของนักเรียนทุกคนในรุ่นต่อเนื่องในคลิกเดียว</td>
+          </tr>
+          <tr>
+            <td><strong>ให้ AI วิเคราะห์อัตโนมัติ</strong></td>
+            <td><code>/admin/training-summary</code></td>
+            <td>ส่งสถิติคะแนนจริงของรุ่นไปยัง Gemini AI เพื่อร่างบทวิเคราะห์สรุปผลการฝึกอบรม</td>
+          </tr>
+          <tr>
+            <td><strong>อนุมัติ (Approve)</strong></td>
+            <td><code>/admin/profile-approvals</code></td>
+            <td>ยืนยันการเปลี่ยนยศ/ชื่อของนักเรียน ข้อมูลจะถูกอัปเดตลงในฐานข้อมูลทันที</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- SECTION: ข้อควรระวังและ FAQ -->
+    <section class="chapter-section" id="faq">
+      <div class="chapter-header">
+        <div class="chapter-number">❓</div>
+        <div class="chapter-header-text">
+          <h2>ข้อควรระวังและคำถามที่พบบ่อยสำหรับแอดมิน (Admin FAQ)</h2>
+          <p>แนวทางแก้ไขปัญหาที่พบบ่อยในการปฏิบัติงาน</p>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="background: #faf8fb; padding: 18px; border-radius: 10px; border-left: 4px solid var(--primary);">
+          <strong style="color: var(--primary); font-size: 15px;">ถาม: นำเข้าไฟล์ Excel แล้วระบบแจ้งว่า Error หรือข้อมูลขึ้นไม่ครบ?</strong>
+          <p style="margin-top: 6px; font-size: 14px; color: #444;">
+            ตอบ: ให้ตรวจสอบว่าในไฟล์ Excel มีการผสานเซลล์ (Merge Cells) หรือไม่ แนะนำให้ยกเลิกการ Merge Cells ทั้งหมด และตรวจสอบว่าชื่อหัวตารางตรงตามตัวอย่างใน Template หรือไม่
+          </p>
+        </div>
+
+        <div style="background: #faf8fb; padding: 18px; border-radius: 10px; border-left: 4px solid var(--primary);">
+          <strong style="color: var(--primary); font-size: 15px;">ถาม: นักเรียนแจ้งว่ามองไม่เห็นคะแนนสอบในหน้าโปรไฟล์ของตนเอง?</strong>
+          <p style="margin-top: 6px; font-size: 14px; color: #444;">
+            ตอบ: ระบบถูกออกแบบมาให้แสดงคะแนนเฉพาะวิชาที่นักเรียน <strong>ทำแบบประเมินผู้สอนเรียบร้อยแล้วเท่านั้น</strong> หากนักเรียนยังไม่ได้ประเมิน ระบบจะขึ้นปุ่มเตือนสีส้มให้นักเรียนกดประเมินก่อน เมื่อประเมินเสร็จแล้วคะแนนจะปรากฏทันที
+          </p>
+        </div>
+
+        <div style="background: #faf8fb; padding: 18px; border-radius: 10px; border-left: 4px solid var(--primary);">
+          <strong style="color: var(--primary); font-size: 15px;">ถาม: ต้องการแก้ไขโควตาหน่วยหลังเริ่มการเลือกลงหน่วยไปแล้ว ทำได้หรือไม่?</strong>
+          <p style="margin-top: 6px; font-size: 14px; color: #444;">
+            ตอบ: ทำได้ แต่จำนวนโควตาใหม่จะต้อง <strong>ไม่น้อยกว่า</strong> จำนวนนักเรียนที่ได้เลือกหน่วยนั้นไปแล้ว เพื่อป้องกันยอดโควตาติดลบ
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="doc-footer">
+      <div>โรงเรียนทหารสื่อสาร กรมการทหารสื่อสาร (กสท.ทบ.)</div>
+      <div style="margin-top: 4px;">ระบบประเมินและแจ้งผลการเรียนออนไลน์ — แผนกเทคโนโลยีสารสนเทศและการฝึกอบรม</div>
+    </footer>
+
+  </main>
+</div>
+
+</body>
+</html>

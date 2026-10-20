@@ -70,31 +70,99 @@ export class Addstudent implements OnInit {
     const newForms: Student[] = [];
 
     for (let row of rows) {
-      if (!row.trim()) continue;
-      
-      // Excel/Google Sheets copy puts tabs between cells
-      const columns = row.split('\t');
-      
-      // Expected format based on user's Excel:
-      // columns[0] = รหัสผ่าน (Password)
-      // columns[1] = ยศ - ชื่อ - สกุล
-      // columns[2] = สังกัด (Affiliation)
-      
-      if (columns.length >= 2) {
-        const newStudent = this.getEmptyForm();
-        
-        // 1. รหัสผ่าน
-        newStudent.password = columns[0]?.trim() || ''; 
-        
-        // 2. แยก ยศ ชื่อ สกุล
-        const fullNameStr = columns[1] || '';
-        // ตัดช่องว่างซ้ำซ้อนออกแล้วแยกคำด้วยช่องว่าง
+      const trimmedRow = row.trim();
+      if (!trimmedRow) continue;
+
+      // ข้ามบรรทัดหัวตาราง (ถ้าผู้ใช้เผลอก๊อปปี้หัวตารางมาด้วย)
+      if (
+        (trimmedRow.includes('ชื่อ') && (trimmedRow.includes('นามสกุล') || trimmedRow.includes('สกุล'))) ||
+        (trimmedRow.includes('ยศ') && trimmedRow.includes('ชื่อ'))
+      ) {
+        continue;
+      }
+
+      // รองรับทั้งคั่นด้วย Tab (จาก Excel), comma หรือช่องว่างหลายช่อง
+      let columns: string[] = [];
+      if (trimmedRow.includes('\t')) {
+        columns = trimmedRow.split('\t').map(c => c?.trim() || '');
+      } else if (trimmedRow.includes(',')) {
+        columns = trimmedRow.split(',').map(c => c?.trim() || '');
+      } else {
+        columns = trimmedRow.split(/\s{2,}/).map(c => c?.trim() || '');
+      }
+
+      if (columns.length === 0 || !columns[0]) continue;
+
+      const newStudent = this.getEmptyForm();
+      const hasThai = (str: string) => /[\u0E00-\u0E7F]/.test(str);
+      const isEmail = (s: string) => s.includes('@');
+      const isPhone = (s: string) => /^[0-9\-\+\s]{8,15}$/.test(s.replace(/[\s\-]/g, ''));
+
+      let fullNameStr = '';
+      let affiliationStr = '';
+      let phoneStr = '';
+      let emailStr = '';
+
+      const assignPhoneAndEmail = (valA: string, valB: string) => {
+        if (!valA && !valB) return;
+        if (isEmail(valA)) {
+          emailStr = valA;
+          phoneStr = valB;
+        } else if (isEmail(valB)) {
+          emailStr = valB;
+          phoneStr = valA;
+        } else if (isPhone(valA)) {
+          phoneStr = valA;
+          emailStr = valB;
+        } else if (isPhone(valB)) {
+          phoneStr = valB;
+          emailStr = valA;
+        } else {
+          // ถ้าไม่มี @ และไม่ใช่ตัวเลขชัดเจน ให้จัดตามลำดับฟอร์ม: [เบอร์โทรศัพท์, อีเมล]
+          phoneStr = valA;
+          emailStr = valB;
+        }
+      };
+
+      // ตรวจสอบกรณีฟอร์แมตเดิมที่มีรหัสผ่านนำหน้า: [0]=รหัสผ่าน, [1]=ยศ-ชื่อ-สกุล, [2]=สังกัด, [3]=เบอร์โทร/อีเมล, [4]=อีเมล/เบอร์โทร
+      const isOldPasswordFormat = columns.length >= 4 && !hasThai(columns[0]) && hasThai(columns[1]);
+
+      if (isOldPasswordFormat) {
+        fullNameStr = columns[1];
+        affiliationStr = columns[2] || '';
+        assignPhoneAndEmail(columns[3] || '', columns[4] || '');
+      } else if (columns.length >= 5 && hasThai(columns[1]) && hasThai(columns[2])) {
+        // รูปแบบ 6 หรือ 5 คอลัมน์ที่สัมพันธ์กับฟอร์ม:
+        // [0]=ยศ, [1]=ชื่อ, [2]=นามสกุล, [3]=สังกัด, [4]=เบอร์โทรศัพท์, [5]=อีเมล
+        newStudent.rank = columns[0];
+        newStudent.firstName = columns[1];
+        newStudent.lastName = columns[2];
+        affiliationStr = columns[3] || '';
+        assignPhoneAndEmail(columns[4] || '', columns[5] || '');
+      } else if (columns.length === 4 && hasThai(columns[1]) && hasThai(columns[2])) {
+        // [0]=ยศ, [1]=ชื่อ, [2]=นามสกุล, [3]=สังกัด
+        newStudent.rank = columns[0];
+        newStudent.firstName = columns[1];
+        newStudent.lastName = columns[2];
+        affiliationStr = columns[3] || '';
+      } else if (columns.length === 3 && hasThai(columns[0]) && hasThai(columns[1]) && hasThai(columns[2])) {
+        // [0]=ยศ, [1]=ชื่อ, [2]=นามสกุล
+        newStudent.rank = columns[0];
+        newStudent.firstName = columns[1];
+        newStudent.lastName = columns[2];
+      } else {
+        // รูปแบบรวมชื่อ: [0]=ยศ-ชื่อ-นามสกุล, [1]=สังกัด, [2]=เบอร์โทร, [3]=อีเมล
+        fullNameStr = columns[0];
+        affiliationStr = columns[1] || '';
+        assignPhoneAndEmail(columns[2] || '', columns[3] || '');
+      }
+
+      // แยก ยศ ชื่อ สกุล ถ้ายังไม่ได้แยก
+      if (fullNameStr && !newStudent.firstName) {
         const nameParts = fullNameStr.trim().split(/\s+/);
-        
         if (nameParts.length >= 3) {
           newStudent.rank = nameParts[0];
           newStudent.firstName = nameParts[1];
-          // นามสกุลคือส่วนที่เหลือทั้งหมดมาต่อกัน
           newStudent.lastName = nameParts.slice(2).join(' ');
         } else if (nameParts.length === 2) {
           newStudent.rank = '';
@@ -103,20 +171,21 @@ export class Addstudent implements OnInit {
         } else if (nameParts.length === 1) {
           newStudent.firstName = nameParts[0];
         }
-        
-        // 3. สังกัด
-        newStudent.affiliation = columns[2]?.trim() || '';
-        
-        // 4. อีเมล
-        newStudent.email = columns[3]?.trim() || '';
+      }
 
-        // 5. เบอร์โทรศัพท์
-        newStudent.phone = columns[4]?.trim() || '';
-        
-        // เพิ่มข้อมูลลงใน array ถ้ามีชื่อ
-        if (newStudent.firstName) {
-          newForms.push(newStudent);
-        }
+      // ถ้าสังกัดมี '@' แสดงว่าเป็นอีเมล
+      if (affiliationStr && isEmail(affiliationStr) && !emailStr) {
+        emailStr = affiliationStr;
+        affiliationStr = '';
+      }
+
+      newStudent.affiliation = affiliationStr;
+      newStudent.phone = phoneStr;
+      newStudent.email = emailStr;
+      newStudent.password = ''; // ไม่ต้องใช้รหัสผ่าน
+
+      if (newStudent.firstName) {
+        newForms.push(newStudent);
       }
     }
 
@@ -130,11 +199,11 @@ export class Addstudent implements OnInit {
       this.showPasteArea = false;
       Swal.fire({
         icon: 'success',
-        title: 'สำเร็จ',
-        text: `ดึงข้อมูลสำเร็จ ${newForms.length} รายการ กรุณาตรวจสอบข้อมูลและกดบันทึก`
+        title: 'นำเข้าสู่ฟอร์มสำเร็จ',
+        text: `ดึงข้อมูลมาใส่ในฟอร์มแล้ว ${newForms.length} คน สามารถตรวจสอบ/แก้ไขรายละเอียดแต่ละคน และกด "บันทึกข้อมูลนักเรียน" ได้เลย`
       });
     } else {
-      Swal.fire('ผิดพลาด', 'รูปแบบข้อมูลไม่ถูกต้อง กรุณาก๊อปปี้จากตาราง (รหัสผ่าน | ยศ-ชื่อ-สกุล | สังกัด | อีเมล | เบอร์โทรศัพท์)', 'error');
+      Swal.fire('รูปแบบข้อมูลไม่ถูกต้อง', 'กรุณาคัดลอกจาก Excel หรือตาราง (ยศ | ชื่อ | นามสกุล | สังกัด | เบอร์โทรศัพท์ | อีเมล)', 'error');
     }
   }
 
@@ -440,7 +509,7 @@ export class Addstudent implements OnInit {
     worksheet.properties.defaultRowHeight = 25;
 
     // สร้าง Header
-    const headers = ['ลำดับ', 'รหัสผ่าน', 'ยศ', 'ชื่อ', 'นามสกุล', 'สังกัด', 'อีเมล', 'เบอร์โทรศัพท์'];
+    const headers = ['ลำดับ', 'ยศ', 'ชื่อ', 'นามสกุล', 'สังกัด', 'อีเมล', 'เบอร์โทรศัพท์'];
     const headerRow = worksheet.addRow(headers);
     
     headerRow.eachCell((cell) => {
@@ -454,7 +523,6 @@ export class Addstudent implements OnInit {
     this.students.forEach((student, index) => {
       const rowData = [
         student.studentCode,
-        student.password || '1234', // default ถ้าไม่มี
         student.rank,
         student.firstName,
         student.lastName,
@@ -466,7 +534,7 @@ export class Addstudent implements OnInit {
       const excelRow = worksheet.addRow(rowData);
       excelRow.eachCell((cell, colNumber) => {
         cell.font = { name: 'Sarabun', size: 11 };
-        cell.alignment = { vertical: 'middle', horizontal: colNumber === 4 || colNumber === 5 || colNumber === 6 ? 'left' : 'center' };
+        cell.alignment = { vertical: 'middle', horizontal: colNumber === 3 || colNumber === 4 || colNumber === 5 ? 'left' : 'center' };
         cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
       });
     });
@@ -475,10 +543,11 @@ export class Addstudent implements OnInit {
     worksheet.columns.forEach(column => {
       column.width = 15;
     });
-    worksheet.getColumn(4).width = 25; // ชื่อ
-    worksheet.getColumn(5).width = 25; // นามสกุล
-    worksheet.getColumn(6).width = 20; // สังกัด
-    worksheet.getColumn(7).width = 25; // อีเมล
+    worksheet.getColumn(3).width = 25; // ชื่อ
+    worksheet.getColumn(4).width = 25; // นามสกุล
+    worksheet.getColumn(5).width = 20; // สังกัด
+    worksheet.getColumn(6).width = 25; // อีเมล
+    worksheet.getColumn(7).width = 18; // เบอร์โทร
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });

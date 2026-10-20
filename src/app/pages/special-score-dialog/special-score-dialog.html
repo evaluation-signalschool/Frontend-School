@@ -30,13 +30,13 @@
               {{ student.name }}
             </td>
             <td class="text-center">
-              <input type="number" class="score-input" [(ngModel)]="student.trainingTimeScore" (input)="validateScore(student, 'trainingTimeScore', 100, $event)" max="100" min="0" placeholder="-">
+              <input type="text" inputmode="decimal" class="score-input" [value]="student.trainingTimeScore !== null && student.trainingTimeScore !== undefined ? student.trainingTimeScore : ''" (input)="validateScore(student, 'trainingTimeScore', 100, $event)" placeholder="-" autocomplete="off">
             </td>
             <td class="text-center">
-              <input type="number" class="score-input" [(ngModel)]="student.examTimeScore" (input)="validateScore(student, 'examTimeScore', 100, $event)" max="100" min="0" placeholder="-">
+              <input type="text" inputmode="decimal" class="score-input" [value]="student.examTimeScore !== null && student.examTimeScore !== undefined ? student.examTimeScore : ''" (input)="validateScore(student, 'examTimeScore', 100, $event)" placeholder="-" autocomplete="off">
             </td>
             <td class="text-center">
-              <input type="number" class="score-input" [(ngModel)]="student.behaviorScore" (input)="validateScore(student, 'behaviorScore', 200, $event)" max="200" min="0" placeholder="-">
+              <input type="text" inputmode="decimal" class="score-input" [value]="student.behaviorScore !== null && student.behaviorScore !== undefined ? student.behaviorScore : ''" (input)="validateScore(student, 'behaviorScore', 200, $event)" placeholder="-" autocomplete="off">
             </td>
           </tr>
           <tr *ngIf="students.length === 0">

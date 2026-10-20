@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, NgZone, HostListener } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef, NgZone, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,6 +17,7 @@ import Swal from 'sweetalert2';
 import { finalize } from 'rxjs/operators';
 import * as ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import { BehaviorScoreDialog } from '../behavior-score-dialog/behavior-score-dialog';
 
 interface Course {
   id: number;
@@ -78,7 +79,7 @@ export interface FailingReviewStudent {
   templateUrl: './score-management.html',
   styleUrl: './score-management.scss',
 })
-export class ScoreManagement implements OnInit {
+export class ScoreManagement implements OnInit, AfterViewInit, OnDestroy {
   courses: Course[] = [];
   courseGroups: CourseGroup[] = []; // เก็บข้อมูลหลักสูตรดิบจาก API พร้อม batches
   batches: Batch[] = [];
@@ -105,6 +106,9 @@ export class ScoreManagement implements OnInit {
   showScrollTopBtn: boolean = false;
   showScrollBottomBtn: boolean = false;
 
+  private scrollContainer: HTMLElement | null = null;
+  private scrollHandler = () => this.checkScroll();
+
   // Modal ตรวจสอบและแก้ไขคะแนนที่ไม่ถึงเกณฑ์ 70%
   showFailingReviewModal: boolean = false;
   failingReviewStudents: FailingReviewStudent[] = [];
@@ -123,6 +127,24 @@ export class ScoreManagement implements OnInit {
 
   ngOnInit(): void {
     this.loadCourses();
+  }
+
+  ngAfterViewInit(): void {
+    this.setupScrollListener();
+  }
+
+  ngOnDestroy(): void {
+    if (this.scrollContainer) {
+      this.scrollContainer.removeEventListener('scroll', this.scrollHandler);
+    }
+  }
+
+  private setupScrollListener(): void {
+    this.scrollContainer = document.querySelector('.admin-main-content') as HTMLElement;
+    if (this.scrollContainer) {
+      this.scrollContainer.addEventListener('scroll', this.scrollHandler, { passive: true });
+    }
+    setTimeout(() => this.checkScroll(), 250);
   }
 
   goBack() {
@@ -201,7 +223,7 @@ export class ScoreManagement implements OnInit {
           if (res && res.data && res.data.length > 0) {
             const rawSubjects: Subject[] = res.data;
 
-            // 🌟 จัดเรียงตามกลุ่มวิชา 1 ไปจนสุด (M01 -> M11 -> MN -> S -> P)
+            // จัดเรียงตามลำดับกลุ่มวิชา (M01 ไปจนถึง P)
             rawSubjects.sort((a, b) => {
               const groupCompare = this.compareGroupNames(a.group_name || '', b.group_name || '');
               if (groupCompare !== 0) return groupCompare;
@@ -320,7 +342,8 @@ export class ScoreManagement implements OnInit {
           }
           this.isLoading = false;
           this.cdr.detectChanges();
-          setTimeout(() => this.onWindowScroll(), 150);
+          setTimeout(() => this.checkScroll(), 150);
+          setTimeout(() => this.checkScroll(), 400);
         });
       },
       error: (err) => {
@@ -421,7 +444,7 @@ export class ScoreManagement implements OnInit {
     this.cdr.detectChanges();
   }
 
-  // ✅ เพิ่มฟังก์ชันรับค่าเมื่อมีการพิมพ์คะแนนเต็ม
+  // ฟังก์ชันรับค่าเมื่อมีการแก้ไขคะแนนเต็ม
   onMaxScoreChange(newMaxScore: number) {
     this.inputMaxScore = newMaxScore;
     this.cdr.detectChanges();
@@ -915,7 +938,7 @@ export class ScoreManagement implements OnInit {
     });
   }
 
-  // ✅ เพิ่มฟังก์ชันสำหรับกดปุ่ม "แก้ไขคะแนน"
+  // ฟังก์ชันสำหรับการกดปุ่มแก้ไขคะแนน
   enableEditMode() {
     this.isSaved = false;
     this.saveError = '';
@@ -941,6 +964,42 @@ export class ScoreManagement implements OnInit {
     this.router.navigate(['/admin/ScoreList']);
   }
 
+  goToTrainingExamTime() {
+    this.router.navigate(['/admin/training-exam-time']);
+  }
+
+  openBehaviorScoreModal(): void {
+    if (!this.selectedBatch) {
+      Swal.fire({
+        icon: 'info',
+        title: 'กรุณาเลือกรุ่น',
+        text: 'กรุณาเลือกโครงสร้างหลักสูตรและรุ่นก่อนบันทึกคะแนนความประพฤติ',
+        confirmButtonColor: '#8e44ad',
+      });
+      return;
+    }
+
+    const batchObj = this.batches.find((b) => Number(b.id) === Number(this.selectedBatch));
+    const courseObj = this.courses.find((c) => Number(c.id) === Number(this.selectedCourse));
+
+    const dialogRef = this.dialog.open(BehaviorScoreDialog, {
+      data: {
+        batchId: this.selectedBatch,
+        batchName: batchObj ? batchObj.batch_name : '',
+        courseName: courseObj ? courseObj.course_name : '',
+      },
+      width: '850px',
+      maxWidth: '95vw',
+      disableClose: true,
+    });
+
+    dialogRef.afterClosed().subscribe((saved) => {
+      if (saved) {
+        // Updated successfully
+      }
+    });
+  }
+
   goToPreviousSubject() {
     const currentIndex = this.subjects.findIndex((s) => s.subject_id == this.selectedSubjectId);
     const prevIndex = currentIndex - 1;
@@ -956,28 +1015,56 @@ export class ScoreManagement implements OnInit {
     this.scrollToTop();
   }
 
+  checkScroll() {
+    let scrollOffset = 0;
+    let windowHeight = 0;
+    let documentHeight = 0;
+
+    const container = this.scrollContainer || (document.querySelector('.admin-main-content') as HTMLElement);
+    if (container && container.scrollHeight > container.clientHeight) {
+      this.scrollContainer = container;
+      scrollOffset = container.scrollTop;
+      windowHeight = container.clientHeight;
+      documentHeight = container.scrollHeight;
+    } else {
+      scrollOffset =
+        window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      windowHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+      documentHeight = Math.max(
+        document.body.scrollHeight,
+        document.documentElement.scrollHeight,
+        document.body.offsetHeight,
+        document.documentElement.offsetHeight,
+      );
+    }
+
+    this.showScrollTopBtn = scrollOffset > 150;
+    const isNearBottom = scrollOffset + windowHeight >= documentHeight - 120;
+    this.showScrollBottomBtn = this.studentList.length > 5 && !isNearBottom;
+    this.cdr.detectChanges();
+  }
+
   @HostListener('window:scroll', [])
   onWindowScroll() {
-    const scrollOffset =
-      window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-    const windowHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-    const documentHeight = Math.max(
-      document.body.scrollHeight,
-      document.documentElement.scrollHeight,
-      document.body.offsetHeight,
-      document.documentElement.offsetHeight,
-    );
-
-    this.showScrollTopBtn = scrollOffset > 250;
-    const isNearBottom = scrollOffset + windowHeight >= documentHeight - 150;
-    this.showScrollBottomBtn = this.studentList.length > 5 && !isNearBottom;
+    this.checkScroll();
   }
 
   scrollToTop() {
+    const container = this.scrollContainer || (document.querySelector('.admin-main-content') as HTMLElement);
+    if (container) {
+      container.scrollTo({ top: 0, behavior: 'smooth' });
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   scrollToBottom() {
+    const container = this.scrollContainer || (document.querySelector('.admin-main-content') as HTMLElement);
+    if (container) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
     window.scrollTo({
       top: document.documentElement.scrollHeight || document.body.scrollHeight,
       behavior: 'smooth',

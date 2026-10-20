@@ -181,8 +181,13 @@
                type="text" 
                [(ngModel)]="createForm.name" 
                name="name" 
+               [class.is-invalid]="hasAttemptedCreate && !createForm.name.trim()"
                placeholder="เช่น พ.อ. สมชาย ใจดี หรือ จนท.ประสานงาน" 
                required />
+        <div *ngIf="hasAttemptedCreate && !createForm.name.trim()" class="input-error-text">
+          <mat-icon style="font-size: 14px; width: 14px; height: 14px;">error_outline</mat-icon>
+          กรุณากรอกชื่อ-นามสกุล / ตำแหน่ง
+        </div>
       </div>
 
       <!-- ชื่อผู้ใช้ (Username) -->
@@ -192,8 +197,13 @@
                type="text" 
                [(ngModel)]="createForm.username" 
                name="username" 
+               [class.is-invalid]="hasAttemptedCreate && !createForm.username.trim()"
                placeholder="เช่น admin_somchai หรือ somchai" 
                required />
+        <div *ngIf="hasAttemptedCreate && !createForm.username.trim()" class="input-error-text">
+          <mat-icon style="font-size: 14px; width: 14px; height: 14px;">error_outline</mat-icon>
+          กรุณากรอกชื่อผู้ใช้ (Username)
+        </div>
       </div>
 
       <!-- รหัสผ่านเริ่มต้น -->
@@ -203,9 +213,18 @@
                type="text" 
                [(ngModel)]="createForm.password" 
                name="password" 
+               [class.is-invalid]="hasAttemptedCreate && (!createForm.password.trim() || createForm.password.trim().length < 6)"
                placeholder="อย่างน้อย 6 ตัวอักษร" 
                required />
-        <small class="helper-text">
+        <div *ngIf="hasAttemptedCreate && !createForm.password.trim()" class="input-error-text">
+          <mat-icon style="font-size: 14px; width: 14px; height: 14px;">error_outline</mat-icon>
+          กรุณากรอกรหัสผ่านเริ่มต้น
+        </div>
+        <div *ngIf="hasAttemptedCreate && createForm.password.trim() && createForm.password.trim().length < 6" class="input-error-text">
+          <mat-icon style="font-size: 14px; width: 14px; height: 14px;">error_outline</mat-icon>
+          รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร
+        </div>
+        <small class="helper-text" *ngIf="!hasAttemptedCreate || (createForm.password.trim().length >= 6)">
           <mat-icon class="hint-icon">info</mat-icon>
           กำหนดรหัสผ่านอย่างน้อย 6 ตัวอักษร เพื่อความปลอดภัยของระบบ
         </small>

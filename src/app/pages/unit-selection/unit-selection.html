@@ -1,0 +1,874 @@
+<div class="unit-selection-page">
+  <!-- ส่วนหัวข้อหลัก: ระบบเลือกลงหน่วย -->
+  <div class="page-header no-print">
+    <div class="header-left">
+      <button mat-icon-button class="back-button" (click)="goBack()" title="ย้อนกลับ">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <div>
+        <div class="title-badge-row">
+          <h1 class="page-title">ระบบเลือกลงหน่วย (Unit Selection)</h1>
+          <span class="special-badge">สำหรับรุ่นที่ต้องเลือกหน่วย</span>
+          <span class="course-tag-badge">
+            <mat-icon style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;">verified</mat-icon>
+            สำหรับหลักสูตร นนส.ทบ. และ ช่างอิเล็กทรอนิกส์
+          </span>
+        </div>
+        <p class="page-subtitle">จัดอันดับ 1 ถึง N สำหรับพิมพ์ใบประสานงานให้นักเรียนเลือกหน่วย และนำรายชื่อกลับมากรอกบันทึกเข้าระบบ (ใช้งานเฉพาะหลักสูตร นนส.ทบ. และ ช่างอิเล็กทรอนิกส์)</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- ลิงก์ไปดูผลจัดอันดับ 1-N -->
+      <button mat-stroked-button class="btn-action-header" routerLink="/admin/ranking" [queryParams]="{ courseId: selectedCourse, batchId: selectedBatch }">
+        <mat-icon>military_tech</mat-icon>
+        <span>ผลจัดอันดับ 1-N</span>
+      </button>
+
+      <!-- ส่งออก Excel -->
+      <button mat-stroked-button class="btn-action-header btn-excel" (click)="exportToExcel()" [disabled]="students.length === 0">
+        <mat-icon>description</mat-icon>
+        <span>ส่งออก Excel</span>
+      </button>
+
+      <!-- บันทึกการเลือกหน่วย -->
+      <button mat-raised-button class="btn-action-header btn-save-all" (click)="saveAllAssignments()" [disabled]="students.length === 0 || isSaving">
+        <mat-icon>{{ isSaving ? 'sync' : 'save' }}</mat-icon>
+        <span>{{ isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล' }}</span>
+        @if (hasUnsavedChanges) {
+          <span class="unsaved-dot" title="มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก"></span>
+        }
+      </button>
+    </div>
+  </div>
+
+  <div class="page-wrapper">
+    
+    <!-- การ์ดตัวกรอง: เลือกรุ่นสำหรับการจัดสรรหน่วย -->
+    <div class="filter-card no-print">
+      <div class="card-section-title-wrap">
+        <div class="card-section-title">
+          <mat-icon>tune</mat-icon>
+          <span>เลือกรุ่นที่ต้องการดำเนินการเลือกลงหน่วย</span>
+          <span style="font-size: 12px; font-weight: 500; color: #0d9488; background: #f0fdf4; border: 1px solid #99f6e4; padding: 2px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px;">
+            📌 เฉพาะหลักสูตร นนส.ทบ. และ ช่างอิเล็กทรอนิกส์
+          </span>
+          @if (selectedBatch) {
+            <span class="active-badge-chip">
+              <mat-icon>verified</mat-icon> {{ batchName }}
+            </span>
+          }
+        </div>
+
+        @if (selectedBatch) {
+          <div class="batch-status-toggle">
+            <span class="toggle-label">สถานะรุ่น:</span>
+            <button type="button" class="btn-toggle-badge" [class.enabled]="isBatchEnabledForUnitSelection" (click)="toggleBatchEnabled()">
+              <mat-icon>{{ isBatchEnabledForUnitSelection ? 'check_circle' : 'cancel' }}</mat-icon>
+              <span>{{ isBatchEnabledForUnitSelection ? 'รุ่นนี้ต้องเลือกหน่วย (เปิดใช้งาน)' : 'ปิดระบบชั่วคราว' }}</span>
+            </button>
+          </div>
+        }
+      </div>
+
+      <div class="filter-row">
+        <!-- 1. เลือกโครงสร้างหลักสูตร -->
+        <div class="form-group">
+          <label class="form-label">เลือกโครงสร้างหลักสูตร</label>
+          <div class="select-wrapper">
+            <select [(ngModel)]="selectedCourse" (change)="onCourseChange()">
+              <option value="">-- กรุณาเลือกโครงสร้างหลักสูตร --</option>
+              @for (course of courses; track course.id) {
+                <option [value]="course.id">{{ course.group_name }}</option>
+              }
+            </select>
+            <span class="arrow-icon">▼</span>
+          </div>
+        </div>
+
+        <!-- 2. เลือกรุ่น -->
+        <div class="form-group">
+          <label class="form-label">เลือกรุ่น</label>
+          <div class="select-wrapper">
+            <select [(ngModel)]="selectedBatch" (change)="onBatchChange()" [disabled]="!selectedCourse">
+              <option value="">-- กรุณาเลือกรุ่น --</option>
+              @for (batch of batches; track batch.id) {
+                <option [value]="batch.id">{{ batch.name }}</option>
+              }
+            </select>
+            <span class="arrow-icon">▼</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- กรณีผู้ใช้ยังไม่ได้เลือกรุ่น -->
+    @if (!selectedBatch) {
+      <div class="empty-state-container no-print">
+        <div class="empty-icon-circle">
+          <mat-icon>domain</mat-icon>
+        </div>
+        <h3 class="empty-title">กรุณาเลือกรุ่นเพื่อดำเนินการเลือกลงหน่วย</h3>
+        <p class="empty-desc">เลือกรุ่นจากเมนูด้านบนเพื่อดึงรายชื่อนักเรียนเรียงตามลำดับผลการเรียน 1 ถึง N แล้วพิมพ์ใบประสานงานส่งให้อีกฝ่าย หรือกรอกผลการเลือกหน่วยกลับเข้าระบบ</p>
+      </div>
+    } @else {
+
+      <!-- สถานะกำลังโหลดข้อมูล -->
+      @if (isLoadingStudents) {
+        <div class="loading-state no-print">
+          <mat-icon class="spinning">sync</mat-icon>
+          <span>กำลังโหลดข้อมูลนักเรียนและโควตาหน่วย...</span>
+        </div>
+      } @else {
+
+        <!-- แถบแนะนำขั้นตอนการปฏิบัติงาน -->
+        <div class="workflow-guide-banner no-print">
+          <div class="guide-header">
+            <div class="guide-title">
+              <mat-icon>alt_route</mat-icon>
+              <span>กระบวนการเลือกลงหน่วย (4 ขั้นตอน)</span>
+            </div>
+            <div class="guide-progress">
+              <span class="progress-pill" [class.done]="unassignedCount === 0 && students.length > 0">
+                <mat-icon>{{ unassignedCount === 0 && students.length > 0 ? 'task_alt' : 'edit_note' }}</mat-icon>
+                @if (selectionQuotaCount && selectionQuotaCount < students.length) {
+                  ความคืบหน้ากลุ่มเลือกหน่วย: <strong>{{ selectionQuotaAssignedCount }} / {{ selectionQuotaCount }} นาย</strong> (รอเลือกอีก {{ selectionQuotaUnassignedCount }} นาย | บรรจุสังกัดเดิม {{ preAssignedStudents.length }} นาย)
+                } @else {
+                  ความคืบหน้าการกรอกข้อมูล: <strong>{{ getTotalAssignedCount() }} / {{ students.length }} นาย</strong> (เหลือรอใส่ข้อมูลอีก {{ unassignedCount }} นาย)
+                }
+              </span>
+            </div>
+          </div>
+          <div class="guide-steps-grid">
+            <div class="guide-step-item">
+              <div class="step-num">1</div>
+              <div class="step-text">
+                <strong>เรียงลำดับ 1 ถึง N</strong>
+                <span>
+                  @if (selectionQuotaCount && selectionQuotaCount < students.length) {
+                    ลำดับที่ 1-{{ selectionQuotaCount }} มีสิทธิ์เลือกหน่วย / ลำดับที่ {{ selectionQuotaCount + 1 }}-{{ students.length }} บรรจุสังกัดเดิม
+                  } @else {
+                    ระบบเรียงลำดับตามผลการเรียน ลำดับที่ 1 มีสิทธิ์เลือกหน่วยก่อน
+                  }
+                </span>
+              </div>
+            </div>
+            <div class="guide-step-item step-highlight">
+              <div class="step-num">2</div>
+              <div class="step-text">
+                <strong>พิมพ์ใบประสานงาน</strong>
+                <span>กดปุ่มพิมพ์ใบประสานงาน ส่งให้อีกฝ่ายไปให้นักเรียนเลือกลงชื่อ</span>
+              </div>
+            </div>
+            <div class="guide-step-item">
+              <div class="step-num">3</div>
+              <div class="step-text">
+                <strong>รับผลกลับมากรอก</strong>
+                <span>เมื่ออีกฝ่ายส่งรายชื่อกลับมา ให้นำหน่วยที่เลือกมากรอกในช่องตารางด้านล่าง</span>
+              </div>
+            </div>
+            <div class="guide-step-item">
+              <div class="step-num">4</div>
+              <div class="step-text">
+                <strong>บันทึกข้อมูล & พิมพ์สรุป</strong>
+                <span>กดปุ่มบันทึกข้อมูลเพื่ออัปเดตระบบ หรือพิมพ์ใบสรุปผลการบรรจุฉบับสมบูรณ์</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- แผงกำหนดสิทธิ์เลือกลงหน่วย (รองรับ นนส.ทบ. และ ช่างอิเล็กทรอนิกส์) -->
+        <div class="quota-allocation-panel no-print">
+          <div class="quota-panel-left">
+            <div class="quota-title-wrap">
+              <mat-icon>tune</mat-icon>
+              <strong>การจัดสรรสิทธิ์เลือกลงหน่วย:</strong>
+            </div>
+            <div class="quota-preset-buttons">
+              <button type="button" class="btn-quota-preset" [class.active]="!selectionQuotaCount || selectionQuotaCount >= students.length" (click)="setSelectionQuota(null)">
+                <mat-icon>people</mat-icon>
+                <span>ทุกคนมีสิทธิ์เลือก (แบบ นนส.)</span>
+              </button>
+              <button type="button" class="btn-quota-preset" [class.active]="selectionQuotaCount === 15" (click)="setSelectionQuota(15)">
+                <mat-icon>engineering</mat-icon>
+                <span>15 คนแรกเลือกหน่วย + 15 คนหลังสังกัดเดิม (แบบช่าง)</span>
+              </button>
+            </div>
+          </div>
+          <div class="quota-panel-right">
+            <div class="quota-custom-input-group">
+              <label>จำนวนผู้มีสิทธิ์เลือกหน่วย:</label>
+              <input type="number"
+                     min="1"
+                     [max]="students.length || 999"
+                     [ngModel]="selectionQuotaCount || students.length"
+                     (ngModelChange)="onSelectionQuotaInputChange($event)"
+                     class="quota-number-input">
+              <span class="unit-text">นาย (ลำดับที่ 1 ถึง {{ selectionQuotaCount || students.length }})</span>
+            </div>
+            <button type="button" class="btn-fill-orig-affil" (click)="applyPreAssignedAffiliations()" title="ดึงสังกัดเดิมลงเป็นหน่วยบรรจุให้อัตโนมัติสำหรับนักเรียนกลุ่มมีหน่วยเดิม">
+              <mat-icon>sync_alt</mat-icon>
+              <span>ดึงสังกัดเดิมให้ผู้มีหน่วยเดิม</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- แผงสถิติสรุปภาพรวมการเลือกลงหน่วย -->
+        <div class="stats-overview-grid no-print">
+          <!-- การ์ด 1: นักเรียนทั้งหมด -->
+          <div class="stat-card stat-total">
+            <div class="stat-icon-wrap">
+              <mat-icon>groups</mat-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value">{{ students.length }}</div>
+              <div class="stat-label">นักเรียนทั้งหมดในรุ่น</div>
+              @if (selectionQuotaCount && selectionQuotaCount < students.length) {
+                <div class="stat-sub-note">เลือกหน่วย {{ selectionQuotaCount }} | สังกัดเดิม {{ students.length - selectionQuotaCount }}</div>
+              }
+            </div>
+          </div>
+
+          <!-- การ์ด 2: กรอกเลือกหน่วยแล้ว -->
+          <div class="stat-card stat-assigned">
+            <div class="stat-icon-wrap">
+              <mat-icon>check_circle</mat-icon>
+            </div>
+            <div class="stat-info">
+              @if (selectionQuotaCount && selectionQuotaCount < students.length) {
+                <div class="stat-value">{{ selectionQuotaAssignedCount }} <small>/ {{ selectionQuotaCount }}</small></div>
+                <div class="stat-label">กลุ่มเลือกหน่วยกรอกแล้ว ({{ selectionQuotaCount > 0 ? ((selectionQuotaAssignedCount / selectionQuotaCount) * 100).toFixed(0) : 0 }}%)</div>
+              } @else {
+                <div class="stat-value">{{ getTotalAssignedCount() }} <small>/ {{ students.length }}</small></div>
+                <div class="stat-label">กรอกเลือกหน่วยแล้ว ({{ students.length > 0 ? ((getTotalAssignedCount() / students.length) * 100).toFixed(0) : 0 }}%)</div>
+              }
+            </div>
+          </div>
+
+          <!-- การ์ด 3: ยังไม่ได้กรอกหน่วย -->
+          <div class="stat-card stat-unassigned">
+            <div class="stat-icon-wrap">
+              <mat-icon>hourglass_empty</mat-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value">{{ unassignedCount }}</div>
+              <div class="stat-label">{{ (selectionQuotaCount && selectionQuotaCount < students.length) ? 'ยังไม่เลือกหน่วย (ในโควตา)' : 'ยังไม่ได้กรอกหน่วย' }}</div>
+            </div>
+          </div>
+
+          <!-- การ์ด 4: กลุ่มมีหน่วยเดิมแล้ว (สังกัดเดิม) ถ้ามีการจำกัดโควตา -->
+          @if (selectionQuotaCount && selectionQuotaCount < students.length) {
+            <div class="stat-card stat-preassigned">
+              <div class="stat-icon-wrap">
+                <mat-icon>domain</mat-icon>
+              </div>
+              <div class="stat-info">
+                <div class="stat-value">{{ preAssignedStudents.length }}</div>
+                <div class="stat-label">มีหน่วยเดิมแล้ว (สังกัดเดิม)</div>
+                <div class="stat-sub-note">ลำดับที่ {{ selectionQuotaCount + 1 }} ถึง {{ students.length }}</div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- แถบค้นหาและตัวกรองข้อมูลนักเรียน -->
+        <div class="table-controls-bar no-print">
+          <div class="search-input-wrap">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input type="text" [(ngModel)]="searchQuery" placeholder="ค้นหาชื่อ, ยศ, เลขที่, หรือหน่วย..." class="search-input">
+            @if (searchQuery) {
+              <button class="btn-clear-search" (click)="searchQuery = ''">✕</button>
+            }
+          </div>
+
+          <div class="filter-pills-row">
+            <button class="pill-btn" [class.active]="filterStatus === 'all'" (click)="filterStatus = 'all'">
+              ทั้งหมด ({{ students.length }})
+            </button>
+            @if (selectionQuotaCount && selectionQuotaCount < students.length) {
+              <button class="pill-btn pill-info" [class.active]="filterStatus === 'in_quota'" (click)="filterStatus = 'in_quota'">
+                กลุ่มเลือกหน่วย ({{ selectionQuotaStudents.length }})
+              </button>
+              <button class="pill-btn pill-indigo" [class.active]="filterStatus === 'pre_assigned'" (click)="filterStatus = 'pre_assigned'">
+                กลุ่มสังกัดเดิม ({{ preAssignedStudents.length }})
+              </button>
+            }
+            <button class="pill-btn pill-warning" [class.active]="filterStatus === 'unassigned'" (click)="filterStatus = 'unassigned'">
+              ยังไม่ได้กรอกหน่วย ({{ unassignedCount }})
+            </button>
+            <button class="pill-btn pill-success" [class.active]="filterStatus === 'assigned'" (click)="filterStatus = 'assigned'">
+              กรอกแล้ว ({{ getTotalAssignedCount() }})
+            </button>
+
+            <!-- Dropdown กรองตามหน่วย -->
+            <div class="select-unit-filter-wrap">
+              <select [(ngModel)]="filterUnitId">
+                <option value="all">กรองดูทุกหน่วย</option>
+                @for (u of units; track u.id) {
+                  <option [value]="u.id">{{ u.name }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- ปุ่มดูแบบเต็มจอ (Fullscreen Toggle) -->
+            <button type="button" class="btn-fullscreen-toggle" (click)="toggleFullscreen()" title="กดเพื่อดูตารางแบบเต็มหน้าจอ">
+              <mat-icon>{{ isFullscreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+              <span>{{ isFullscreen ? 'ย่อจอปกติ' : 'ดูแบบเต็มจอ' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- แถบอธิบายสูตรการคำนวณการจัดลำดับ -->
+        <div class="formula-info-banner no-print">
+          <div class="formula-item">
+            <span class="formula-badge">เกณฑ์การคำนวณลำดับ:</span>
+            <span class="formula-text">
+              <strong>80% ของคะแนนรวม</strong> (คะแนนรวมดิบ*นก. คิดเป็น 80 ส่วน &times; 0.80) + <strong>20% ของคะแนนประพฤติ</strong> (ความประพฤติคิดเป็น 20 ส่วน &times; 0.20 เช่น 20% ของ 200 = 40.0000) = <strong>คะแนนรวมสุทธิ (80% + 20%)</strong>
+            </span>
+          </div>
+          <div class="formula-sub-note">
+            * เรียงวิชาจากวิชาแรกไปวิชาท้ายสุด (แต่ละวิชาแสดง คะแนนดิบ และ คะแนนดิบ * ค่าน้ำหนัก) และนำคะแนนรวมไปรวมตอนท้ายทุกวิชา
+          </div>
+        </div>
+
+        <!-- ตารางข้อมูลและแถบนำทาง (รองรับการแสดงผลแบบเต็มจอ) -->
+        <div class="unit-table-section" [class.is-fullscreen-mode]="isFullscreen">
+
+          <!-- แถบส่วนหัวในโหมดแสดงผลเต็มจอ -->
+          @if (isFullscreen) {
+            <div class="fullscreen-header-bar no-print">
+              <div class="fs-title-group">
+                <div class="fs-badge">
+                  <mat-icon>fullscreen</mat-icon>
+                  <span>โหมดตารางเต็มจอ</span>
+                </div>
+                <div class="fs-batch-info">
+                  <strong>{{ courseName }}</strong> <span class="fs-sep">|</span> <span>{{ batchName }}</span>
+                  <span class="fs-count-pill">{{ filteredStudents.length }} นาย</span>
+                </div>
+              </div>
+
+              <!-- ช่องค้นหาด่วนในโหมดเต็มจอ -->
+              <div class="fs-search-wrap">
+                <mat-icon class="fs-search-icon">search</mat-icon>
+                <input type="text" [(ngModel)]="searchQuery" placeholder="ค้นหาชื่อ, เลขที่, หน่วย..." class="fs-search-input">
+                @if (searchQuery) {
+                  <button class="fs-clear-search" (click)="searchQuery = ''">✕</button>
+                }
+              </div>
+
+              <!-- ตัวกรองสถานะในโหมดเต็มจอ -->
+              <div class="fs-filter-pills">
+                <button type="button" class="fs-pill-btn" [class.active]="filterStatus === 'all'" (click)="filterStatus = 'all'">ทั้งหมด ({{ students.length }})</button>
+                <button type="button" class="fs-pill-btn fs-pill-warn" [class.active]="filterStatus === 'unassigned'" (click)="filterStatus = 'unassigned'">รอใส่ ({{ unassignedCount }})</button>
+                <button type="button" class="fs-pill-btn fs-pill-succ" [class.active]="filterStatus === 'assigned'" (click)="filterStatus = 'assigned'">กรอกแล้ว ({{ getTotalAssignedCount() }})</button>
+              </div>
+
+              <!-- ปุ่มบันทึก & ปุ่มออกจากโหมดเต็มจอ -->
+              <div class="fs-actions-right">
+                @if (hasUnsavedChanges) {
+                  <button type="button" class="btn-fs-save" (click)="saveAllAssignments()" [disabled]="isSaving">
+                    <mat-icon>{{ isSaving ? 'sync' : 'save' }}</mat-icon>
+                    <span>{{ isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล' }}</span>
+                  </button>
+                }
+                <button type="button" class="btn-exit-fullscreen" (click)="exitFullscreen()" title="ออกจากโหมดเต็มจอ (หรือกดปุ่ม ESC)">
+                  <mat-icon>fullscreen_exit</mat-icon>
+                  <span>ย่อจอปกติ (ESC)</span>
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- แถบนำทางตารางและปุ่มเลื่อนซ้าย-ขวา -->
+          <div class="table-navigation-toolbar no-print">
+            <div class="nav-toolbar-left">
+              <span class="nav-label">
+                <mat-icon>swap_horiz</mat-icon>
+                <span>เลื่อนดูคะแนนรายวิชา:</span>
+              </span>
+              <div class="quick-scroll-btn-group">
+                <button type="button" class="btn-nav-scroll" (click)="scrollTable('start')" title="เลื่อนไปหน้าสุด (ข้อมูลนักเรียน)">
+                  <mat-icon>first_page</mat-icon> <span>หน้าสุด</span>
+                </button>
+                <button type="button" class="btn-nav-scroll"
+                        (mousedown)="startContinuousScroll('left')"
+                        (mouseup)="stopContinuousScroll()"
+                        (mouseleave)="stopContinuousScroll()"
+                        (touchstart)="startContinuousScroll('left')"
+                        (touchend)="stopContinuousScroll()"
+                        (click)="scrollTable('left')"
+                        title="คลิกเพื่อเลื่อนซ้ายช่วงกว้าง หรือกดค้างเพื่อเลื่อนต่อเนื่อง">
+                  <mat-icon>chevron_left</mat-icon> <span>เลื่อนซ้าย</span>
+                </button>
+                <button type="button" class="btn-nav-scroll"
+                        (mousedown)="startContinuousScroll('right')"
+                        (mouseup)="stopContinuousScroll()"
+                        (mouseleave)="stopContinuousScroll()"
+                        (touchstart)="startContinuousScroll('right')"
+                        (touchend)="stopContinuousScroll()"
+                        (click)="scrollTable('right')"
+                        title="คลิกเพื่อเลื่อนขวาช่วงกว้าง หรือกดค้างเพื่อเลื่อนต่อเนื่อง">
+                  <span>เลื่อนขวา</span> <mat-icon>chevron_right</mat-icon>
+                </button>
+                <button type="button" class="btn-nav-scroll btn-nav-mid" (click)="scrollTable('mid')" title="เลื่อนไปตรงกลาง (วิชารอบกลาง)">
+                  <mat-icon>view_column</mat-icon> <span>ตรงกลาง</span>
+                </button>
+                <button type="button" class="btn-nav-scroll btn-nav-end" (click)="scrollTable('end')" title="เลื่อนไปท้ายสุด (คะแนนสรุป & เลือกหน่วย)">
+                  <span>ท้ายสุด (สรุปผล)</span> <mat-icon>last_page</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            <div class="nav-toolbar-right">
+              <span class="scroll-hint-tip">
+                <mat-icon>touch_app</mat-icon>
+                <span>กด <strong>Shift + ลูกกลิ้งเมาส์</strong> เพื่อเลื่อนซ้าย-ขวาได้รวดเร็ว</span>
+              </span>
+              <button type="button" class="btn-fullscreen-action" (click)="toggleFullscreen()" [class.active]="isFullscreen" title="กดเพื่อดูตารางแบบเต็มจอ">
+                <mat-icon>{{ isFullscreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+                <span>{{ isFullscreen ? 'ย่อจอปกติ (ESC)' : 'ดูแบบเต็มจอ' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ↔ แถบเลื่อนแนวนอนด้านบน (Top Horizontal Scrollbar) ซิงค์กับตารางด้านล่าง -->
+          <div class="top-scrollbar-container no-print" #topScrollbarContainer (scroll)="onTopScroll()">
+            <div class="top-scrollbar-spacer" [style.width.px]="tableScrollWidth"></div>
+          </div>
+
+          <!-- ตารางหลัก: รายชื่อนักเรียนเรียงตามลำดับสำหรับกรอกผลการเลือกลงหน่วย -->
+          <div class="table-container unit-table-wrapper no-print" #tableContainer (scroll)="onTableScroll()">
+          <table class="unit-selection-table" #selectionTable>
+            <thead>
+              <tr class="main-header-row">
+                <th rowspan="3" class="col-rank sticky-col-1 text-center" (click)="setSort('rank')">
+                  ลำดับที่เลือก
+                  <span class="sort-indicator">{{ sortBy === 'rank' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span>
+                </th>
+                <th rowspan="3" class="col-code sticky-col-2 text-center" (click)="setSort('code')">
+                  เลขที่
+                  <span class="sort-indicator">{{ sortBy === 'code' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span>
+                </th>
+                <th rowspan="3" class="col-name sticky-col-3 text-left" (click)="setSort('name')">
+                  ยศ-ชื่อ-นามสกุล
+                  <span class="sort-indicator">{{ sortBy === 'name' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span>
+                </th>
+                <th rowspan="3" class="col-orig text-left">สังกัดเดิม</th>
+
+                <!-- คอลัมน์รายวิชา: แสดงชื่อวิชาเรียงตามลำดับ -->
+                @for (grp of subjectGroups; track grp.groupId) {
+                  <th colspan="2" class="col-subject-group text-center">
+                    <div class="grp-header-title" [title]="grp.displayName">
+                      <span class="grp-code-pill">{{ grp.groupName }}</span>
+                      <span class="grp-name-title">{{ grp.subjectNames || grp.displayName }}</span>
+                      @if (grp.isMerged) {
+                        <span class="merged-tag" title="รวมคะแนนดิบ {{ grp.subjectsCount }} วิชาก่อนคูณหน่วยกิต">เมิร์จ</span>
+                      }
+                    </div>
+                  </th>
+                }
+
+                <!-- คอลัมน์คะแนนรวมและการคำนวณร้อยละรวมทุกวิชา -->
+                <th rowspan="2" class="col-total-w text-center" (click)="setSort('total_weighted')">
+                  คะแนนรวมทั้งหมด
+                  <span class="sort-indicator">{{ sortBy === 'total_weighted' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span>
+                </th>
+                <th rowspan="2" class="col-beh text-center" (click)="setSort('behavior')">
+                  คะแนนประพฤติ
+                  <span class="sort-indicator">{{ sortBy === 'behavior' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span>
+                </th>
+                <th rowspan="2" class="col-acad-80 text-center" (click)="setSort('academic_80')" title="80% ของคะแนนรวม (คำนวณจากคะแนนรวมทุกวิชาคิดเป็นร้อยละ 80)">
+                  80% ของคะแนนรวม
+                  <span class="sort-indicator">{{ sortBy === 'academic_80' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span>
+                </th>
+                <th rowspan="2" class="col-beh-20 text-center" (click)="setSort('behavior_20')" title="20% ของคะแนนประพฤติ (คำนวณจากคะแนนความประพฤติคิดเป็นร้อยละ 20)">
+                  20% ของคะแนนประพฤติ
+                  <span class="sort-indicator">{{ sortBy === 'behavior_20' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span>
+                </th>
+                <th rowspan="2" class="col-final highlight-header text-center" (click)="setSort('final_score')" title="คะแนนรวมสุทธิ (80% ของคะแนนรวม + 20% ของคะแนนประพฤติ)">
+                  คะแนนรวมสุทธิ (80% + 20%)
+                  <span class="sort-indicator">{{ sortBy === 'final_score' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span>
+                </th>
+
+                <!-- คอลัมน์ผลการเลือกลงหน่วย -->
+                <th rowspan="3" class="col-unit text-left" (click)="setSort('unit')">
+                  หน่วยที่เลือกบรรจุ (นำข้อมูลจากใบประสานงานมากรอก)
+                  <span class="sort-indicator">{{ sortBy === 'unit' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span>
+                </th>
+                <th rowspan="3" class="col-time text-center">วันเวลาที่เลือก</th>
+                <th rowspan="3" class="col-notes text-left">หมายเหตุ</th>
+                <th rowspan="3" class="col-status text-center">สถานะ</th>
+                <th rowspan="3" class="col-actions text-center">จัดการ</th>
+              </tr>
+              <!-- แถว Header ย่อย 1: ชื่อแถว (คะแนนดิบ | คะแนนดิบ * ค่าน้ำหนัก) -->
+              <tr class="sub-header-row">
+                @for (grp of subjectGroups; track grp.groupId) {
+                  <th class="col-sub-raw text-center" (click)="setSort('group_raw_' + grp.groupId)" title="คะแนนดิบ">
+                    คะแนนดิบ
+                  </th>
+                  <th class="col-sub-w text-center" (click)="setSort('group_w_' + grp.groupId)" title="คะแนนดิบ * ค่าน้ำหนัก">
+                    คะแนนดิบ * ค่าน้ำหนัก
+                  </th>
+                }
+              </tr>
+              <!-- แถว Header ย่อย 2: ค่าเกณฑ์ (ค่าคะแนนดิบ | ค่าหน่วยกิต และเกณฑ์คะแนนรวมตอนท้าย) -->
+              <tr class="sub-header-criteria-row">
+                @for (grp of subjectGroups; track grp.groupId) {
+                  <th class="col-sub-criteria-raw text-center font-mono" title="ค่าคะแนนดิบเต็มของรายวิชา">
+                    {{ grp.group_max_score_formatted || '100.0000' }}
+                  </th>
+                  <th class="col-sub-criteria-credit text-center font-mono" title="ค่าหน่วยกิต">
+                    {{ grp.credit }} นก.
+                  </th>
+                }
+                <!-- เกณฑ์คะแนนรวมและคะแนนสรุปผลตอนท้ายทุกวิชา -->
+                <th class="col-sub-criteria-summary text-center font-mono text-muted" title="คะแนนเต็มรวมทั้งหมดทุกวิชา">
+                  {{ students.length > 0 && totalMaxWeighted > 0 ? ('เต็ม ' + totalMaxWeightedFormatted) : '-' }}
+                </th>
+                <th class="col-sub-criteria-summary text-center font-mono text-muted" title="คะแนนเต็มความประพฤติ">
+                  {{ students.length > 0 && totalMaxWeighted > 0 && maxBehaviorScore > 0 ? ('เต็ม ' + maxBehaviorScore.toFixed(4)) : '-' }}
+                </th>
+                <th class="col-sub-criteria-summary text-center font-mono text-muted" title="80% ของคะแนนรวม (คิดเป็น 80 ส่วน)">
+                  {{ students.length > 0 && totalMaxWeighted > 0 ? ('เต็ม ' + maxAcademic80Formatted) : '-' }}
+                </th>
+                <th class="col-sub-criteria-summary text-center font-mono text-muted" title="20% ของคะแนนประพฤติ">
+                  {{ students.length > 0 && totalMaxWeighted > 0 && maxBehavior20 > 0 ? ('เต็ม ' + maxBehavior20Formatted) : '-' }}
+                </th>
+                <th class="col-sub-criteria-summary text-center font-mono text-teal font-bold" title="คะแนนเต็มรวมสุทธิ (80% + 20%)">
+                  {{ students.length > 0 && totalMaxWeighted > 0 ? ('เต็ม ' + maxFinalScoreFormatted) : '-' }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (student of filteredStudents; track student.student_id || student.student_code; let i = $index) {
+                <tr [class.row-assigned]="student.selectedUnitName" [class.row-unassigned]="!student.selectedUnitName">
+                  <!-- 1. ลำดับที่เลือก (Rank 1 ถึง N คำนวณจากคะแนนรวมสุทธิ) -->
+                  <td class="col-rank sticky-col-1 text-center">
+                    <span class="rank-badge" [class.rank-gold]="student.rank === 1" [class.rank-silver]="student.rank === 2" [class.rank-bronze]="student.rank === 3">
+                      {{ student.rank }}
+                    </span>
+                    @if (selectionQuotaCount && selectionQuotaCount < students.length) {
+                      @if (student.rank <= selectionQuotaCount) {
+                        <span class="sub-rank-tag selection-tag" title="มีสิทธิ์เลือกหน่วยตามลำดับ">เลือกหน่วย</span>
+                      } @else {
+                        <span class="sub-rank-tag origin-tag" title="นักเรียนมีหน่วยประจำการเดิมอยู่แล้ว">สังกัดเดิม</span>
+                      }
+                    }
+                  </td>
+
+                  <!-- 2. เลขที่ (Code) -->
+                  <td class="col-code sticky-col-2 text-center font-mono">
+                    {{ student.student_code }}
+                  </td>
+
+                  <!-- 3. ยศ-ชื่อ-นามสกุล -->
+                  <td class="col-name sticky-col-3 text-left font-medium student-name-cell" [title]="student.full_name">
+                    <span class="rank-prefix">{{ student.rank_name }}</span> {{ student.first_name }} {{ student.last_name }}
+                  </td>
+
+                  <!-- 4. สังกัดเดิม -->
+                  <td class="col-orig text-left text-muted">
+                    {{ student.originalAffiliation }}
+                  </td>
+
+                  <!-- 5. คะแนนรายวิชา (2 คอลัมน์ต่อวิชา: 1. คะแนนดิบ | 2. คะแนนดิบ * ค่าน้ำหนัก) -->
+                  @for (grp of subjectGroups; track grp.groupId) {
+                    <!-- ช่องแรก: คะแนนของ นร. ที่ได้ (คะแนนดิบ) -->
+                    <td class="col-sub-raw text-center font-mono">
+                      {{ student.group_scores[grp.groupId]?.raw_score_formatted || '0.0000' }}
+                    </td>
+                    <!-- ช่องสอง: คะแนนดิบ * ค่าน้ำหนัก -->
+                    <td class="col-sub-w text-center font-mono text-purple font-medium">
+                      {{ student.group_scores[grp.groupId]?.weighted_score_formatted || '0.0000' }}
+                    </td>
+                  }
+
+                  <!-- 6. คะแนนรวมทั้งหมด -->
+                  <td class="col-total-w text-center font-mono font-bold">
+                    {{ student.total_weighted_score_formatted }}
+                  </td>
+
+                  <!-- 7. คะแนนประพฤติ -->
+                  <td class="col-beh text-center font-mono">
+                    {{ student.behavior_score_formatted }}
+                  </td>
+
+                  <!-- 8. คะแนนรวมคิดเป็นร้อยละ 80 -->
+                  <td class="col-acad-80 text-center font-mono font-bold text-teal">
+                    {{ student.academic_score_80_formatted }}
+                  </td>
+
+                  <!-- 9. คะแนนประพฤติคิดเป็นร้อยละ 20 -->
+                  <td class="col-beh-20 text-center font-mono font-bold text-teal">
+                    {{ student.behavior_score_20_formatted }}
+                  </td>
+
+                  <!-- 10. คะแนนรวมสุทธิ (80+20) ไฮไลท์สำคัญที่สุด -->
+                  <td class="col-final text-center font-mono font-bold highlight-cell text-primary">
+                    {{ student.final_score_formatted }}
+                  </td>
+
+                  <!-- 11. ช่องกรอกหน่วยที่เลือกบรรจุ -->
+                  <td class="col-unit text-left">
+                    <div class="unit-select-box">
+                      <div class="unit-input-group-row">
+                        <input type="text"
+                               [ngModel]="student.selectedUnitName"
+                               (ngModelChange)="onUnitNameChange(student, $event)"
+                               [placeholder]="!isStudentInSelectionQuota(student) && student.originalAffiliation && student.originalAffiliation !== '-' ? ('ใช้สังกัดเดิม: ' + student.originalAffiliation) : 'พิมพ์หน่วยที่เลือกบรรจุ...'"
+                               class="select-unit-input"
+                               [class.selected]="student.selectedUnitName"
+                               [class.preassigned-field]="!isStudentInSelectionQuota(student)"
+                               list="unitListSuggestions">
+                        @if (!isStudentInSelectionQuota(student) && !student.selectedUnitName && student.originalAffiliation && student.originalAffiliation !== '-') {
+                          <button type="button" class="btn-inline-orig" (click)="onUnitNameChange(student, student.originalAffiliation)" title="คลิกเพื่อนำสังกัดเดิมมาใช้">
+                            ใช้สังกัดเดิม
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- 12. วันเวลาที่เลือก -->
+                  <td class="col-time text-center text-xs text-muted">
+                    {{ student.assignedAt || '-' }}
+                  </td>
+
+                  <!-- 13. หมายเหตุ -->
+                  <td class="col-notes text-left">
+                    <input type="text" [(ngModel)]="student.notes" (change)="hasUnsavedChanges = true" placeholder="บันทึก..." class="notes-input">
+                  </td>
+
+                  <!-- 14. สถานะ (Badge) -->
+                  <td class="col-status text-center">
+                    @if (!isStudentInSelectionQuota(student)) {
+                      <span class="status-pill status-preassigned" title="มีหน่วยประจำการเดิมอยู่แล้ว">
+                        <mat-icon>domain</mat-icon> สังกัดเดิม
+                      </span>
+                    } @else if (student.selectedUnitName) {
+                      <span class="status-pill status-assigned">
+                        <mat-icon>check</mat-icon> กรอกแล้ว
+                      </span>
+                    } @else {
+                      <span class="status-pill status-waiting">
+                        <mat-icon>edit</mat-icon> รอใส่ข้อมูล
+                      </span>
+                    }
+                  </td>
+
+                  <!-- 15. ปุ่มจัดการ / ล้างค่า -->
+                  <td class="col-actions text-center">
+                    @if (student.selectedUnitName) {
+                      <button class="btn-reset-selection" (click)="clearSelection(student)" title="ยกเลิกการเลือกหน่วย">
+                        <mat-icon>restart_alt</mat-icon>
+                      </button>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td [attr.colspan]="14 + (subjectGroups.length * 2)" class="empty-table-row">
+                    ไม่พบข้อมูลนักเรียนที่ตรงตามเงื่อนไข
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- รายการแนะนำชื่อหน่วยอัตโนมัติ (Autocomplete) -->
+        <datalist id="unitListSuggestions">
+          @for (u of getExistingUnitNames(); track u) {
+            <option [value]="u"></option>
+          }
+        </datalist>
+
+        <!-- แถบแจ้งเตือนการบันทึกข้อมูลด้านล่าง -->
+        @if (hasUnsavedChanges) {
+          <div class="bottom-unsaved-banner no-print">
+            <div class="banner-content">
+              <mat-icon>info</mat-icon>
+              <span>มีการแก้ไขการเลือกหน่วยที่ยังไม่ได้บันทึก กรุณากดบันทึกข้อมูลเพื่ออัปเดตระบบ</span>
+            </div>
+            <button class="btn-save-banner" (click)="saveAllAssignments()" [disabled]="isSaving">
+              <mat-icon>{{ isSaving ? 'sync' : 'save' }}</mat-icon>
+              <span>{{ isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูลตอนนี้' }}</span>
+            </button>
+          </div>
+        }
+
+        </div> <!-- end .unit-table-section -->
+
+      }
+
+    }
+
+    <!-- ========================================================================= -->
+    <!-- ส่วนสำหรับการพิมพ์เอกสารประสานงานและเอกสารสรุปผล -->
+    <!-- ========================================================================= -->
+
+    <!-- แบบที่ 1: ใบประสานงานเลือกหน่วยบรรจุ (ให้นักเรียนเขียนหน่วยและลงลายมือชื่อ) -->
+    @if (printMode === 'coordination') {
+      <div class="print-container print-only">
+        <div class="print-official-header">
+          <h2 class="print-title">ใบประสานงานการเลือกลงหน่วยบรรจุ (เรียงตามลำดับคะแนนรวมสุทธิ 1 ถึง N)</h2>
+          <h3 class="print-sub-header">หลักสูตร: {{ courseName }} | รุ่น: {{ batchName }}</h3>
+          <p class="print-instruction">
+            <strong>คำชี้แจง:</strong>
+            @if (selectionQuotaCount && selectionQuotaCount < students.length) {
+              นักเรียนลำดับที่ 1 ถึง {{ selectionQuotaCount }} ให้เลือกลงหน่วยบรรจุตามลำดับผลการเรียน (ลำดับที่ 1 มีสิทธิ์เลือกก่อนตามลำดับ) โดยเขียนระบุชื่อหน่วยที่เลือกและลงลายมือชื่อกำกับ / ลำดับที่ {{ selectionQuotaCount + 1 }} ถึง {{ students.length }} เป็นผู้มีหน่วยประจำการเดิม (บรรจุสังกัดเดิม) ให้ตรวจสอบหน่วยและลงลายมือชื่อกำกับ
+            } @else {
+              ให้นักเรียนเลือกลงหน่วยบรรจุตามลำดับผลการเรียน (ลำดับที่ 1 มีสิทธิ์เลือกก่อนตามลำดับ) โดยเขียนระบุชื่อหน่วยที่เลือก และลงลายมือชื่อกำกับทุกนาย
+            }
+          </p>
+        </div>
+
+        <!-- สรุปโควตาหน่วยที่เปิดรับ แนบในใบประสานงาน -->
+        <div class="print-quota-summary">
+          <strong>รายการหน่วยและโควตาที่เปิดรับ:</strong>
+          <div class="print-quota-chips">
+            @for (u of units; track u.id) {
+              <span class="print-quota-item">{{ u.name }} ({{ u.totalQuota }} อัตรา)</span>
+            }
+          </div>
+        </div>
+
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th style="width: 7%;">ลำดับที่</th>
+              <th style="width: 9%;">เลขที่</th>
+              <th style="width: 25%;">ยศ-ชื่อ-นามสกุล</th>
+              <th style="width: 14%;">สังกัดเดิม</th>
+              <th style="width: 13%;">คะแนนรวมสุทธิ</th>
+              <th style="width: 18%;">หน่วยที่เลือกบรรจุ</th>
+              <th style="width: 14%;">ลายมือชื่อนักเรียน</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (st of students; track st.student_id; let i = $index) {
+              <tr [class.print-row-preassigned]="!isStudentInSelectionQuota(st)">
+                <td class="text-center font-bold">{{ st.rank || (i + 1) }}</td>
+                <td class="text-center">{{ st.student_code }}</td>
+                <td class="text-left">{{ st.full_name }}</td>
+                <td class="text-left">{{ st.originalAffiliation }}</td>
+                <td class="text-center font-bold font-mono">{{ st.final_score_formatted }}</td>
+
+                <!-- ช่องหน่วยที่เลือกบรรจุ: 15 คนแรกเว้นจุดไข่ปลาให้เขียน / 15 คนหลังใส่ชื่อหน่วยเดิมไว้ตามที่กำหนด -->
+                @if (isStudentInSelectionQuota(st)) {
+                  <td class="text-center dotted-cell">................................................</td>
+                } @else {
+                  <td class="text-center font-bold print-unit-fixed">
+                    {{ st.selectedUnitName || (st.originalAffiliation && st.originalAffiliation !== '-' ? ('บรรจุสังกัดเดิม (' + st.originalAffiliation + ')') : 'มีหน่วยเดิมอยู่แล้ว') }}
+                  </td>
+                }
+
+                <!-- ลายมือชื่อนักเรียน -->
+                <td class="text-center dotted-cell">................................................</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        <div class="print-signoff-section">
+          <div class="signoff-boxes">
+            <div class="signoff-box">
+              <p>ผู้ควบคุมการเลือกหน่วย (ผู้ประสานงาน)</p>
+              <div class="sign-line">...................................................</div>
+              <p class="sign-role">(...................................................)</p>
+              <p class="sign-title">ตำแหน่ง ...................................................</p>
+              <p class="sign-date">วันที่ ......./......./............</p>
+            </div>
+            <div class="signoff-box">
+              <p>นายทหารฝ่ายการศึกษา / นายทหารธุรการ</p>
+              <div class="sign-line">...................................................</div>
+              <p class="sign-role">(...................................................)</p>
+              <p class="sign-title">ตำแหน่ง ...................................................</p>
+              <p class="sign-date">วันที่ ......./......./............</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- แบบที่ 2: บัญชีสรุปผลการจัดสรรและบรรจุลงหน่วย (ฉบับสมบูรณ์หลังกรอกเสร็จ) -->
+    @if (printMode === 'final') {
+      <div class="print-container print-only">
+        <div class="print-official-header">
+          <h2 class="print-title">บัญชีสรุปผลการจัดสรรและบรรจุลงหน่วยของนักเรียน (เรียงตามลำดับคะแนนรวมสุทธิ 1 ถึง N)</h2>
+          <h3 class="print-sub-header">หลักสูตร: {{ courseName }} | รุ่น: {{ batchName }}</h3>
+          <p class="print-instruction">
+            รายชื่อผู้สำเร็จการศึกษาและหน่วยที่ได้รับการบรรจุตามลำดับผลคะแนนรวมสุทธิ (วิชาการ 80% + ความประพฤติ 20%)
+          </p>
+        </div>
+
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th style="width: 7%;">ลำดับที่</th>
+              <th style="width: 8%;">เลขที่</th>
+              <th style="width: 24%;">ยศ-ชื่อ-นามสกุล</th>
+              <th style="width: 13%;">สังกัดเดิม</th>
+              <th style="width: 10%;">ร้อยละ 80</th>
+              <th style="width: 10%;">ประพฤติ 20%</th>
+              <th style="width: 11%;">คะแนนรวมสุทธิ</th>
+              <th style="width: 17%;">หน่วยที่ได้รับบรรจุ</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (st of students; track st.student_id; let i = $index) {
+              <tr>
+                <td class="text-center font-bold">{{ st.rank || (i + 1) }}</td>
+                <td class="text-center">{{ st.student_code }}</td>
+                <td class="text-left">{{ st.full_name }}</td>
+                <td class="text-left">{{ st.originalAffiliation }}</td>
+                <td class="text-center font-mono">{{ st.academic_score_80_formatted }}</td>
+                <td class="text-center font-mono">{{ st.behavior_score_20_formatted }}</td>
+                <td class="text-center font-bold font-mono">{{ st.final_score_formatted }}</td>
+                <td class="text-left font-bold">
+                  {{ st.selectedUnitName || (st.originalAffiliation && st.originalAffiliation !== '-' ? st.originalAffiliation : 'ยังไม่ได้เลือกหน่วย') }}
+                  @if (!isStudentInSelectionQuota(st)) {
+                    <span class="print-orig-tag">(สังกัดเดิม)</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        <!-- สรุปยอดบรรจุแต่ละหน่วยท้ายกระดาษ -->
+        <div class="print-summary-table-wrap">
+          <h4>สรุปยอดการบรรจุลงหน่วย:</h4>
+          <div class="print-quota-chips">
+            @for (u of units; track u.id) {
+              <span class="print-quota-item">
+                {{ u.name }}: <strong>{{ getAssignedCount(u.id) }}</strong> / {{ u.totalQuota }} อัตรา
+              </span>
+            }
+          </div>
+        </div>
+
+        <div class="print-signoff-section">
+          <div class="signoff-boxes">
+            <div class="signoff-box">
+              <p>ตรวจแล้วถูกต้อง</p>
+              <div class="sign-line">...................................................</div>
+              <p class="sign-role">(...................................................)</p>
+              <p class="sign-title">นายทหารฝ่ายการศึกษา / นายทหารธุรการ</p>
+              <p class="sign-date">วันที่ ......./......./............</p>
+            </div>
+            <div class="signoff-box">
+              <p>อนุมัติ</p>
+              <div class="sign-line">...................................................</div>
+              <p class="sign-role">(...................................................)</p>
+              <p class="sign-title">ผู้บังคับการ / ผู้ว่าการโรงเรียน</p>
+              <p class="sign-date">วันที่ ......./......./............</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+  </div>
+</div>

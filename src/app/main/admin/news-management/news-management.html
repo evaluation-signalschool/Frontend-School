@@ -37,8 +37,29 @@
           <textarea [(ngModel)]="formData.description" name="description" rows="4" required placeholder="ระบุรายละเอียดข่าวสาร"></textarea>
         </div>
 
-        <div class="form-group">
-          <label>ไฟล์แนบ (ถ้ามี)</label>
+        <!-- Google Drive Section -->
+        <div class="form-group drive-box">
+          <label class="drive-label">
+            <mat-icon class="drive-icon">add_to_drive</mat-icon>
+            <span>ลิงก์ไฟล์จาก Google Drive (ถ้ามี)</span>
+          </label>
+          <input type="url" [(ngModel)]="formData.file_url" name="file_url" placeholder="วางลิงก์ เช่น https://drive.google.com/file/d/.../view">
+          
+          <div class="drive-tip">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">info</mat-icon>
+            <span>
+              <b>คำแนะนำ:</b> อัปโหลดไฟล์ลง Google Drive &gt; คลิกขวาเลือก "แชร์" &gt; ตั้งเป็น <b>"ทุกคนที่มีลิงก์มีสิทธิ์อ่าน"</b> &gt; คัดลอกลิงก์มาวางที่นี่ (เมื่อคลิกจะเปิดดูในแท็บใหม่ทันที)
+            </span>
+          </div>
+        </div>
+
+        <div class="form-group" *ngIf="formData.file_url">
+          <label>ชื่อไฟล์แนบที่ต้องการแสดง (ถ้ามี)</label>
+          <input type="text" [(ngModel)]="formData.file_name" name="file_name" placeholder="เช่น เอกสารระเบียบการ.pdf (ถ้าเว้นว่างจะแสดง 'เปิดดูเอกสาร Google Drive')">
+        </div>
+
+        <div class="form-group" *ngIf="!formData.file_url">
+          <label>หรือ อัปโหลดไฟล์จากเครื่อง (ถ้าไม่ได้ใช้ Google Drive)</label>
           <input type="file" (change)="onFileSelected($event)" class="file-input">
         </div>
 
@@ -65,8 +86,9 @@
               <h3>{{ item.title }}</h3>
               <p>{{ item.news_date | date:'dd/MM/yyyy' }}</p>
             </div>
-            <a *ngIf="item.file_url" [href]="getFileUrl(item.file_url)" target="_blank" class="file-link">
-              <mat-icon>attachment</mat-icon> {{ item.file_name }}
+            <a *ngIf="item.file_url" [href]="getFileUrl(item.file_url)" target="_blank" rel="noopener noreferrer" class="file-link">
+              <mat-icon>{{ isGoogleDrive(item.file_url) ? 'open_in_new' : 'attachment' }}</mat-icon>
+              <span>{{ item.file_name || (isGoogleDrive(item.file_url) ? 'เปิดดูเอกสาร Google Drive' : 'เปิดดูไฟล์แนบ') }}</span>
             </a>
           </div>
           <div class="action-buttons" style="display: flex; gap: 4px;">

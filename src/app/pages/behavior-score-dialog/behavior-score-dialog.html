@@ -1,0 +1,131 @@
+<div class="behavior-score-dialog-container">
+  <div class="dialog-header">
+    <div class="header-title-row">
+      <div class="header-icon-circle">
+        <mat-icon>verified</mat-icon>
+      </div>
+      <div>
+        <h2 class="dialog-title">บันทึกคะแนนความประพฤติ</h2>
+        <p class="dialog-subtitle" *ngIf="data.batchName">
+          รุ่น: <strong>{{ data.batchName }}</strong>
+          <span *ngIf="data.courseName"> ({{ data.courseName }})</span>
+        </p>
+      </div>
+    </div>
+    <button mat-icon-button (click)="onClose()" class="btn-close" [disabled]="isSaving">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="dialog-toolbar">
+    <div class="search-box">
+      <mat-icon>search</mat-icon>
+      <input
+        type="text"
+        placeholder="ค้นหารหัส, ยศ, ชื่อ, หรือสังกัด..."
+        [(ngModel)]="searchQuery"
+        (input)="onSearchChange()"
+      />
+      <button *ngIf="searchQuery" (click)="searchQuery = ''; onSearchChange()" class="btn-clear-search">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div class="toolbar-actions">
+      <button
+        type="button"
+        class="btn-quick-fill"
+        (click)="quickFillAll(200)"
+        title="กำหนดคะแนนความประพฤติ 200 คะแนนเต็มให้ทุกคนในรุ่น"
+      >
+        <mat-icon>flash_on</mat-icon>
+        ตั้งค่า 200 คะแนนทุกคน
+      </button>
+      <span class="count-badge">
+        จำนวนนักเรียน: <strong>{{ filteredStudents.length }}</strong> นาย
+      </span>
+    </div>
+  </div>
+
+  <div class="dialog-body">
+    <div *ngIf="isLoading" class="loading-state">
+      <mat-icon class="spinning">sync</mat-icon>
+      <span>กำลังโหลดรายชื่อนักเรียน...</span>
+    </div>
+
+    <div *ngIf="!isLoading" class="table-container">
+      <table class="behavior-score-table">
+        <thead>
+          <tr>
+            <th class="text-center" style="width: 55px;">ลำดับ</th>
+            <th class="text-center" style="width: 90px;">รหัส</th>
+            <th class="text-left">ยศ - ชื่อ - นามสกุล</th>
+            <th class="text-center" style="width: 140px;">สังกัด</th>
+            <th class="text-center" style="width: 180px;">คะแนนความประพฤติ (200)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let student of filteredStudents; let i = index" [class.deducted]="student.behaviorScore !== null && student.behaviorScore < 200">
+            <td class="text-center col-index">{{ i + 1 }}</td>
+            <td class="text-center col-code">
+              <span class="code-pill">{{ student.student_code }}</span>
+            </td>
+            <td class="text-left col-name">
+              <span class="rank-tag" *ngIf="student.rank_name">{{ student.rank_name }}</span>
+              <span class="name-text">{{ student.first_name }} {{ student.last_name }}</span>
+            </td>
+            <td class="text-center col-affiliation">
+              <span class="affiliation-pill" *ngIf="student.affiliation">{{ student.affiliation }}</span>
+              <span class="text-muted" *ngIf="!student.affiliation">-</span>
+            </td>
+            <td class="text-center col-score">
+              <div class="input-score-wrap">
+                <input
+                  type="text"
+                  inputmode="decimal"
+                  class="score-input"
+                  [class.is-deducted]="student.behaviorScore !== null && student.behaviorScore < 200"
+                  [class.is-over]="student.behaviorScore !== null && student.behaviorScore > 200"
+                  [value]="student.behaviorScore !== null && student.behaviorScore !== undefined ? student.behaviorScore : ''"
+                  (input)="validateScore(student, 200, $event)"
+                  (blur)="onScoreBlur(student, 200, $event)"
+                  (wheel)="onWheel($event)"
+                  placeholder="200"
+                  autocomplete="off"
+                />
+                <span class="max-label">/ 200</span>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="filteredStudents.length === 0">
+            <td colspan="5" class="empty-state">
+              <mat-icon>person_off</mat-icon>
+              <p>ไม่พบรายชื่อนักเรียน</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="dialog-footer">
+    <div class="footer-tip">
+      <mat-icon>info</mat-icon>
+      <span>เกณฑ์คะแนนความประพฤติเริ่มต้น 200 คะแนน สามารถแก้ไขหรือหักคะแนนตามระเบียบโรงเรียน</span>
+    </div>
+    <div class="footer-buttons">
+      <button mat-button class="btn-cancel" (click)="onClose()" [disabled]="isSaving">
+        ยกเลิก
+      </button>
+      <button
+        mat-raised-button
+        class="btn-save"
+        (click)="saveScores()"
+        [disabled]="isSaving || students.length === 0"
+      >
+        <mat-icon>{{ isSaved ? 'check_circle' : 'save' }}</mat-icon>
+        <span>{{ isSaved ? 'บันทึกแล้ว' : 'บันทึกคะแนนความประพฤติ' }}</span>
+      </button>
+    </div>
+  </div>
+</div>

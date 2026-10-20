@@ -13,7 +13,7 @@
   </div>
 
   <div class="page-wrapper">
-    <!-- 🔍 ส่วน Dropdown ตัวกรองข้อมูล -->
+    <!-- ส่วนดรอปดาวน์ตัวกรองข้อมูล -->
     <div class="center-content">
       <div class="course-container">
         <!-- 1: เลือกโครงสร้างหลักสูตร -->
@@ -69,7 +69,7 @@
       </div>
     </div>
 
-    <!-- 📊 ข้อมูลสรุปหมวดวิชา (จาก API) -->
+    <!-- ข้อมูลสรุปหมวดวิชาจากเซิร์ฟเวอร์ -->
     @if (groupSummary) {
       <div class="subject-summary-card">
         <h3 class="summary-title">
@@ -89,7 +89,7 @@
       </div>
     }
 
-    <!-- ⚙️ แถบปุ่ม Action -->
+    <!-- แถบปุ่มดำเนินการต่างๆ -->
     <div class="table-actions-bar">
       <div></div>
       <div class="action-buttons-inline">
@@ -128,7 +128,7 @@
             <th style="min-width: 60px">ลำดับ</th>
             <th style="min-width: 180px">ยศ ชื่อ-นามสกุล</th>
 
-            <!-- 🌟 วนลูปสร้างคอลัมน์ "ชื่อวิชา" แทนที่คอลัมน์คะแนนรวม 🌟 -->
+            <!-- วนลูปสร้างคอลัมน์ชื่อวิชาแทนที่คอลัมน์คะแนนรวม -->
             @for (subj of groupSummary?.subjects; track subj.subject_id) {
               <th style="min-width: 140px">
                 <div class="subject-col-title">{{ subj.subject_name }}</div>
@@ -151,7 +151,7 @@
 
               <td class="text-left">{{ student.full_name }}</td>
 
-              <!-- 🌟 วนลูปดึง "คะแนน" ของแต่ละวิชามาแสดงให้ตรงคอลัมน์ 🌟 -->
+              <!-- วนลูปดึงคะแนนของแต่ละวิชามาแสดงผลให้ตรงตามคอลัมน์ -->
               @for (subj of groupSummary?.subjects; track subj.subject_id) {
                 <td class="subject-score-cell">
                   <!-- ถ้าไม่มีคะแนนให้แสดงเครื่องหมายขีด (-) -->
@@ -188,7 +188,7 @@
     </div>
   </div>
 
-  <!-- 🎯 สถานะประมวลผลล่าสุด -->
+  <!-- สถานะการประมวลผลล่าสุด -->
   <div class="page-footer-status">
     <div class="process-status-bottom">
       <mat-icon>history</mat-icon>

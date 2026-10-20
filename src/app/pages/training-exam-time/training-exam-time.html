@@ -1,0 +1,444 @@
+<div class="training-exam-time-page">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <button mat-icon-button class="back-button" (click)="goBack()" title="กลับไปยังหน้าหลักแอดมิน">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <div class="title-wrap">
+        <h1 class="page-title">บันทึกเวลาการฝึกอบรมและเวลาสอบ</h1>
+        <p class="page-subtitle">จัดการเวลาคิดเป็นร้อยละ (เวลาในการฝึกอบรม และ เวลาในการสอบ) ของนักเรียนทั้งรุ่น</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn-header-nav" routerLink="/admin/scoremanagement" title="ไปยังหน้าบันทึกคะแนนดิบรายวิชา">
+        <mat-icon>edit_note</mat-icon>
+        <span>ไปหน้าบันทึกคะแนนดิบ</span>
+      </button>
+      <button class="btn-header-nav" routerLink="/admin/classoverview" title="ไปยังหน้าภาพรวมผลการเรียนทั้งรุ่น">
+        <mat-icon>dashboard</mat-icon>
+        <span>ไปหน้าภาพรวมผลการเรียน</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="page-content">
+    <!-- Filter Card: เลือกรุ่นและหลักสูตร -->
+    <div class="filter-card">
+      <div class="filter-card-header">
+        <mat-icon class="icon-filter">tune</mat-icon>
+        <span class="filter-title">เลือกรุ่นที่ต้องการบันทึกเวลา</span>
+      </div>
+
+      <div class="filter-grid">
+        <div class="form-group">
+          <label class="form-label">โครงสร้างหลักสูตร</label>
+          <div class="select-wrapper">
+            <select [(ngModel)]="selectedCourse" (ngModelChange)="onCourseChange()">
+              <option value="all">— เลือกหลักสูตร —</option>
+              @for (cg of courseGroups; track cg.course_name) {
+                <option [value]="cg.course_name">
+                  {{ cg.course_name }}
+                </option>
+              }
+            </select>
+            <mat-icon class="select-arrow">expand_more</mat-icon>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">เลือกรุ่น</label>
+          <div class="select-wrapper">
+            <select
+              [(ngModel)]="selectedBatch"
+              (ngModelChange)="onBatchChange()"
+              [disabled]="selectedCourse === 'all' || !selectedCourse"
+            >
+              <option [value]="null">— เลือกรุ่น —</option>
+              @for (batch of batches; track (batch.batch_id || batch.id)) {
+                <option [value]="batch.batch_id || batch.id">{{ batch.batch_name }}</option>
+              }
+            </select>
+            <mat-icon class="select-arrow">expand_more</mat-icon>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State เมื่อยังไม่ได้เลือกรุ่น -->
+    <div *ngIf="!selectedBatch && !isLoadingStudents" class="empty-batch-state">
+      <div class="empty-icon-circle">
+        <mat-icon>schedule</mat-icon>
+      </div>
+      <h3>กรุณาเลือกโครงสร้างหลักสูตรและรุ่น</h3>
+      <p>เพื่อเริ่มตรวจสอบและบันทึกเวลาการฝึกอบรมและเวลาสอบของนักเรียน</p>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoadingStudents" class="loading-state">
+      <mat-icon class="spinning">sync</mat-icon>
+      <span>กำลังโหลดรายชื่อนักเรียนในรุ่น...</span>
+    </div>
+
+    <!-- Main Content เมื่อเลือกรุ่นแล้ว -->
+    <div *ngIf="selectedBatch && !isLoadingStudents" class="data-section">
+      <!-- Stats Summary Row: แสดงภาพรวมเกรดเฉลี่ยและระดับเกณฑ์ -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon-wrap icon-blue">
+            <mat-icon>group</mat-icon>
+          </div>
+          <div class="stat-details">
+            <span class="stat-value">{{ totalCount }}</span>
+            <span class="stat-label">นักเรียนทั้งหมด (นาย)</span>
+          </div>
+        </div>
+
+        <div class="stat-card stat-card-gpa">
+          <div class="stat-icon-wrap icon-gold">
+            <mat-icon>school</mat-icon>
+          </div>
+          <div class="stat-details">
+            <span class="stat-value highlight-gold">{{ averageGpa }}</span>
+            <span class="stat-label">เกรดเฉลี่ยรวม (เฉลี่ยนเฉลี่ย)</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrap icon-green">
+            <mat-icon>stars</mat-icon>
+          </div>
+          <div class="stat-details">
+            <span class="stat-value">{{ excellentCount + veryGoodCount }} / {{ totalCount }}</span>
+            <span class="stat-label">เกณฑ์ดีเลิศ &amp; ดีมาก (นาย)</span>
+          </div>
+        </div>
+
+        <div class="stat-card" [class.has-poor]="poorCount > 0">
+          <div class="stat-icon-wrap" [ngClass]="poorCount > 0 ? 'icon-orange' : 'icon-teal'">
+            <mat-icon>{{ poorCount > 0 ? 'warning_amber' : 'verified' }}</mat-icon>
+          </div>
+          <div class="stat-details">
+            <span class="stat-value">
+              {{ goodCount + fairCount }}
+              <small *ngIf="poorCount > 0" class="sub-poor">| ไม่พอใช้ {{ poorCount }}</small>
+            </span>
+            <span class="stat-label">เกณฑ์ดี &amp; พอใช้ (นาย)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions & Toolbar -->
+      <div class="toolbar-card">
+        <div class="toolbar-left">
+          <!-- Live Search -->
+          <div class="search-input-wrap">
+            <mat-icon>search</mat-icon>
+            <input
+              type="text"
+              placeholder="ค้นหารหัส, ยศ, ชื่อ, นามสกุล, หรือสังกัด..."
+              [(ngModel)]="searchQuery"
+              (input)="onSearchChange()"
+            />
+            <button *ngIf="searchQuery" (click)="searchQuery = ''; onSearchChange()" class="btn-clear-search">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+
+          <!-- Filter Mode Chips ตามระดับเกณฑ์ -->
+          <div class="filter-chips">
+            <button
+              type="button"
+              class="chip-btn"
+              [class.active]="filterMode === 'all'"
+              (click)="setFilterMode('all')"
+            >
+              ทั้งหมด ({{ totalCount }})
+            </button>
+            <button
+              type="button"
+              class="chip-btn chip-excellent"
+              [class.active]="filterMode === 'excellent'"
+              (click)="setFilterMode('excellent')"
+            >
+              ดีเลิศ ({{ excellentCount }})
+            </button>
+            <button
+              type="button"
+              class="chip-btn chip-very-good"
+              [class.active]="filterMode === 'very-good'"
+              (click)="setFilterMode('very-good')"
+            >
+              ดีมาก ({{ veryGoodCount }})
+            </button>
+            <button
+              type="button"
+              class="chip-btn chip-good"
+              [class.active]="filterMode === 'good'"
+              (click)="setFilterMode('good')"
+            >
+              ดี ({{ goodCount }})
+            </button>
+            <button
+              type="button"
+              class="chip-btn chip-fair"
+              [class.active]="filterMode === 'fair'"
+              (click)="setFilterMode('fair')"
+            >
+              พอใช้ ({{ fairCount }})
+            </button>
+            <button
+              type="button"
+              class="chip-btn chip-poor"
+              [class.active]="filterMode === 'poor'"
+              (click)="setFilterMode('poor')"
+              *ngIf="poorCount > 0"
+            >
+              ไม่พอใช้ ({{ poorCount }})
+            </button>
+          </div>
+        </div>
+
+        <div class="toolbar-right">
+          <!-- Sort Options -->
+          <div class="sort-group">
+            <span class="sort-caption">เรียง:</span>
+            <button
+              type="button"
+              class="btn-sort"
+              [class.active]="sortBy === 'code'"
+              (click)="sortStudents('code')"
+              title="เรียงตามเลขที่"
+            >
+              เลขที่
+              <mat-icon class="sort-icon" *ngIf="sortBy === 'code'">{{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+            </button>
+            <button
+              type="button"
+              class="btn-sort"
+              [class.active]="sortBy === 'gpa'"
+              (click)="sortStudents('gpa')"
+              title="เรียงตามเกรดเฉลี่ยสะสม"
+            >
+              เกรด
+              <mat-icon class="sort-icon" *ngIf="sortBy === 'gpa'">{{ sortDirection === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</mat-icon>
+            </button>
+            <button
+              type="button"
+              class="btn-sort"
+              [class.active]="sortBy === 'rank'"
+              (click)="sortStudents('rank')"
+              title="เรียงตามลำดับที่ได้"
+            >
+              อันดับ
+              <mat-icon class="sort-icon" *ngIf="sortBy === 'rank'">{{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+            </button>
+          </div>
+
+          <!-- Quick Fill Tools -->
+          <div class="quick-tools-group">
+            <button
+              type="button"
+              class="btn-tool btn-tool-training"
+              (click)="quickFillTraining100()"
+              title="ใส่ค่าเวลาฝึกอบรม 100% ให้ทุกคน"
+            >
+              <mat-icon>flash_on</mat-icon>
+              ฝึกอบรม 100%
+            </button>
+            <button
+              type="button"
+              class="btn-tool btn-tool-exam"
+              (click)="quickFillExam100()"
+              title="ใส่ค่าเวลาสอบ 100% ให้ทุกคน"
+            >
+              <mat-icon>flash_on</mat-icon>
+              เวลาสอบ 100%
+            </button>
+          </div>
+
+          <!-- Export Excel -->
+          <button type="button" class="btn-export-excel" (click)="exportExcel()" title="ส่งออกเป็นไฟล์ Excel">
+            <mat-icon>file_download</mat-icon>
+            ส่งออก Excel
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Data Table: จัดรูปแบบตามระเบียบใน Image 1 & Image 2 -->
+      <div class="table-card">
+        <div class="table-responsive">
+          <table class="time-table">
+            <thead>
+              <!-- Header Row 1 -->
+              <tr>
+                <th rowspan="2" class="text-center col-num clickable" (click)="sortStudents('code')">
+                  ลำดับ
+                </th>
+                <th rowspan="2" class="text-center col-code clickable" (click)="sortStudents('code')">
+                  รหัส
+                </th>
+                <th rowspan="2" class="text-left col-name">ยศ - ชื่อ - นามสกุล</th>
+                <th rowspan="2" class="text-center col-affil">สังกัด</th>
+                <th colspan="2" class="text-center col-time-group">เวลาคิดเป็นร้อยละ</th>
+                <th rowspan="2" class="text-center col-gpa clickable" (click)="sortStudents('gpa')">
+                  <div class="th-content-center">
+                    <span>คะแนนเฉลี่ยสะสม</span>
+                    <mat-icon class="th-sort-icon" *ngIf="sortBy === 'gpa'">{{ sortDirection === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</mat-icon>
+                  </div>
+                </th>
+                <th rowspan="2" class="text-center col-grade-level">เกณฑ์ที่ได้</th>
+                <th rowspan="2" class="text-center col-rank clickable" (click)="sortStudents('rank')">
+                  <div class="th-content-center">
+                    <span>ลำดับที่ได้</span>
+                    <mat-icon class="th-sort-icon" *ngIf="sortBy === 'rank'">{{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                  </div>
+                </th>
+              </tr>
+              <!-- Header Row 2 -->
+              <tr>
+                <th class="text-center col-sub-time">
+                  <div class="th-content">
+                    <mat-icon>model_training</mat-icon>
+                    <span>เวลาในการฝึกอบรม (%)</span>
+                  </div>
+                </th>
+                <th class="text-center col-sub-time">
+                  <div class="th-content">
+                    <mat-icon>assignment_turned_in</mat-icon>
+                    <span>เวลาในการสอบ (%)</span>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (st of filteredStudents; track st.student_id; let i = $index) {
+                <tr [class.row-warn]="(st.trainingTimeScore ?? 0) < 80 || (st.examTimeScore ?? 0) < 80" [class.row-modified]="st.isModified">
+                  <!-- ลำดับ -->
+                  <td class="text-center col-num">{{ i + 1 }}</td>
+
+                  <!-- รหัสประจำตัว -->
+                  <td class="text-center col-code">
+                    <span class="code-badge">{{ st.student_code }}</span>
+                  </td>
+
+                  <!-- ยศ - ชื่อ - นามสกุล -->
+                  <td class="text-left col-name">
+                    <div class="name-wrap">
+                      <span class="rank-tag" *ngIf="st.rank_name">{{ st.rank_name }}</span>
+                      <span class="name-text">{{ st.first_name }} {{ st.last_name }}</span>
+                    </div>
+                  </td>
+
+                  <!-- สังกัด -->
+                  <td class="text-center col-affil">
+                    <span class="affiliation-badge" *ngIf="st.affiliation">{{ st.affiliation }}</span>
+                    <span class="text-muted" *ngIf="!st.affiliation">-</span>
+                  </td>
+
+                  <!-- เวลาในการฝึกอบรม (คิดเป็นร้อยละ) -->
+                  <td class="text-center col-time-input">
+                    <div class="input-wrap">
+                      <input
+                        type="text"
+                        inputmode="decimal"
+                        class="time-input"
+                        [class.error-input]="isScoreInvalid(st.trainingTimeScore)"
+                        [class.empty-input]="isScoreEmpty(st.trainingTimeScore)"
+                        [class.warn-input]="!isScoreInvalid(st.trainingTimeScore) && !isScoreEmpty(st.trainingTimeScore) && (st.trainingTimeScore ?? 0) < 80"
+                        [value]="st.trainingTimeScore !== null && st.trainingTimeScore !== undefined ? st.trainingTimeScore : ''"
+                        (input)="validateScore(st, 'trainingTimeScore', $event)"
+                        (blur)="onScoreBlur(st, 'trainingTimeScore', $event)"
+                        (wheel)="onWheel($event)"
+                        placeholder="100"
+                        autocomplete="off"
+                      />
+                      <span class="unit-label">%</span>
+                    </div>
+                  </td>
+
+                  <!-- เวลาในการสอบ (คิดเป็นร้อยละ) -->
+                  <td class="text-center col-time-input">
+                    <div class="input-wrap">
+                      <input
+                        type="text"
+                        inputmode="decimal"
+                        class="time-input"
+                        [class.error-input]="isScoreInvalid(st.examTimeScore)"
+                        [class.empty-input]="isScoreEmpty(st.examTimeScore)"
+                        [class.warn-input]="!isScoreInvalid(st.examTimeScore) && !isScoreEmpty(st.examTimeScore) && (st.examTimeScore ?? 0) < 80"
+                        [value]="st.examTimeScore !== null && st.examTimeScore !== undefined ? st.examTimeScore : ''"
+                        (input)="validateScore(st, 'examTimeScore', $event)"
+                        (blur)="onScoreBlur(st, 'examTimeScore', $event)"
+                        (wheel)="onWheel($event)"
+                        placeholder="100"
+                        autocomplete="off"
+                      />
+                      <span class="unit-label">%</span>
+                    </div>
+                  </td>
+
+                  <!-- คะแนนเฉลี่ยสะสม (GPA) -->
+                  <td class="text-center col-gpa">
+                    <span class="gpa-badge" [class.high-gpa]="st.gpa !== '-' && +st.gpa >= 3.5">
+                      {{ st.gpa }}
+                    </span>
+                  </td>
+
+                  <!-- เกณฑ์ที่ได้ (วัดตามสูตรเกรด) -->
+                  <td class="text-center col-grade-level">
+                    <span class="grade-badge" [ngClass]="getGradeLevelClass(st.gradeLevel)">
+                      {{ st.gradeLevel }}
+                    </span>
+                  </td>
+
+                  <!-- ลำดับที่ได้ -->
+                  <td class="text-center col-rank">
+                    <span class="rank-num">
+                      {{ st.rank ? st.rank : '-' }}
+                    </span>
+                  </td>
+                </tr>
+              }
+
+              @if (filteredStudents.length === 0) {
+                <tr>
+                  <td colspan="9" class="empty-table-row">
+                    <mat-icon>search_off</mat-icon>
+                    <p>ไม่พบข้อมูลนักเรียนที่ตรงกับเงื่อนไข</p>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Table Footer Action Bar -->
+        <div class="table-footer-bar">
+          <div class="footer-info">
+            <span *ngIf="hasUnsavedChanges" class="unsaved-badge">
+              <mat-icon>edit</mat-icon> มีการแก้ไขข้อมูลที่ยังไม่ได้บันทึก
+            </span>
+            <span *ngIf="!hasUnsavedChanges" class="saved-badge">
+              <mat-icon>check</mat-icon> ข้อมูลตรงกับฐานข้อมูลแล้ว
+            </span>
+          </div>
+
+          <div class="footer-actions">
+            <button
+              mat-raised-button
+              class="btn-save-primary"
+              [class.saved]="isSaved && !hasUnsavedChanges"
+              (click)="saveScores()"
+              [disabled]="isSaving || students.length === 0"
+            >
+              <mat-icon>{{ isSaved && !hasUnsavedChanges ? 'check_circle' : 'save' }}</mat-icon>
+              <span>{{ isSaved && !hasUnsavedChanges ? 'บันทึกแล้ว' : 'บันทึกเวลาฝึกอบรมและเวลาสอบ' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

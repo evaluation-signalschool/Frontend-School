@@ -20,11 +20,11 @@ import { environment } from '../../environments/environment';
   animations: [
     trigger('slideAnim', [
       transition(':enter', [
-        style({ opacity: 0 }), // ✅ แก้ stlye → style
-        animate('500ms ease', style({ opacity: 1 })), // ✅ แก้ stlye → style
-      ]), // ✅ เพิ่ม comma
+        style({ opacity: 0 }), // กำหนดค่าความโปร่งใสเริ่มต้น
+        animate('500ms ease', style({ opacity: 1 })), // แอนิเมชันแสดงผลแบบค่อยๆ ปรากฏ
+      ]),
       transition(':leave', [
-        // ✅ แก้ TransitionEvent(: → transition('
+        // การเปลี่ยนสถานะของแอนิเมชัน (Transition)
         animate('500ms ease', style({ opacity: 0 })),
       ]),
     ]),
@@ -112,9 +112,9 @@ export class Home {
   public chartLabels: string[] = [];
   public chartDatasets: ChartDataset[] = [];
 
-  // ✅ 1. ประกาศตัวแปร 2 ตัวนี้เป็น public
+  // กำหนดตัวแปรสำหรับแสดงผลในหน้าจอ
   public selectedCohort: string = 'all'; 
-  public currentAverageScore: number = 77.5; // 👈 ตัวแปรนี้แหละครับที่ HTML เรียกหา
+  public currentAverageScore: number = 77.5; // ตัวแปรเก็บคะแนนเฉลี่ยที่ใช้แสดงใน HTML
 
   // ข้อมูลคะแนนเฉลี่ยจำลองของแต่ละรุ่น
   private cohortScores: { [key: string]: number } = {
@@ -137,7 +137,7 @@ export class Home {
   const ctx = document.getElementById('mainChart') as HTMLCanvasElement;
   if (!ctx) return;
 
-  // 🟢 เคลียร์กราฟใบเก่าออกจาก Canvas ก่อนเสมอ ป้องกัน Error "Canvas is already in use"
+  // เคลียร์กราฟเดิมออกจาก Canvas ก่อนสร้างใหม่ เพื่อป้องกันข้อผิดพลาด Canvas is already in use
   if (this.chart) {
     this.chart.destroy();
   }
@@ -146,7 +146,7 @@ export class Home {
   this.chart = new Chart(ctx, {
     type: this.chartType,
     data: {
-      // 🟢 ดึงจากตัวแปรเก็บข้อมูล (เพื่อให้เวลาสลับกราฟ หรือโหลด API ข้อมูลรายการ 'นนส.ทบ.' จะไม่หายไป)
+      // ดึงข้อมูลจากตัวแปร เพื่อป้องกันข้อมูลสูญหายเมื่อสลับกราฟหรือเรียก API
       labels: this.chartLabels || [], 
       datasets: this.chartDatasets || []
     },
@@ -194,7 +194,7 @@ export class Home {
     this.fetchNews();
   }
 
-  // ✅ เหลือแค่ get แบบเดียว ไม่ต้องประกาศ staffGroups แยก
+  // ดึงข้อมูลรายชื่อเจ้าหน้าที่แบบแบ่งหน้า
   get staffGroups(): number[] {
     return Array.from(
       { length: Math.ceil(this.staffList.length / this.itemsPerPage) },
@@ -204,7 +204,7 @@ export class Home {
 
   get currentStaff() {
     const start = this.staffPage * this.itemsPerPage;
-    return this.staffList.slice(start, start + this.itemsPerPage); // ✅ เติม return
+    return this.staffList.slice(start, start + this.itemsPerPage); // ส่งคืนข้อมูลตามจำนวนรายการต่อหน้า
   }
 
   // ── Forms List ─────────────────────────────────────
@@ -261,6 +261,11 @@ export class Home {
       return url;
     }
     return this.getBackendUrl() + url;
+  }
+
+  isGoogleDrive(url: string): boolean {
+    if (!url) return false;
+    return url.includes('drive.google.com') || url.includes('docs.google.com');
   }
 }
 

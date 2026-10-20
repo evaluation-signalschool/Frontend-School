@@ -34,6 +34,31 @@
           </button>
         </mat-form-field>
 
+        <!-- จดจำการเข้าสู่ระบบ (Remember Me) -->
+        <div class="remember-row">
+          <label class="remember-label" for="rememberMeCheckbox">
+            <input
+              type="checkbox"
+              id="rememberMeCheckbox"
+              [(ngModel)]="rememberMe"
+              class="hidden-checkbox"
+            />
+            <span class="custom-checkbox" [class.checked]="rememberMe">
+              <mat-icon class="check-icon" *ngIf="rememberMe">check</mat-icon>
+            </span>
+            <span class="remember-text">จดจำการเข้าสู่ระบบ</span>
+          </label>
+
+          <span
+            class="remember-badge"
+            [class.badge-active]="rememberMe"
+            [title]="rememberMe ? 'อยู่ในระบบต่อเนื่อง 30 วัน' : 'ระบบจะให้เข้าสู่ระบบใหม่ทุก 1 วัน'"
+          >
+            <mat-icon class="badge-icon">{{ rememberMe ? 'verified_user' : 'history_toggle_off' }}</mat-icon>
+            {{ rememberMe ? 'จดจำ 30 วัน' : 'รีเซ็ตทุก 1 วัน' }}
+          </span>
+        </div>
+
         <!-- ข้อความ error -->
         <p class="error-message" *ngIf="errorMessage">
           <mat-icon class="error-icon">error_outline</mat-icon>

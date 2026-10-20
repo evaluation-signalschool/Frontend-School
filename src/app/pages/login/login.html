@@ -8,64 +8,90 @@
   <div class="page-content">
     <div class="login-card">
       <div class="card-header">
-        <img src="assets/image/logo.png" alt="School Logo" class="school-logo" *ngIf="false" />
-        <!-- Add logo if you want, hiding for now -->
         <h1 class="main-title">
-          ระบบแจ้งผลการเรียนออนไลน์<br />โรงเรียนทหารสื่อสาร กรมทหารสื่อสาร
+          ระบบแจ้งผลการเรียนออนไลน์<br />
+          <span>โรงเรียนทหารสื่อสาร กรมทหารสื่อสาร</span>
         </h1>
 
+        <!-- ป้ายแสดงหลักสูตรและรุ่น -->
         <div class="course-badge" *ngIf="loginTitle">
           <span class="badge-label">เข้าสู่ระบบ:</span>
           <span class="badge-value">{{ loginTitle }}</span>
         </div>
+
+        <!-- ถ้ายังไม่ได้เลือกรุ่นมา ให้แสดงตัวเลือกรุ่น -->
+        <div class="batch-selector-box" *ngIf="!loginTitle && availableBatches.length > 0">
+          <label class="selector-label">
+            <mat-icon class="label-icon">school</mat-icon>
+            เลือกรุ่นที่ต้องการเข้าสู่ระบบ:
+          </label>
+          <div class="select-wrapper">
+            <select class="styled-select" [(ngModel)]="batchId" (change)="onSelectBatch(availableBatches[$any($event.target).selectedIndex])">
+              <option *ngFor="let b of availableBatches" [value]="b.id">
+                {{ b.course_name ? b.course_name + ' - ' : '' }}{{ b.batch_name }}
+              </option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div class="login-body">
-        <p class="sub-title">
-          <mat-icon class="title-icon">lock_outline</mat-icon>
-          กรอกข้อมูลเพื่อเข้าสู่ระบบ
-        </p>
+        <div class="login-welcome">
+          <div class="google-shield-icon">
+            <mat-icon>verified_user</mat-icon>
+          </div>
+          <h2 class="welcome-heading">เข้าสู่ระบบด้วย Google</h2>
+          <p class="welcome-subtext">
+            กรุณาใช้บัญชี Google ของท่านเพื่อเข้าสู่ระบบดูผลคะแนนการเรียนและแบบประเมิน
+          </p>
+        </div>
 
-        <div class="login-form">
-          <mat-form-field appearance="outline" class="custom-field">
-            <mat-label>รหัสนักเรียน</mat-label>
-            <input
-              matInput
-              type="text"
-              placeholder="รหัสนักเรียน 10 หลัก"
-              [(ngModel)]="studentCode"
-            />
-            <mat-icon matSuffix class="field-icon">person</mat-icon>
-          </mat-form-field>
+        <!-- กล่องปุ่ม Google Sign-In -->
+        <div class="google-auth-container">
+          <!-- Official Google GIS Button Render Target -->
+          <div id="googleGisBtn" class="google-gis-wrapper"></div>
 
-          <mat-form-field appearance="outline" class="custom-field">
-            <mat-label>รหัสทหาร</mat-label>
-            <input
-              matInput
-              [type]="hidePassword ? 'password' : 'text'"
-              placeholder="รหัสผ่าน"
-              [(ngModel)]="password"
-              (keyup.enter)="onLogin()"
-            />
-            <button mat-icon-button matSuffix (click)="hidePassword = !hidePassword" tabindex="-1">
-              <mat-icon class="field-icon">{{
-                hidePassword ? 'visibility_off' : 'visibility'
-              }}</mat-icon>
-            </button>
-          </mat-form-field>
+          <!-- Custom Google Sign-In Button (Fallback / Direct Click) -->
+          <button 
+            type="button" 
+            class="google-custom-btn" 
+            (click)="triggerGoogleSignIn()" 
+            [disabled]="isLoading"
+            *ngIf="!gisRendered"
+          >
+            <svg class="google-svg" viewBox="0 0 48 48" width="22" height="22">
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+            </svg>
+            <span *ngIf="!isLoading">ลงชื่อเข้าใช้ด้วย Google</span>
+            <span *ngIf="isLoading" class="loading-inline">
+              <span class="spinner"></span>
+              กำลังเข้าสู่ระบบ...
+            </span>
+          </button>
 
+          <!-- Error Alert -->
           <div class="error-message" *ngIf="errorMessage">
             <mat-icon>error_outline</mat-icon>
             <span>{{ errorMessage }}</span>
           </div>
 
-          <button mat-flat-button class="login-btn" (click)="onLogin()" [disabled]="isLoading">
-            <span *ngIf="!isLoading">เข้าสู่ระบบ</span>
-            <mat-icon *ngIf="!isLoading" class="btn-icon">arrow_forward</mat-icon>
-            <div *ngIf="isLoading" class="spinner"></div>
-            <span *ngIf="isLoading" style="margin-left: 8px">กำลังตรวจสอบ...</span>
-          </button>
+          <!-- คำแนะนำการใช้งาน -->
+          <div class="login-hints">
+            <div class="hint-item">
+              <mat-icon>check_circle</mat-icon>
+              <span>ล็อกอินครั้งแรก: กรอกข้อมูลส่วนตัวเพิ่มเติมเพียงครั้งเดียว</span>
+            </div>
+            <div class="hint-item">
+              <mat-icon>check_circle</mat-icon>
+              <span>ครั้งต่อไป: เข้าสู่หน้าหลักเพื่อดูผลคะแนนและทำแบบประเมินได้ทันที</span>
+            </div>
+          </div>
         </div>
+
+
       </div>
 
       <div class="card-footer">

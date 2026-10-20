@@ -19,6 +19,7 @@ import { EvaluationFillComponent } from './main/student/evaluation-fill/evaluati
 // 3. ส่วนของผู้ดูแลระบบ (Admin Components)
 // =========================================================================
 import { Admin } from './main/admin/admin';
+import { AdminLayout } from './main/admin/admin-layout/admin-layout';
 import { AdminLogin } from './pages/admin-login/admin-login';
 import { AddCourse } from './pages/add-course-dialog/add-course-dialog';
 import { Addstudent } from './pages/addstudent/addstudent';
@@ -28,6 +29,8 @@ import { ScoreList } from './pages/score-list/score-list';
 import { ScoreSubmission } from './pages/score-submission/score-submission';
 import { ClassOverview } from './pages/class-overview/class-overview';
 import { StudentRanking } from './pages/student-ranking/student-ranking';
+import { TrainingExamTime } from './pages/training-exam-time/training-exam-time';
+import { UnitSelection } from './pages/unit-selection/unit-selection';
 import { From } from './main/from/from';
 import { FormView } from './pages/form-view/form-view';
 import { Certificate } from './pages/certificate/certificate';
@@ -72,6 +75,8 @@ export const routes: Routes = [
       { path: 'fill-form', component: EvaluationFillComponent }, // เข้าด้วย /student/fill-form (ทำแบบประเมิน)
     ],
   },
+  { path: 'login', redirectTo: 'student/login', pathMatch: 'full' },
+  { path: 'register', redirectTo: 'student/register', pathMatch: 'full' },
 
   // =======================================================================
   // 2. ส่วนของแอดมิน (Admin Routes)
@@ -82,6 +87,7 @@ export const routes: Routes = [
       { path: 'login', component: AdminLogin }, // เข้าด้วย /admin/login (เข้าสู่ระบบแอดมิน)
       {
         path: '',
+        component: AdminLayout,
         canActivate: [adminGuard],
         children: [
           { path: '', component: Admin }, // เข้าด้วย /admin (แดชบอร์ดหลักแอดมิน)
@@ -99,6 +105,9 @@ export const routes: Routes = [
           { path: 'classoverview', component: ClassOverview },
           { path: 'ranking', component: StudentRanking },
           { path: 'student-ranking', component: StudentRanking },
+          { path: 'training-exam-time', component: TrainingExamTime },
+          { path: 'training-time-scores', component: TrainingExamTime },
+          { path: 'unit-selection', component: UnitSelection },
 
           // จัดการแบบฟอร์มประเมินและสรุปผล
           { path: 'form', component: From },
@@ -157,7 +166,7 @@ export const routes: Routes = [
   {
     path: 'training-results',
     children: [
-      { path: '', component: TrainingResults },
+      { path: '', component: TrainingSummary },
       { path: 'training-statistics', component: TrainingStatistics },
       { path: 'training-summary', component: TrainingSummary },
     ],

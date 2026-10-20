@@ -1,7 +1,7 @@
 <div class="class-overview-page">
-  <!-- 🟪 หัวข้อบนสุด: ภาพรวมผลการเรียนทั้งรุ่น -->
+  <!-- หัวข้อหลัก: ภาพรวมผลการเรียนทั้งรุ่น -->
   <div class="page-header">
-    <button mat-icon-button class="back-button" routerLink="/admin/ScoreList">
+    <button mat-icon-button class="back-button" (click)="goBack()" title="ย้อนกลับ">
       <mat-icon>chevron_left</mat-icon>
     </button>
     <h1 class="page-title">ภาพรวมผลการเรียนทั้งรุ่น</h1>
@@ -10,7 +10,7 @@
 
   <div class="page-wrapper">
     
-    <!-- 🔍 เมนูฟิลเตอร์หลัก: เลือกโครงสร้างหลักสูตร และ เลือกรุ่น -->
+    <!-- เมนูตัวกรองข้อมูลหลัก: เลือกโครงสร้างหลักสูตรและเลือกรุ่น -->
     <div class="filter-card">
       <div class="menu-sub-title">
         <mat-icon>tune</mat-icon>
@@ -48,7 +48,7 @@
       </div>
     </div>
 
-    <!-- ⚠️ กรณีผู้ใช้ยังไม่ได้เลือกรุ่น -->
+    <!-- กรณีผู้ใช้ยังไม่ได้เลือกรุ่น -->
     @if (!selectedBatch) {
       <div class="empty-state-container">
         <div class="empty-icon-circle">
@@ -59,7 +59,7 @@
       </div>
     } @else {
 
-      <!-- ⏳ สถานะกำลังโหลดข้อมูล -->
+      <!-- สถานะกำลังโหลดข้อมูล -->
       @if (isLoading) {
         <div class="loading-state">
           <mat-icon class="spinning">sync</mat-icon>
@@ -67,21 +67,27 @@
         </div>
       } @else {
 
-        <!-- 📝 ปุ่มการทำงาน (อยู่นอก Tabs) -->
-        <div class="global-actions-top" style="display: flex; justify-content: flex-end; margin-bottom: 16px; gap: 10px;">
+        <!-- ปุ่มการทำงานต่างๆ -->
+        <div class="global-actions-top" style="display: flex; justify-content: flex-end; margin-bottom: 16px; gap: 10px; flex-wrap: wrap;">
+          <button mat-raised-button routerLink="/admin/unit-selection" [queryParams]="{ courseId: selectedCourse, batchId: selectedBatch }" style="background: linear-gradient(135deg, #0d9488 0%, #059669 100%); color: white; border-radius: 8px; font-family: inherit; font-weight: 600; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);">
+            <mat-icon style="margin-right: 8px;">account_tree</mat-icon> เลือกลงหน่วย (นนส.ทบ. / ช่างอิเล็กฯ)
+          </button>
           <button mat-raised-button routerLink="/admin/ranking" [queryParams]="{ courseId: selectedCourse, batchId: selectedBatch }" style="background-color: #f39c12; color: white; border-radius: 8px; font-family: inherit;">
             <mat-icon style="margin-right: 8px;">military_tech</mat-icon> จัดลำดับผลการเรียน (1 ถึง N)
           </button>
-          <button mat-raised-button (click)="openSpecialScoreModal()" style="background-color: #8e44ad; color: white; border-radius: 8px; font-family: inherit;">
-            <mat-icon style="margin-right: 8px;">edit_square</mat-icon> บันทึกคะแนนพิเศษ (ฝึกอบรม/สอบ/ความประพฤติ)
+          <button mat-raised-button routerLink="/admin/training-exam-time" style="background-color: #1e3a8a; color: white; border-radius: 8px; font-family: inherit;">
+            <mat-icon style="margin-right: 8px;">timer</mat-icon> บันทึกเวลาฝึกอบรมและสอบ (%)
+          </button>
+          <button mat-raised-button routerLink="/admin/scoremanagement" style="background-color: #8e44ad; color: white; border-radius: 8px; font-family: inherit;">
+            <mat-icon style="margin-right: 8px;">edit_square</mat-icon> ไปหน้ากรอกคะแนน / ความประพฤติ
           </button>
         </div>
 
-        <!-- 🗂️ ส่วนของ Tabs (แท็บสลับหน้าจอ) -->
+        <!-- ส่วนแท็บสลับมุมมองหน้าจอ -->
         <div class="tabs-wrapper">
           <mat-tab-group animationDuration="200ms" class="custom-mat-tabs">
             
-            <!-- 🔘 Tab 1: สรุปเกรดเฉลี่ย (Overview Component) -->
+            <!-- แท็บ 1: สรุปเกรดเฉลี่ย -->
             <mat-tab>
               <ng-template mat-tab-label>
                 <mat-icon class="tab-icon">dashboard</mat-icon>
@@ -111,7 +117,7 @@
                     <thead>
                       <tr>
                         <th class="text-center" style="width: 70px;">เลขที่</th>
-                        <th class="text-left" style="width: 260px;">ยศ-ชื่อ-นามสกุล</th>
+                        <th class="text-left" style="width: 280px;">ยศ-ชื่อ-นามสกุล</th>
                         <th class="text-center" style="width: 140px;">เกรดเฉลี่ยสะสม (GPA)</th>
                         <th class="text-center" style="width: 140px;">สถานะ</th>
                         <th class="text-center" style="width: 150px;">ดูเกรดรายวิชา</th>
@@ -122,7 +128,7 @@
                         <tr>
                           <td class="text-center font-bold">{{ i + 1 }}</td>
 
-                          <td class="text-left font-medium student-name-cell">
+                          <td class="text-left font-medium student-name-cell" [title]="(student.rank ? student.rank + ' ' : '') + student.name">
                             <span class="rank-tag">{{ student.rank }}</span> {{ student.name }}
                           </td>
                           <td class="text-center">
@@ -134,7 +140,7 @@
                             </span>
                           </td>
                           <td class="text-center">
-                            <!-- Action 👁️ ไอคอนดูเกรดรายวิชา -->
+                            <!-- ปุ่มดูผลการเรียนรายวิชา -->
                             <button class="btn-eye-action" (click)="openStudentGradeModal(student)" title="ดูเกรดรายวิชาของนักเรียน">
                               <mat-icon>visibility</mat-icon>
                               <span>ดูเกรด</span>
@@ -152,7 +158,7 @@
               </div>
             </mat-tab>
 
-            <!-- 🔘 Tab 2: ตารางคะแนนรวมทุกรายวิชา (Master Grid Component) -->
+            <!-- แท็บ 2: ตารางคะแนนรวมทุกรายวิชา -->
             <mat-tab>
               <ng-template mat-tab-label>
                 <mat-icon class="tab-icon">grid_on</mat-icon>
@@ -232,7 +238,7 @@
                       @for (student of students; track student.id || student.code || $index; let i = $index) {
                         <tr>
                           <td class="sticky-col-1 text-center font-bold">{{ i + 1 }}</td>
-                          <td class="sticky-col-2 text-left font-medium student-name-cell">
+                          <td class="sticky-col-2 text-left font-medium student-name-cell" [title]="(student.rank ? student.rank + ' ' : '') + student.name">
                             <span class="rank-tag">{{ student.rank }}</span> {{ student.name }}
                           </td>
                           @if (subjectGroups.length > 0) {

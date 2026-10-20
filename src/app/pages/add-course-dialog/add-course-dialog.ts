@@ -168,36 +168,6 @@ export class AddCourse implements OnInit {
       });
   }
 
-  onToggleRegistration(batch: any, event: Event): void {
-    const input = event.target as HTMLInputElement;
-
-    // Call API to toggle registration
-    batch.is_registration_open = input.checked;
-    this.courseService.toggleRegistration(batch.id, input.checked).subscribe({
-      next: (res) => {
-        if (!res.success) {
-          batch.is_registration_open = !input.checked;
-          input.checked = batch.is_registration_open;
-          alert('เกิดข้อผิดพลาดในการเปลี่ยนสถานะเปิดรับสมัคร');
-        } else {
-          this.loadAllData();
-          Swal.fire({
-            icon: 'success',
-            title: 'อัปเดตสถานะรับสมัครสำเร็จ',
-            text: 'เปิด/ปิดรับสมัครเรียบร้อยแล้ว',
-            timer: 2000,
-            showConfirmButton: false
-          });
-        }
-      },
-      error: (err) => {
-        batch.is_registration_open = !input.checked;
-        input.checked = batch.is_registration_open;
-        alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
-      }
-    });
-  }
-
   // TrackBy function to prevent *ngFor from recreating DOM elements continuously
   trackByBatchId(index: number, batch: any): any {
     return batch.id;
@@ -281,27 +251,230 @@ export class AddCourse implements OnInit {
     this.courseForm.course_name = '';
   }
 
-  onSubmitCourse() {
-    if (this.courseForm.course_name === 'NEW_COURSE' || !this.courseForm.course_name) {
-      Swal.fire('แจ้งเตือน', 'กรุณาระบุชื่อหลักสูตร', 'warning');
+  resetCourseForm(): void {
+    this.courseForm = { course_name: '', curriculum_year: null };
+    this.isNewCourse = false;
+  }
+
+  onCourseNameKeyDown(event: KeyboardEvent): void {
+    const input = event.target as HTMLInputElement;
+    // ป้องกันการกด space ที่จุดเริ่มต้น หรือเมื่อช่องยังว่างอยู่
+    if (event.key === ' ' && (!input.value || input.selectionStart === 0)) {
+      event.preventDefault();
       return;
     }
-    this.courseService.addCourse(this.courseForm).subscribe({
+    // ห้ามพิมพ์ตัวเลข 0-9
+    if (/[0-9]/.test(event.key)) {
+      event.preventDefault();
+      return;
+    }
+  }
+
+  onCourseNameInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input) return;
+    let val = input.value;
+    // ตัดตัวเลขออกทั้งหมด
+    val = val.replace(/[0-9]/g, '');
+    // ไม่ให้ขึ้นต้นด้วยช่องว่าง
+    val = val.replace(/^\s+/, '');
+    this.courseForm.course_name = val;
+    input.value = val;
+  }
+
+  onlyNumberKey(event: KeyboardEvent): void {
+    // ให้พิมพ์ได้เฉพาะตัวเลข 0-9 เท่านั้น
+    if (!/[0-9]/.test(event.key)) {
+      event.preventDefault();
+    }
+  }
+
+  onCurriculumYearInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input) return;
+    let val = input.value.replace(/[^0-9]/g, '');
+    if (val.length > 4) {
+      val = val.substring(0, 4);
+    }
+    this.courseForm.curriculum_year = val;
+    input.value = val;
+  }
+
+  onSubmitCourse(): void {
+    // 1. ตรวจสอบชื่อหลักสูตร
+    const trimmedCourseName = (this.courseForm.course_name || '').trim();
+
+    // Test ID 3: ไม่เลือกหรือระบุชื่อหลักสูตร
+    if (!trimmedCourseName || trimmedCourseName === 'NEW_COURSE') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'แจ้งเตือน',
+        text: 'กรุณาเลือกหรือกรอกชื่อหลักสูตร',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#ff9800'
+      });
+      return;
+    }
+
+    // Test ID 2: ตรวจสอบการกรอกชื่อหลักสูตรใหม่ ห้ามมีตัวเลข
+    if (/\d/.test(trimmedCourseName)) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'แจ้งเตือน',
+        text: 'ชื่อหลักสูตรต้องเป็นตัวอักษรเท่านั้น ห้ามใส่ตัวเลข',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#ff9800'
+      });
+      return;
+    }
+
+    // 2. ตรวจสอบปีหลักสูตร
+    const yearStr = this.courseForm.curriculum_year != null ? String(this.courseForm.curriculum_year).trim() : '';
+
+    // Test ID 4: ไม่กรอกปีหลักสูตร
+    if (!yearStr) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'แจ้งเตือน',
+        text: 'กรุณากรอกปีหลักสูตร',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#ff9800'
+      });
+      return;
+    }
+
+    // Test ID 5: กรอกปีหลักสูตรด้วยอักขระที่ไม่ใช่ตัวเลข
+    if (!/^\d+$/.test(yearStr)) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'แจ้งเตือน',
+        text: 'กรุณากรอกปีเป็นตัวเลขเท่านั้น',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#ff9800'
+      });
+      return;
+    }
+
+    // Test ID 6: จำนวนหลักปีหลักสูตรไม่ถูกต้อง (ต้องครบ 4 หลักพอดี)
+    if (yearStr.length !== 4) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'แจ้งเตือน',
+        text: 'กรุณากรอกปี พ.ศ./ค.ศ. จำนวน 4 หลักให้ถูกต้อง',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#ff9800'
+      });
+      return;
+    }
+
+    // Test ID 7: ตรวจสอบการเพิ่มหลักสูตรที่มีชื่อและปีซ้ำในระบบ (Duplicate Check)
+    const normalizedNewName = trimmedCourseName.replace(/[\s()]/g, '');
+    const isDuplicate = this.courses.some((c: any) => {
+      const existingName = (c.course_name || '').replace(/[\s()]/g, '');
+      return existingName === normalizedNewName && String(c.curriculum_year) === yearStr;
+    });
+
+    if (isDuplicate) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ข้อมูลซ้ำ!',
+        text: 'หลักสูตรนี้ในปีดังกล่าวมีอยู่ในระบบแล้ว',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#ff9800'
+      });
+      return;
+    }
+
+    // Test ID 1, 9: ตัด Space หน้า-หลังก่อนส่งบันทึก (Trim Data)
+    const payload = {
+      course_name: trimmedCourseName,
+      curriculum_year: parseInt(yearStr, 10)
+    };
+
+    this.courseService.addCourse(payload).subscribe({
       next: (res) => {
-        Swal.fire('สำเร็จ!', 'เพิ่มหลักสูตรเรียบร้อยแล้ว', 'success');
-        this.courseForm = { course_name: '', curriculum_year: null };
-        this.isNewCourse = false;
+        Swal.fire({
+          icon: 'success',
+          title: 'สำเร็จ!',
+          text: 'บันทึกข้อมูลสำเร็จ',
+          confirmButtonText: 'ตกลง',
+          confirmButtonColor: '#8d70ee'
+        });
+        this.resetCourseForm();
         this.loadAllData(); // reload
       },
       error: (err) => {
         const msg = err?.error?.message || 'ไม่สามารถเพิ่มหลักสูตรได้';
-        Swal.fire('เกิดข้อผิดพลาด!', msg, 'error');
+        Swal.fire({
+          icon: 'error',
+          title: 'เกิดข้อผิดพลาด!',
+          text: msg,
+          confirmButtonText: 'ตกลง',
+          confirmButtonColor: '#f44336'
+        });
         console.error(err);
       }
     });
   }
 
+  parseDateToComparableNumber(val: string): number | null {
+    if (!val || typeof val !== 'string' || !val.trim()) return null;
+    const str = val.trim();
+
+    // Case 1: YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+      const parts = str.split('T')[0].split('-');
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      const d = parseInt(parts[2], 10);
+      return y * 10000 + m * 100 + d;
+    }
+
+    // Case 2: DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
+    const parts = str.split(/[\/\-\.]/);
+    if (parts.length === 3) {
+      const d = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      let y = parseInt(parts[2], 10);
+      if (y >= 2400) y -= 543; // Buddhist Era to CE
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        return y * 10000 + m * 100 + d;
+      }
+    }
+
+    const dt = new Date(str);
+    if (!isNaN(dt.getTime())) {
+      return dt.getFullYear() * 10000 + (dt.getMonth() + 1) * 100 + dt.getDate();
+    }
+
+    return null;
+  }
+
+  isBatchEndDateInvalid(): boolean {
+    if (!this.batchForm.start_date || !this.batchForm.end_date) return false;
+    const start = this.parseDateToComparableNumber(this.batchForm.start_date);
+    const end = this.parseDateToComparableNumber(this.batchForm.end_date);
+    return start !== null && end !== null && end < start;
+  }
+
   onSubmitBatch() {
+    // 1. ตรวจสอบวันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น
+    if (this.batchForm.start_date && this.batchForm.end_date) {
+      const startDateNum = this.parseDateToComparableNumber(this.batchForm.start_date);
+      const endDateNum = this.parseDateToComparableNumber(this.batchForm.end_date);
+
+      if (startDateNum !== null && endDateNum !== null && endDateNum < startDateNum) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'ข้อผิดพลาด!',
+          text: 'วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น',
+          confirmButtonText: 'ตกลง',
+          confirmButtonColor: '#ff9800'
+        });
+        return;
+      }
+    }
+
     const normalizeName = (name: string) => name.replace(/รุ่นที่|รุ่น|ที่|\s/g, '').toLowerCase();
 
     const isDuplicate = this.batches.some(
@@ -328,7 +501,8 @@ export class AddCourse implements OnInit {
         this.loadAllData();
       },
       error: (err) => {
-        Swal.fire('เกิดข้อผิดพลาด!', 'ไม่สามารถเพิ่มรุ่นได้', 'error');
+        const msg = err?.error?.message || 'ไม่สามารถเพิ่มรุ่นได้';
+        Swal.fire('เกิดข้อผิดพลาด!', msg, 'error');
         console.error(err);
       }
     });
@@ -702,6 +876,15 @@ export class AddCourse implements OnInit {
 
         const start = this.parseThaiInputToISO(startRaw);
         const end = this.parseThaiInputToISO(endRaw);
+
+        if (start && end) {
+          const startDateNum = this.parseDateToComparableNumber(start);
+          const endDateNum = this.parseDateToComparableNumber(end);
+          if (startDateNum !== null && endDateNum !== null && endDateNum < startDateNum) {
+            Swal.showValidationMessage('วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น');
+            return false;
+          }
+        }
 
         return { batch_name: name, start_date: start, end_date: end };
       }
