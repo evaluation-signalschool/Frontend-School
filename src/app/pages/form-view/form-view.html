@@ -1,234 +1,417 @@
-<div class="page-container">
-  <!-- แถบหัวข้อหน้าพร้อมปุ่มย้อนกลับ -->
-  <div class="page-header">
-    <button mat-icon-button class="back-button" type="button" (click)="goBack()" title="ย้อนกลับ">
-      <mat-icon>chevron_left</mat-icon>
-    </button>
-    <h1 class="course-title">แสดงข้อมูลแบบฟอร์ม</h1>
+<div class="admin-page">
+  <!-- Top Bar -->
+  <div class="admin-header-title-container">
+    <div class="header-content-wrapper">
+      <button
+        mat-icon-button
+        (click)="goBack()"
+        class="btn-header-back"
+        title="ย้อนกลับ"
+      >
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <h2 class="main-content-title">แสดงข้อมูลแบบประเมิน</h2>
+    </div>
   </div>
 
   <div class="content-container">
-    <!-- Card Container -->
-    <div class="card">
-      <!-- Card Header -->
-      <div class="card-header">
-        <div class="header-title">
-          <p style="margin: 0;">รายการข้อมูลที่มีการส่งเข้าระบบทั้งหมด</p>
+    <!-- Hero Banner -->
+    <div class="view-hero">
+      <div class="hero-icon">
+        <mat-icon>analytics</mat-icon>
+      </div>
+      <div class="hero-text">
+        <span class="hero-badge">
+          <span class="badge-dot"></span>
+          ระบบสรุปผลและรายงาน
+        </span>
+        <h3 class="hero-title">รายงานและข้อมูลผลการประเมิน</h3>
+        <p class="hero-subtitle">
+          เรียกดูรายการคำตอบของผู้ประเมินรายบุคคล ตรวจสอบความถูกต้อง และส่งออกไฟล์รายงานในรูปแบบ Excel (.xlsx)
+        </p>
+      </div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="filter-card">
+      <div class="card-section-header">
+        <div class="section-icon">
+          <mat-icon>filter_alt</mat-icon>
         </div>
-        <div class="header-actions" style="display: flex; gap: 0.5rem; align-items: center;">
-          <button class="btn btn-primary" (click)="onExport()" [disabled]="submissions.length === 0">
-            <i class="icon">📥</i> ส่งออกข้อมูล
+        <div class="section-title-wrap">
+          <h4 class="section-title">ตัวกรองเลือกแบบประเมิน</h4>
+          <p class="section-desc">เลือกหลักสูตร รุ่น และประเภทแบบประเมินที่ต้องการเรียกดูข้อมูล</p>
+        </div>
+      </div>
+
+      <div class="filter-grid">
+        <!-- 1. หลักสูตร -->
+        <div class="form-group">
+          <label class="input-label">
+            <mat-icon class="label-icon">school</mat-icon>
+            หลักสูตร
+          </label>
+          <div class="select-wrap">
+            <select
+              class="custom-select"
+              [(ngModel)]="selectedCourse"
+              (ngModelChange)="onCourseChange()"
+            >
+              <option value="">— เลือกหลักสูตร —</option>
+              <option *ngFor="let course of courseGroups" [value]="course.course_name">
+                {{ course.course_name }}
+              </option>
+            </select>
+            <mat-icon class="select-arrow">expand_more</mat-icon>
+          </div>
+        </div>
+
+        <!-- 2. รุ่น -->
+        <div class="form-group">
+          <label class="input-label">
+            <mat-icon class="label-icon">groups</mat-icon>
+            รุ่น
+          </label>
+          <div class="select-wrap">
+            <select
+              class="custom-select"
+              [(ngModel)]="selectedBatch"
+              (ngModelChange)="onBatchChange()"
+              [disabled]="!selectedCourse"
+            >
+              <option value="">— เลือกรุ่น —</option>
+              <option *ngFor="let batch of batches" [value]="batch.batch_id">
+                {{ batch.batch_name }}
+              </option>
+            </select>
+            <mat-icon class="select-arrow">expand_more</mat-icon>
+          </div>
+        </div>
+
+        <!-- 3. ประเภทแบบประเมิน -->
+        <div class="form-group">
+          <label class="input-label">
+            <mat-icon class="label-icon">assignment</mat-icon>
+            ประเภทแบบประเมิน
+          </label>
+          <div class="select-wrap">
+            <select
+              class="custom-select"
+              [(ngModel)]="selectedFormType"
+              (ngModelChange)="onFormTypeChange()"
+              [disabled]="!selectedBatch"
+            >
+              <option value="">— เลือกประเภทแบบประเมิน —</option>
+              <optgroup *ngFor="let group of formGroups" [label]="group.label">
+                <option *ngFor="let type of group.types" [value]="type.value">
+                  {{ type.label }}
+                </option>
+              </optgroup>
+            </select>
+            <mat-icon class="select-arrow">expand_more</mat-icon>
+          </div>
+        </div>
+
+        <!-- 4. รายวิชา (ถ้าเป็นประเมินอาจารย์ผู้สอน) -->
+        <div
+          class="form-group"
+          *ngIf="selectedFormType === 'instructor'"
+        >
+          <label class="input-label">
+            <mat-icon class="label-icon">menu_book</mat-icon>
+            รายวิชา <span class="required-star">*</span>
+          </label>
+          <div class="select-wrap">
+            <select
+              class="custom-select"
+              [(ngModel)]="selectedSubject"
+              (ngModelChange)="onSubjectChange()"
+            >
+              <option value="">— เลือกรายวิชา —</option>
+              <ng-container *ngIf="groupedSubjects && groupedSubjects.length > 0">
+                <optgroup *ngFor="let group of groupedSubjects" [label]="group.display_label">
+                  <option *ngFor="let subject of group.subjects" [value]="subject.subject_id">
+                    {{ subject.subject_name }}
+                  </option>
+                </optgroup>
+              </ng-container>
+              <ng-container *ngIf="!groupedSubjects || groupedSubjects.length === 0">
+                <option *ngFor="let subject of availableSubjects" [value]="subject.subject_id">
+                  {{ subject.subject_name }}
+                </option>
+              </ng-container>
+            </select>
+            <mat-icon class="select-arrow">expand_more</mat-icon>
+          </div>
+        </div>
+
+        <!-- 5. ปุ่มค้นหา / ดึงข้อมูล -->
+        <div class="form-group form-group-action" *ngIf="selectedBatch && selectedFormType && (selectedFormType !== 'instructor' || selectedSubject)">
+          <label class="input-label action-label">&nbsp;</label>
+          <button
+            type="button"
+            class="btn-trigger-search"
+            (click)="onSearch()"
+            [disabled]="isLoading"
+            title="ค้นหาหรือโหลดข้อมูลคำตอบแบบประเมิน"
+          >
+            <mat-icon [class.spin-icon]="isLoading">{{ isLoading ? 'sync' : 'search' }}</mat-icon>
+            <span>{{ isLoading ? 'กำลังดึงข้อมูล...' : 'ค้นหาข้อมูล' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Section Card -->
+    <div class="results-card" #resultsCard [class.is-fullscreen]="isFullscreen">
+      <!-- Toolbar Header -->
+      <div class="results-toolbar">
+        <div class="toolbar-left">
+          <div class="results-badge-wrap">
+            <span class="results-title">รายการคำตอบแบบประเมิน</span>
+            <span class="count-pill" *ngIf="submissions.length > 0">
+              <mat-icon class="pill-icon">person</mat-icon>
+              ผู้ตอบทั้งหมด {{ submissions.length }} ราย
+            </span>
+            <span class="fullscreen-pill" *ngIf="isFullscreen">
+              <mat-icon>fullscreen</mat-icon>
+              โหมดเต็มจอ (กด ESC เพื่อออก)
+            </span>
+          </div>
+
+          <!-- Active Criteria Tags -->
+          <div class="active-criteria-chips" *ngIf="selectedCourse || selectedBatch || selectedFormType">
+            <span class="criterion-chip" *ngIf="selectedCourse">
+              <mat-icon>school</mat-icon>
+              {{ selectedCourse }}
+            </span>
+            <span class="criterion-chip" *ngIf="selectedBatch">
+              <mat-icon>groups</mat-icon>
+              {{ getSelectedBatchName() }}
+            </span>
+            <span class="criterion-chip type-chip" *ngIf="selectedFormType">
+              <mat-icon>assignment</mat-icon>
+              {{ getSelectedFormTypeLabel() }}
+            </span>
+            <span class="criterion-chip subject-chip" *ngIf="selectedSubject">
+              <mat-icon>menu_book</mat-icon>
+              {{ getSelectedSubjectName() }}
+            </span>
+          </div>
+        </div>
+
+        <div class="toolbar-right">
+          <!-- Refresh / Reload Button -->
+          <button
+            type="button"
+            class="btn-refresh-data"
+            (click)="onSearch()"
+            [disabled]="isLoading || !selectedFormId"
+            title="โหลดข้อมูลล่าสุดใหม่"
+          >
+            <mat-icon [class.spin-icon]="isLoading">refresh</mat-icon>
+          </button>
+
+          <!-- Quick Horizontal Scroll Controls -->
+          <div class="table-scroll-controls" *ngIf="submissions.length > 0 && !isLoading">
+            <span class="scroll-label">เลื่อนตาราง:</span>
+            <button
+              type="button"
+              class="btn-scroll-arrow"
+              (click)="scrollTable('left')"
+              title="เลื่อนตารางไปทางซ้าย"
+            >
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <button
+              type="button"
+              class="btn-scroll-arrow"
+              (click)="scrollTable('right')"
+              title="เลื่อนตารางไปทางขวา"
+            >
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </div>
+
+          <!-- Fullscreen Toggle Button -->
+          <button
+            type="button"
+            class="btn-fullscreen-toggle"
+            (click)="toggleFullscreen()"
+            [class.active]="isFullscreen"
+            [title]="isFullscreen ? 'ออกจากโหมดเต็มจอ (ESC)' : 'ดูผลการประเมินแบบเต็มจอ'"
+          >
+            <mat-icon>{{ isFullscreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+            <span>{{ isFullscreen ? 'ย่อหน้าจอ' : 'ดูเต็มจอ' }}</span>
+          </button>
+
+          <button
+            class="btn-export-excel"
+            (click)="onExport()"
+            [disabled]="submissions.length === 0 || isLoading"
+            title="ส่งออกผลการประเมินเป็นไฟล์ Microsoft Excel"
+          >
+            <span class="export-icon-wrap">
+              <mat-icon>table_view</mat-icon>
+            </span>
+            <span class="export-text">ส่งออกข้อมูล Excel</span>
+            <span class="export-badge" *ngIf="submissions.length > 0">
+              {{ submissions.length }}
+            </span>
           </button>
         </div>
       </div>
 
-    <!-- Filter Section -->
-    <div
-      class="filter-section"
-      style="
-        padding: 1.5rem 2rem 0 2rem;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-        align-items: flex-end;
-      "
-    >
-      <div class="form-group" style="flex: 1; min-width: 150px">
-        <label
-          style="
-            display: block;
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #4b5563;
-          "
-          >หลักสูตร</label
+      <!-- Content Area -->
+      <div class="results-content">
+        <!-- 1. กำลังโหลดข้อมูล -->
+        <div *ngIf="isLoading" class="state-container loading-state">
+          <div class="spinner-ring"></div>
+          <h4 class="state-title">กำลังเรียกดูข้อมูลแบบประเมิน...</h4>
+          <p class="state-desc">ระบบกำลังค้นหาคำตอบและจัดกลุ่มคำถาม กรุณารอสักครู่</p>
+        </div>
+
+        <!-- 2. ตารางแสดงข้อมูลคำตอบเมื่อพบข้อมูล -->
+        <div
+          class="table-responsive-wrapper"
+          #tableWrapper
+          *ngIf="!isLoading && submissions.length > 0"
         >
-        <select
-          class="custom-select"
-          [(ngModel)]="selectedCourse"
-          (ngModelChange)="onCourseChange()"
-          style="
-            width: 100%;
-            padding: 0.5rem;
-            border-radius: 4px;
-            border: 1px solid #d1d5db;
-            outline: none;
-          "
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th class="th-index">#</th>
+                <th class="th-time">ประทับเวลา</th>
+                <th class="th-student-code">รหัสนักเรียน</th>
+                <th class="th-student-name">ผู้ตอบแบบประเมิน</th>
+                <th class="th-instructor">ครู-อาจารย์ผู้สอน</th>
+                <!-- Dynamic Questions Header -->
+                <th
+                  *ngFor="let q of questions"
+                  class="th-question"
+                >
+                  <div class="q-header-box">
+                    <span class="q-number-chip">ข้อ {{ q.order_num }}</span>
+                    <span class="q-header-text" [title]="q.question_text">
+                      {{ q.question_text }}
+                    </span>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let sub of submissions; let i = index">
+                <td class="td-index">{{ i + 1 }}</td>
+                <td class="td-time">
+                  <div class="time-box">
+                    <mat-icon class="cell-icon">schedule</mat-icon>
+                    <span>{{ sub.submittedAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+                  </div>
+                </td>
+                <td class="td-student-code">
+                  <span class="student-code-badge">
+                    {{ sub.studentCode || '-' }}
+                  </span>
+                </td>
+                <td class="td-student-name">
+                  <div class="user-cell">
+                    <div class="user-avatar-wrap">
+                      <mat-icon class="user-icon">person</mat-icon>
+                    </div>
+                    <span class="user-name-text">{{ sub.name || '-' }}</span>
+                  </div>
+                </td>
+                <td class="td-instructor">
+                  <div class="instructor-cell-wrap" *ngIf="sub.instructorName">
+                    <div
+                      class="instructor-chip"
+                      *ngFor="let t of getInstructorList(sub.instructorName)"
+                    >
+                      <mat-icon class="teacher-icon">school</mat-icon>
+                      <span class="teacher-name-text">{{ t }}</span>
+                    </div>
+                  </div>
+                  <span class="empty-dash" *ngIf="!sub.instructorName">-</span>
+                </td>
+                <!-- Dynamic Question Answers -->
+                <td
+                  *ngFor="let q of questions"
+                  class="td-answer"
+                  [title]="sub.answers['q_' + q.id] || ''"
+                >
+                  <div class="answer-wrapper">
+                    <ng-container *ngIf="isScoreRating(sub.answers['q_' + q.id]); else textAns">
+                      <div
+                        class="score-rating-pill"
+                        [ngClass]="'score-' + sub.answers['q_' + q.id]"
+                      >
+                        <span class="score-number">{{ sub.answers['q_' + q.id] }}</span>
+                      </div>
+                    </ng-container>
+                    <ng-template #textAns>
+                      <span class="text-answer-content">
+                        {{ sub.answers['q_' + q.id] || '-' }}
+                      </span>
+                    </ng-template>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 3. กรณีเลือกครบ แต่ยังไม่มีใครส่งคำตอบ -->
+        <div
+          *ngIf="!isLoading && submissions.length === 0 && selectedFormId"
+          class="state-container empty-state"
         >
-          <option value="">— เลือกหลักสูตร —</option>
-          <option *ngFor="let course of courseGroups" [value]="course.course_name">
-            {{ course.course_name }}
-          </option>
-        </select>
-      </div>
+          <div class="state-icon-circle neutral">
+            <mat-icon>inbox</mat-icon>
+          </div>
+          <h4 class="state-title">ยังไม่มีผู้ตอบแบบประเมินนี้</h4>
+          <p class="state-desc">
+            แบบประเมินนี้พร้อมใช้งานแล้วในระบบ แต่ยังไม่มีนักเรียนหรือผู้เกี่ยวข้องส่งคำตอบเข้ามา
+          </p>
+        </div>
 
-      <div class="form-group" style="flex: 1; min-width: 150px">
-        <label
-          style="
-            display: block;
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #4b5563;
-          "
-          >รุ่น</label
+        <!-- 4. กรณีเลือกครบแต่ยังไม่ได้สร้างแบบประเมิน -->
+        <div
+          *ngIf="!isLoading && !selectedFormId && selectedFormType && (selectedFormType !== 'instructor' || selectedSubject)"
+          class="state-container warning-state"
         >
-        <select
-          class="custom-select"
-          [(ngModel)]="selectedBatch"
-          (ngModelChange)="onBatchChange()"
-          [disabled]="!selectedCourse"
-          style="
-            width: 100%;
-            padding: 0.5rem;
-            border-radius: 4px;
-            border: 1px solid #d1d5db;
-            outline: none;
-          "
+          <div class="state-icon-circle warn">
+            <mat-icon>assignment_late</mat-icon>
+          </div>
+          <h4 class="state-title">ยังไม่ได้สร้างแบบประเมินสำหรับรายการที่เลือก</h4>
+          <p class="state-desc">
+            ยังไม่พบแบบประเมินในระบบสำหรับหลักสูตร รุ่น และประเภทที่ท่านระบุ
+          </p>
+          <button
+            mat-flat-button
+            routerLink="/admin/form"
+            class="btn-go-create-form"
+          >
+            <mat-icon>add_circle_outline</mat-icon>
+            ไปที่หน้าสร้างแบบประเมิน
+          </button>
+        </div>
+
+        <!-- 5. กรณีที่ยังเลือกเงื่อนไขไม่ครบ -->
+        <div
+          *ngIf="!isLoading && !selectedFormId && (!selectedFormType || (selectedFormType === 'instructor' && !selectedSubject))"
+          class="state-container guide-state"
         >
-          <option value="">— เลือกรุ่น —</option>
-          <option *ngFor="let batch of batches" [value]="batch.batch_id">
-            {{ batch.batch_name }}
-          </option>
-        </select>
-      </div>
-
-      <div class="form-group" style="flex: 1.5; min-width: 200px">
-        <label
-          style="
-            display: block;
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #4b5563;
-          "
-          >ประเภทแบบฟอร์ม</label
-        >
-        <select
-          class="custom-select"
-          [(ngModel)]="selectedFormType"
-          (ngModelChange)="onFormTypeChange()"
-          [disabled]="!selectedBatch"
-          style="
-            width: 100%;
-            padding: 0.5rem;
-            border-radius: 4px;
-            border: 1px solid #d1d5db;
-            outline: none;
-          "
-        >
-          <option value="">— เลือกประเภท —</option>
-          <option *ngFor="let type of formTypes" [value]="type.value">
-            {{ type.label }}
-          </option>
-        </select>
-      </div>
-
-      <div
-        class="form-group"
-        style="flex: 1.5; min-width: 200px"
-        *ngIf="selectedFormType === 'instructor'"
-      >
-        <label
-          style="
-            display: block;
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #4b5563;
-          "
-          >รายวิชา</label
-        >
-        <select
-          class="custom-select"
-          [(ngModel)]="selectedSubject"
-          (ngModelChange)="onSubjectChange()"
-          style="
-            width: 100%;
-            padding: 0.5rem;
-            border-radius: 4px;
-            border: 1px solid #d1d5db;
-            outline: none;
-          "
-        >
-          <option value="">— เลือกรายวิชา —</option>
-          <option *ngFor="let subject of availableSubjects" [value]="subject.subject_id">
-            {{ subject.subject_name }}
-          </option>
-        </select>
-      </div>
-
-
-    </div>
-
-    <div style="border-bottom: 1px solid #e9d5ff; margin-top: 1.5rem"></div>
-
-    <!-- Card Body / Table Wrapper -->
-    <div class="card-body">
-      <div *ngIf="isLoading" class="text-center" style="padding: 2.5rem; color: #6b21a8">
-        กำลังโหลดข้อมูล...
-      </div>
-
-      <div class="table-responsive" *ngIf="!isLoading && submissions.length > 0">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th style="min-width: 60px">ลำดับ</th>
-              <th style="min-width: 140px">ประทับเวลา</th>
-              <th style="min-width: 120px">รหัสนักเรียน</th>
-              <th style="min-width: 180px">ผู้ตอบแบบประเมิน</th>
-              <th style="min-width: 180px">ครู-อาจารย์ผู้สอน</th>
-              <!-- Dynamic Questions Header -->
-              <th *ngFor="let q of questions" style="min-width: 250px">
-                {{ q.order_num }}. {{ q.question_text }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let sub of submissions; let i = index">
-              <td>{{ i + 1 }}</td>
-              <td class="col-date">{{ sub.submittedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
-              <td class="font-weight-medium">{{ sub.studentCode }}</td>
-              <td>{{ sub.name || '-' }}</td>
-              <td>{{ sub.instructorName || '-' }}</td>
-              <!-- Dynamic Questions Answers -->
-              <td
-                *ngFor="let q of questions"
-                class="col-long-text"
-                [title]="sub.answers['q_' + q.id]"
-              >
-                {{ sub.answers['q_' + q.id] }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div
-        *ngIf="!isLoading && submissions.length === 0 && selectedFormId"
-        class="text-center"
-        style="padding: 3rem; color: #6b21a8; font-weight: 500"
-      >
-        ยังไม่มีข้อมูลผู้ตอบแบบฟอร์มนี้
-      </div>
-
-      <div
-        *ngIf="!isLoading && !selectedFormId && selectedFormType && (selectedFormType !== 'instructor' || selectedSubject)"
-        class="text-center"
-        style="padding: 3rem; color: #ef4444; font-weight: 500"
-      >
-        ยังไม่ได้สร้างแบบประเมินสำหรับรายการที่เลือก
-      </div>
-
-      <div
-        *ngIf="!isLoading && !selectedFormId && (!selectedFormType || (selectedFormType === 'instructor' && !selectedSubject))"
-        class="text-center"
-        style="padding: 3rem; color: #6b21a8; font-weight: 500"
-      >
-        กรุณาเลือกหลักสูตร รุ่น ประเภทแบบฟอร์ม และวิชา (ถ้ามี) เพื่อดูข้อมูล
+          <div class="state-icon-circle primary">
+            <mat-icon>manage_search</mat-icon>
+          </div>
+          <h4 class="state-title">กรุณาเลือกเงื่อนไขด้านบนเพื่อดูข้อมูล</h4>
+          <p class="state-desc">
+            เลือก <strong>หลักสูตร</strong>, <strong>รุ่น</strong> และ <strong>ประเภทแบบประเมิน</strong>
+            <span *ngIf="selectedFormType === 'instructor'">รวมถึง <strong>รายวิชา</strong></span>
+            เพื่อเรียกดูรายการคำตอบและส่งออกไฟล์
+          </p>
+        </div>
       </div>
     </div>
-  </div>
   </div>
 </div>

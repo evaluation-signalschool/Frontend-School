@@ -42,7 +42,7 @@ $font-family-thai: 'Sarabun', sans-serif;
     font-family: 'Material Icons' !important;
   }
 
-  // 🟣 แถบ Header สไตล์ Banner แบบในรูป
+  // แถบส่วนหัวสไตล์แบนเนอร์
   .page-header {
     position: relative;
     display: flex;
@@ -88,7 +88,7 @@ $font-family-thai: 'Sarabun', sans-serif;
     }
   }
 
-  // 📦 กล่องคอนเทนต์ด้านล่าง (เว้นระยะด้านบนเล็กน้อย)
+  // กล่องเนื้อหาด้านล่าง
   .content-container {
     max-width: 960px;
     margin: 32px auto;
@@ -186,6 +186,13 @@ $font-family-thai: 'Sarabun', sans-serif;
     font-size: 1rem;
     color: $text-body;
     letter-spacing: 0.01em;
+
+    .label-hint {
+      font-size: 0.85rem;
+      font-weight: 400;
+      color: #7c3aed;
+      margin-left: 6px;
+    }
   }
 
   .form-control {
@@ -455,6 +462,19 @@ $font-family-thai: 'Sarabun', sans-serif;
       margin-bottom: 12px;
       color: #475569;
       font-size: 1rem;
+
+      .paste-helper-text {
+        display: block;
+        font-size: 0.88rem;
+        font-weight: 400;
+        color: #64748b;
+        margin-top: 4px;
+
+        strong {
+          color: $primary-color;
+          font-weight: 600;
+        }
+      }
     }
 
     .textarea-code {
@@ -475,6 +495,9 @@ $font-family-thai: 'Sarabun', sans-serif;
       gap: 12px;
 
       .btn-green {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         background-color: #10b981;
         color: #ffffff;
         border: none;

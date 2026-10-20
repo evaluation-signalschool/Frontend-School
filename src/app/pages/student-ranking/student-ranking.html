@@ -1,5 +1,5 @@
 <div class="student-ranking-page">
-  <!-- 🟪 หัวข้อบนสุด: จัดลำดับผลการเรียน -->
+  <!-- หัวข้อหลัก: การจัดลำดับผลการเรียน -->
   <div class="page-header no-print">
     <div class="header-left">
       <button mat-icon-button class="back-button" routerLink="/admin/classoverview" title="กลับไปหน้าภาพรวมผลการเรียน">
@@ -16,6 +16,10 @@
         <mat-icon>table_chart</mat-icon>
         <span>ดูตารางผลการเรียนรวม (Master Grid)</span>
       </button>
+      <button mat-raised-button class="btn-action-header" routerLink="/admin/unit-selection" [queryParams]="{ courseId: selectedCourse, batchId: selectedBatch }" style="background: linear-gradient(135deg, #0d9488 0%, #059669 100%); color: white; border: none; font-weight: 600;">
+        <mat-icon>account_tree</mat-icon>
+        <span>เลือกลงหน่วย (นนส.ทบ. / ช่างอิเล็กฯ)</span>
+      </button>
       <button mat-stroked-button class="btn-action-header" (click)="printPage()" [disabled]="rankedStudents.length === 0">
         <mat-icon>print</mat-icon>
         <span>พิมพ์รายงาน (A4)</span>
@@ -29,11 +33,25 @@
 
   <div class="page-wrapper">
     
-    <!-- 🔍 เมนูกรองข้อมูล: โครงสร้างหลักสูตร และ เลือกรุ่น -->
+    <!-- เมนูตัวกรองข้อมูล: โครงสร้างหลักสูตรและเลือกรุ่น -->
     <div class="filter-card no-print">
-      <div class="card-section-title">
-        <mat-icon>tune</mat-icon>
-        <span>เลือกรุ่นที่ต้องการประมวลผลการจัดอันดับ</span>
+      <div class="card-section-title-wrap">
+        <div class="card-section-title">
+          <mat-icon>tune</mat-icon>
+          <span>เลือกรุ่นที่ต้องการประมวลผลการจัดอันดับ</span>
+          @if (selectedBatch) {
+            <span class="active-badge-chip" title="ระบบบันทึกตัวเลือกและวิชาที่คำนวณไว้ในเครื่องให้โดยอัตโนมัติ เข้า-ออกหน้าใหม่ข้อมูลจะไม่หาย">
+              <mat-icon>history</mat-icon> จำการคำนวณล่าสุดไว้แล้ว (ไม่รีเฟรชใหม่)
+            </span>
+          }
+        </div>
+
+        @if (selectedBatch) {
+          <button type="button" class="btn-clear-selection" (click)="clearSavedSelection()" title="ล้างตัวเลือกที่บันทึกไว้เพื่อเลือกรุ่นใหม่">
+            <mat-icon>restart_alt</mat-icon>
+            <span>เลือกรุ่นใหม่ / ล้างตัวเลือก</span>
+          </button>
+        }
       </div>
 
       <div class="filter-row">
@@ -67,7 +85,7 @@
       </div>
     </div>
 
-    <!-- ⚠️ กรณีผู้ใช้ยังไม่ได้เลือกรุ่น -->
+    <!-- กรณีผู้ใช้ยังไม่ได้เลือกรุ่น -->
     @if (!selectedBatch) {
       <div class="empty-state-container no-print">
         <div class="empty-icon-circle">
@@ -78,7 +96,7 @@
       </div>
     } @else {
 
-      <!-- ⏳ กำลังโหลดข้อมูล -->
+      <!-- สถานะกำลังโหลดข้อมูล -->
       @if (isLoading) {
         <div class="loading-state no-print">
           <mat-icon class="spinning">sync</mat-icon>
@@ -86,7 +104,7 @@
         </div>
       } @else {
 
-        <!-- 🎯 แผงตั้งค่าเลือกวิชาสำหรับ Tie-Breaking (กรณีเกรดเท่ากัน) -->
+        <!-- แผงตั้งค่าเลือกวิชาสำหรับกรณีคะแนนเท่ากัน (Tie-Breaking) -->
         <div class="tiebreak-panel no-print">
           <div class="panel-header" (click)="isTieBreakPanelOpen = !isTieBreakPanelOpen">
             <div class="panel-title-area">
@@ -168,7 +186,7 @@
                 }
               </div>
 
-              <!-- 🎛️ แถบควบคุมและปุ่มกดสั่งคำนวณอันดับใหม่ด้านล่างแผง -->
+              <!-- แถบควบคุมและปุ่มคำนวณอันดับใหม่ -->
               <div class="panel-action-footer">
                 <div class="footer-summary">
                   <mat-icon class="icon-info">info</mat-icon>
@@ -194,7 +212,7 @@
           }
         </div>
 
-        <!-- ⏳ สถานะกำลังประมวลผลวาดหน้าใหม่เฉพาะส่วนตารางด้านล่าง -->
+        <!-- สถานะกำลังประมวลผลอัปเดตข้อมูลตาราง -->
         @if (isTableLoading) {
           <div class="table-loading-card no-print">
             <div class="loading-content">
@@ -205,7 +223,111 @@
           </div>
         } @else {
 
-        <!-- 📊 สถิติภาพรวม (Stat Cards) -->
+        <!-- แสดงรายชื่อผู้ได้รับรางวัลเกียรตินิยม อันดับ 1, 2 และ 3 -->
+        @if (rankedStudents.length > 0 && top3Winners.length > 0) {
+          <div class="trophy-focus-card no-print" [class.trophy-resolved]="isTop3TieResolved" [class.trophy-unresolved]="!isTop3TieResolved">
+            <div class="trophy-card-header">
+              <div class="trophy-title-wrap">
+                <div class="trophy-icon-circle" [class.is-tied]="!isTop3TieResolved">
+                  <mat-icon>{{ isTop3TieResolved ? 'emoji_events' : 'gavel' }}</mat-icon>
+                </div>
+                <div>
+                  <div class="trophy-title-row">
+                    <h3 class="trophy-main-title">
+                      {{ activeTieStatus.title }}
+                    </h3>
+                    <span class="trophy-status-pill" [class.status-resolved]="isTop3TieResolved" [class.status-pending]="!isTop3TieResolved">
+                      <mat-icon>{{ isTop3TieResolved ? 'verified' : 'priority_high' }}</mat-icon>
+                      {{ isTop3TieResolved ? 'ตัดสินเด็ดขาดแล้ว (มีผู้ครองโล่ครบ 3 อันดับ)' : '⚠️ ยังตัดสินไม่เด็ดขาด (มีคะแนนเท่ากัน)' }}
+                    </span>
+                  </div>
+                  <p class="trophy-subtitle">
+                    {{ activeTieStatus.subtitle }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="trophy-header-actions">
+                @if (hasTop3Tie) {
+                  <button 
+                    type="button" 
+                    class="btn-trophy-filter"
+                    [class.active]="filterMode === 'rank1-only'"
+                    (click)="setFilterMode(filterMode === 'rank1-only' ? 'all' : 'rank1-only')"
+                    title="คลิกเพื่อกรองดูเฉพาะกลุ่มผู้มีสิทธิ์ชิงโล่รางวัล (Top 3)"
+                  >
+                    <mat-icon>emoji_events</mat-icon>
+                    <span>{{ filterMode === 'rank1-only' ? 'แสดงนักเรียนทุกคน' : 'ดูเฉพาะกลุ่มชิงโล่รางวัล (' + topRankContenders.length + ' คน)' }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+
+            <!-- รายละเอียดผู้ครองโล่รางวัลเกียรตินิยม อันดับ 1, 2, 3 (กรอบทอง) -->
+            <div class="trophy-body-grid">
+              <div class="top3-spotlight-grid">
+                @for (winner of top3Winners; track winner.student_id; let wIdx = $index) {
+                  <div class="winner-spotlight-card gold-frame" [class.winner-rank-1]="winner.manualRank === 1" [class.winner-rank-2]="winner.manualRank === 2" [class.winner-rank-3]="winner.manualRank === 3">
+                    <div class="winner-crown-badge" [class.crown-gold]="winner.manualRank === 1" [class.crown-silver]="winner.manualRank === 2" [class.crown-bronze]="winner.manualRank === 3">
+                      <mat-icon>emoji_events</mat-icon>
+                      <span>{{ winner.manualRank === 1 ? '🥇 อันดับที่ 1 (ครองโล่รางวัล)' : (winner.manualRank === 2 ? '🥈 อันดับที่ 2 (ครองโล่รางวัล)' : '🥉 อันดับที่ 3 (ครองโล่รางวัล)') }}</span>
+                    </div>
+                    <div class="winner-info-row">
+                      <div class="winner-rank-avatar" [class.avatar-gold]="winner.manualRank === 1" [class.avatar-silver]="winner.manualRank === 2" [class.avatar-bronze]="winner.manualRank === 3">
+                        <span class="avatar-num">0{{ winner.manualRank }}</span>
+                      </div>
+                      <div class="winner-details">
+                        <div class="winner-name">
+                          <span class="rank-name" *ngIf="winner.rank_name">{{ winner.rank_name }}</span>
+                          <strong>{{ winner.first_name }} {{ winner.last_name }}</strong>
+                          <span class="code-badge">เลขที่ {{ winner.student_code }}</span>
+                        </div>
+                        <div class="winner-meta">
+                          <span class="meta-item">เกรดเฉลี่ย: <strong>GPA {{ winner.gpa }}</strong></span>
+                          <span class="meta-divider">•</span>
+                          <span class="meta-item">วิชาตัดสิน: <strong>{{ winner.tieBreakScore | number:'1.1-2' }}</strong> / {{ winner.tieBreakMaxScore }}</span>
+                          <span class="meta-divider">•</span>
+                          <span class="meta-item">รวม: <strong>{{ winner.total_raw_score | number:'1.1-2' }}</strong></span>
+                        </div>
+                        <div class="winner-reason">
+                          <mat-icon class="icon-check">check_circle</mat-icon>
+                          <span>{{ winner.tieBreakReason }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- หากมีผู้เข้าชิง Top 3 มากกว่า 3 คน -->
+              @if (hasTop3Tie) {
+                <div class="contenders-panel">
+                  <div class="contenders-panel-title">
+                    <mat-icon>military_tech</mat-icon>
+                    <span>ผู้มีสิทธิ์ชิงโล่รางวัลทั้งหมด (จำนวน {{ topRankContenders.length }} นาย):</span>
+                  </div>
+                  <div class="contenders-chips-list">
+                    @for (contender of topRankContenders; track contender.student_id) {
+                      <div class="contender-chip" [class.is-winner]="contender.manualRank != null && contender.manualRank <= 3" [class.is-tied]="contender.isTrulyTied">
+                        <span class="contender-rank-pill">
+                          {{ contender.manualRank != null && contender.manualRank <= 3 ? '🏆 ที่ ' + contender.manualRank : 'อันดับ ' + contender.manualRank }}
+                        </span>
+                        <span class="contender-name">
+                          {{ contender.rank_name }} {{ contender.first_name }} {{ contender.last_name }} (เลขที่ {{ contender.student_code }}) - GPA {{ contender.gpa }}
+                        </span>
+                        <span class="contender-score" title="คะแนนวิชาตัดสิน">
+                          {{ contender.tieBreakScore | number:'1.1-2' }} คะแนน
+                        </span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- กล่องแสดงข้อมูลสถิติภาพรวม -->
         <div class="stats-row no-print">
           <div class="stat-card">
             <div class="stat-icon-wrap purple">
@@ -222,10 +344,12 @@
               <mat-icon>emoji_events</mat-icon>
             </div>
             <div class="stat-data">
-              <span class="stat-label">ลำดับที่ 1 (Top Performer)</span>
+              <span class="stat-label">ผู้ครองโล่รางวัล (อันดับ 1 - 3)</span>
               <span class="stat-value top-name">
-                @if (topPerformer) {
-                  {{ topPerformer.rank_name }} {{ topPerformer.first_name }} (GPA {{ topPerformer.gpa }})
+                @if (rank1Winner) {
+                  🥇 {{ rank1Winner.rank_name }} {{ rank1Winner.first_name }}
+                  <span *ngIf="rank2Winner">, 🥈 {{ rank2Winner.first_name }}</span>
+                  <span *ngIf="rank3Winner">, 🥉 {{ rank3Winner.first_name }}</span>
                 } @else {
                   -
                 }
@@ -243,13 +367,19 @@
             </div>
           </div>
 
-          <div class="stat-card">
-            <div class="stat-icon-wrap amber">
-              <mat-icon>balance</mat-icon>
+          <div class="stat-card" [class.stat-warning]="hasTop3Tie && !isTop3TieResolved">
+            <div class="stat-icon-wrap" [class.gold]="!hasTop3Tie || isTop3TieResolved" [class.amber]="hasTop3Tie && !isTop3TieResolved">
+              <mat-icon>{{ (!hasTop3Tie || isTop3TieResolved) ? 'verified' : 'balance' }}</mat-icon>
             </div>
             <div class="stat-data">
-              <span class="stat-label">กรณีเกรดเท่ากันที่ปลดล็อค</span>
-              <span class="stat-value">{{ tiedCount }} <small>คน</small></span>
+              <span class="stat-label">{{ hasTop3Tie ? 'แย่งชิงโล่รางวัล (เกรดเท่ากัน)' : 'สถานะการตัดสินโล่รางวัล' }}</span>
+              <span class="stat-value">
+                @if (hasTop3Tie) {
+                  {{ topRankContenders.length }} <small>นาย</small>
+                } @else {
+                  ตัดสินครบ 3 อันดับ
+                }
+              </span>
             </div>
           </div>
 
@@ -266,7 +396,7 @@
           }
         </div>
 
-        <!-- 📢 แถบแจ้งเตือนเมื่อมีการปรับลำดับด้วยมือ -->
+        <!-- แถบแจ้งเตือนเมื่อมีการปรับลำดับด้วยตนเอง -->
         @if (hasManualAdjustments) {
           <div class="alert-banner-adjust no-print">
             <div class="adjust-text">
@@ -280,33 +410,33 @@
           </div>
         }
 
-        <!-- 📢 แถบแจ้งเตือนเมื่อมีนักเรียนที่คะแนนวิชาที่เลือกยังเท่ากัน -->
-        @if (hasTiedUnresolved) {
+        <!-- แถบแจ้งเตือนเมื่อผู้มีสิทธิ์ชิงรางวัล 3 อันดับแรกมีคะแนนเท่ากัน -->
+        @if (hasTiedUnresolved && !isTop3TieResolved) {
           <div class="alert-banner-tied no-print">
             <div class="tied-alert-left">
               <mat-icon>lightbulb</mat-icon>
               <div>
-                <strong>พบนักเรียนที่คะแนนดิบรวมในวิชาที่เลือกยังเท่ากัน:</strong>
-                <span>ท่านสามารถ <strong>ติ๊กเลือกวิชาเพิ่มในแผงด้านบน</strong> เพื่อนำคะแนนมารวมตัดสิน หรือใช้ปุ่ม ⬆️ ⬇️ เพื่อปรับอันดับ</span>
+                <strong>{{ activeTieStatus.title }}:</strong>
+                <span>กรุณา <strong>ติ๊กเลือกวิชาเพิ่มในแผงด้านบน</strong> เพื่อนำคะแนนมารวมตัดสิน หรือใช้ปุ่ม ⬆️ ⬇️ เพื่อกำหนดผู้ครองโล่รางวัลให้เด็ดขาด</span>
               </div>
             </div>
           </div>
         }
 
-        <!-- 🧩 แผงระบุกลุ่มเกรดซ้ำ (Tied Groups Detection Panel) -->
+        <!-- แผงแสดงกลุ่มคะแนนซ้ำสำหรับกลุ่มชิงรางวัล 3 อันดับแรก -->
         @if (tiedGroups.length > 0) {
           <div class="tied-groups-panel no-print">
             <div class="tied-panel-header">
               <div class="tied-title-wrap">
                 <div class="panel-badge-icon">
-                  <mat-icon>hub</mat-icon>
+                  <mat-icon>emoji_events</mat-icon>
                 </div>
                 <div>
                   <h4 class="tied-title">
-                    ตรวจพบลำดับที่เกรดซ้ำกัน {{ tiedGroups.length }} กลุ่ม (รวม {{ tiedCount }} คน)
+                    ตรวจพบกลุ่มที่เกรดซ้ำกันแย่งชิงโล่รางวัล (อันดับ 1 - 3) {{ tiedGroups.length }} กลุ่ม (รวม {{ tiedCount }} นาย)
                   </h4>
                   <p class="tied-desc">
-                    แต่ละกลุ่มมีสีประจำกลุ่มที่ชัดเจน คลิกที่การ์ดกลุ่มเพื่อกรองดูเฉพาะกลุ่มนั้น หรือดูช่วงลำดับที่กำลังแย่งกัน:
+                    กลุ่มนักเรียนที่มีเกรดเฉลี่ยสูงสุดเท่ากัน และกำลังแย่งชิงอันดับ 1, 2, 3 เพื่อรับมอบโล่รางวัลเกียรตินิยม:
                   </p>
                 </div>
               </div>
@@ -344,7 +474,11 @@
 
                     <div class="competing-ranks">
                       <mat-icon>military_tech</mat-icon>
-                      <span>แย่งลำดับที่ <strong>{{ tg.minRank }} - {{ tg.maxRank }}</strong></span>
+                      @if (tg.isTop3Group) {
+                        <span>⚔️ แย่งชิงอันดับที่ <strong>{{ tg.minRank }} - {{ tg.maxRank }} (ชิงโล่รางวัล)</strong></span>
+                      } @else {
+                        <span>เกรดเท่ากัน ได้ลำดับที่ <strong>{{ tg.minRank }} ร่วมกัน</strong></span>
+                      }
                     </div>
 
                     <div class="student-codes-list">
@@ -353,13 +487,19 @@
                     </div>
 
                     <div class="resolution-badge">
-                      @if (tg.isResolved) {
-                        <span class="badge-status resolved">
-                          <mat-icon>check_circle</mat-icon> ปลดล็อคแล้ว
-                        </span>
+                      @if (tg.isTop3Group) {
+                        @if (tg.isResolved) {
+                          <span class="badge-status resolved">
+                            <mat-icon>check_circle</mat-icon> ตัดสินผู้ครองโล่แล้ว
+                          </span>
+                        } @else {
+                          <span class="badge-status pending">
+                            <mat-icon>error_outline</mat-icon> คะแนนเท่ากัน (รอติ๊กวิชา)
+                          </span>
+                        }
                       } @else {
-                        <span class="badge-status pending">
-                          <mat-icon>error_outline</mat-icon> คะแนนเท่ากัน (รอติ๊กวิชา)
+                        <span class="badge-status shared-rank">
+                          <mat-icon>check_circle</mat-icon> ได้ลำดับที่ {{ tg.minRank }} ร่วมกันตามเกรด
                         </span>
                       }
                     </div>
@@ -370,14 +510,14 @@
           </div>
         }
 
-        <!-- 📄 หัวรายงานสำหรับตอนพิมพ์ (Print Only Header) -->
+        <!-- ส่วนหัวรายงานสำหรับการพิมพ์เอกสารเท่านั้น -->
         <div class="print-header only-print">
           <h2>รายงานการจัดลำดับผลการศึกษา</h2>
           <h3>หลักสูตร {{ getSelectedCourseName() }} {{ getSelectedBatchName() }}</h3>
           <p>เกณฑ์การตัดสินกรณีเกรดเฉลี่ยเท่ากัน: คำนวณจากคะแนนรวมในวิชา [ {{ getSelectedSubjectsText() }} ]</p>
         </div>
 
-        <!-- 🎛️ แถบควบคุมมุมมองการดู (สลับดูเรียงตามลำดับที่ VS เรียงตามเลขที่) -->
+        <!-- แถบสลับมุมมองการแสดงผล (เรียงตามลำดับที่ หรือเรียงตามเลขที่) -->
         <div class="view-mode-bar no-print">
           <div class="view-mode-left">
             <span class="mode-label">
@@ -418,6 +558,18 @@
               >
                 ทุกคน ({{ rankedStudents.length }})
               </button>
+              @if (hasTop3Tie) {
+                <button 
+                  type="button" 
+                  class="chip-btn chip-gold" 
+                  [class.active]="filterMode === 'rank1-only'"
+                  (click)="setFilterMode('rank1-only')"
+                  title="คลิกเพื่อกรองดูเฉพาะกลุ่มผู้มีสิทธิ์ชิงโล่รางวัล (Top 3)"
+                >
+                  <mat-icon>emoji_events</mat-icon>
+                  🏆 กลุ่มชิงโล่รางวัล ({{ topRankContenders.length }} คน)
+                </button>
+              }
               <button 
                 type="button" 
                 class="chip-btn" 
@@ -436,7 +588,7 @@
                 *ngIf="tiedCount > 0"
               >
                 <mat-icon>warning_amber</mat-icon>
-                เฉพาะเกรดซ้ำ ({{ tiedCount }} คน)
+                เฉพาะเกรดซ้ำชิงโล่ ({{ tiedCount }} นาย)
               </button>
               <button 
                 type="button" 
@@ -452,7 +604,7 @@
           </div>
         </div>
 
-        <!-- 🏆 ตารางผลการจัดลำดับ 1 ถึง N (Ranking Table) -->
+        <!-- ตารางแสดงผลการจัดลำดับคะแนน -->
         <div class="table-container">
           <div class="table-action-bar no-print">
             <div class="table-title">
@@ -465,7 +617,7 @@
 
               @if (filterMode !== 'all') {
                 <span class="active-filter-badge">
-                  กรอง: {{ filterMode === 'tied-only' ? 'เฉพาะคนที่เกรดซ้ำกัน' : (filterMode === 'incomplete-only' ? 'เฉพาะคนที่คะแนนไม่ครบ' : filterMode) }}
+                  กรอง: {{ filterMode === 'rank1-only' ? '🏆 กลุ่มชิงโล่รางวัล (อันดับ 1 - 3)' : (filterMode === 'tied-only' ? 'เฉพาะคนที่เกรดซ้ำกัน' : (filterMode === 'incomplete-only' ? 'เฉพาะคนที่คะแนนไม่ครบ' : filterMode)) }}
                 </span>
               }
             </div>
@@ -518,26 +670,38 @@
                     [class.row-top-1]="student.manualRank === 1 && student.is_completed !== false"
                     [class.row-top-2]="student.manualRank === 2 && student.is_completed !== false"
                     [class.row-top-3]="student.manualRank === 3 && student.is_completed !== false"
+                    [class.row-top-trophy]="student.manualRank != null && student.manualRank <= 3 && student.is_completed !== false"
                     [class.row-tied]="student.isTiedGpa && student.is_completed !== false"
                     [class.row-incomplete]="student.is_completed === false"
-                    [style.border-left]="student.is_completed === false ? '6px solid #d9d9d9' : (student.isTiedGpa ? '6px solid ' + student.tiedGroupColor : null)"
-                    [style.background-color]="student.is_completed === false ? '#fafafa' : (student.isTiedGpa ? student.tiedGroupBg : null)"
+                    [style.border-left]="student.is_completed === false ? '6px solid #d9d9d9' : (student.manualRank != null && student.manualRank <= 3 ? '6px solid #f59e0b' : (student.isTiedGpa ? '6px solid ' + student.tiedGroupColor : null))"
+                    [style.background-color]="student.is_completed === false ? '#fafafa' : (student.manualRank != null && student.manualRank <= 3 ? '#fffdf0' : (student.isTiedGpa ? student.tiedGroupBg : null))"
                   >
                     
-                    <!-- ลำดับที่ (แสดงเหรียญรางวัล Top 3 สำหรับผู้ที่เรียนครบ และป้ายสถานะสำหรับผู้ที่ไม่ครบ) -->
+                    <!-- ลำดับที่ (แสดงโล่ทอง กรอบทอง สำหรับ Top 1, 2, 3 และลำดับปกติสำหรับลำดับอื่นๆ) -->
                     <td class="text-center col-rank font-bold">
                       @if (student.is_completed === false) {
                         <span class="badge-incomplete" title="มีคะแนนไม่ครบตามโครงสร้างหลักสูตร ไม่นำมาจัดอันดับ">
                           <mat-icon>hourglass_top</mat-icon> ไม่ครบวิชา
                         </span>
                       } @else if (student.manualRank === 1) {
-                        <span class="badge-medal gold">🥇 1</span>
+                        <div class="rank-trophy-cell gold-framed-cell">
+                          <span class="badge-medal gold">🥇 1</span>
+                          <span class="badge-trophy-tag gold-tag" title="ผู้ครองโล่รางวัลเกียรตินิยม อันดับ 1 (กรอบทอง)">🏆 โล่ทอง</span>
+                        </div>
                       } @else if (student.manualRank === 2) {
-                        <span class="badge-medal silver">🥈 2</span>
+                        <div class="rank-trophy-cell gold-framed-cell">
+                          <span class="badge-medal gold-silver">🥈 2</span>
+                          <span class="badge-trophy-tag gold-tag" title="ผู้ครองโล่รางวัลเกียรตินิยม อันดับ 2 (กรอบทอง)">🏆 โล่ทอง</span>
+                        </div>
                       } @else if (student.manualRank === 3) {
-                        <span class="badge-medal bronze">🥉 3</span>
+                        <div class="rank-trophy-cell gold-framed-cell">
+                          <span class="badge-medal gold-bronze">🥉 3</span>
+                          <span class="badge-trophy-tag gold-tag" title="ผู้ครองโล่รางวัลเกียรตินิยม อันดับ 3 (กรอบทอง)">🏆 โล่ทอง</span>
+                        </div>
                       } @else {
-                        <span class="badge-rank">{{ student.manualRank }}</span>
+                        <div class="rank-trophy-cell">
+                          <span class="badge-rank">{{ student.manualRank }}</span>
+                        </div>
                       }
                     </td>
 
@@ -548,8 +712,17 @@
 
                     <!-- ยศ - ชื่อ - นามสกุล -->
                     <td class="text-left col-name">
-                      <span class="rank-tag" *ngIf="student.rank_name">{{ student.rank_name }}</span>
-                      <span class="student-name">{{ student.first_name }} {{ student.last_name }}</span>
+                      <div class="name-cell-wrap">
+                        <span class="rank-tag" *ngIf="student.rank_name">{{ student.rank_name }}</span>
+                        <span class="student-name">{{ student.first_name }} {{ student.last_name }}</span>
+                        @if (student.manualRank === 1 && student.is_completed !== false) {
+                          <span class="trophy-winner-tag">🏆 โล่ทอง อันดับ 1</span>
+                        } @else if (student.manualRank === 2 && student.is_completed !== false) {
+                          <span class="trophy-winner-tag">🏆 โล่ทอง อันดับ 2</span>
+                        } @else if (student.manualRank === 3 && student.is_completed !== false) {
+                          <span class="trophy-winner-tag">🏆 โล่ทอง อันดับ 3</span>
+                        }
+                      </div>
                     </td>
 
                     <!-- เกรดเฉลี่ยสะสม (GPA) พร้อมป้ายระบุกลุ่มซ้ำ -->
@@ -633,7 +806,7 @@
                       }
                     </td>
 
-                    <!-- ปุ่มปรับลำดับด้วยมือ ⬆️ ⬇️ -->
+                    <!-- ปุ่มปรับเปลี่ยนลำดับด้วยตนเอง -->
                     <td class="text-center col-action no-print">
                       @if (student.is_completed !== false) {
                         <div class="action-btn-group">

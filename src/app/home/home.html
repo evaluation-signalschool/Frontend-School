@@ -91,8 +91,12 @@
             <p class="news-desc">{{ item.description }}</p>
           </div>
           <div class="news-footer">
-            <a *ngIf="item.file_url" [href]="getFileUrl(item.file_url)" target="_blank" class="news-read-btn">
-              ดูไฟล์แนบ <mat-icon style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;">attachment</mat-icon>
+            <a *ngIf="item.file_url" [href]="getFileUrl(item.file_url)" target="_blank" rel="noopener noreferrer" class="news-read-btn" [title]="item.file_name || 'เปิดดูเอกสาร'">
+              <mat-icon style="font-size: 16px; width: 16px; height: 16px; vertical-align: middle;">
+                {{ isGoogleDrive(item.file_url) ? 'description' : 'attachment' }}
+              </mat-icon>
+              <span>{{ item.file_name || (isGoogleDrive(item.file_url) ? 'เปิดดูเอกสาร' : 'ดูไฟล์แนบ') }}</span>
+              <mat-icon style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle; margin-left: 2px;">open_in_new</mat-icon>
             </a>
           </div>
         </div>
@@ -241,7 +245,7 @@
 
       <div class="card-grid">
         <div class="staff-card" *ngFor="let staff of staffList">
-          <!-- ✅ เปลี่ยนตรงนี้ -->
+          <!-- ส่วนแสดงผลคะแนน -->
           <div class="staff-img">
             <img [src]="staff.image" [alt]="staff.name" *ngIf="staff.image; else placeholder" />
             <ng-template #placeholder>

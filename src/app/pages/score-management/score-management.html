@@ -1,15 +1,31 @@
 <div class="score-management-page">
   <div class="page-header">
-    <button mat-icon-button class="back-button" (click)="goBack()">
-      <mat-icon>chevron_left</mat-icon>
-    </button>
-    <h1 class="page-title">บันทึกคะแนนดิบ</h1>
-    <button class="header-btn" (click)="goToScorePage()">
-      <mat-icon style="font-size: 20px; width: 20px; height: 20px; margin-right: 4px"
-        >list_alt</mat-icon
-      >
-      ไปหน้า ประมวลผลการเรียน
-    </button>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <button mat-icon-button class="back-button" (click)="goBack()">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <h1 class="page-title" style="margin: 0;">บันทึกคะแนนดิบ</h1>
+    </div>
+
+    <div class="header-actions-group" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+      <!-- ปุ่มกรอกคะแนนความประพฤติ (สีม่วง) -->
+      <button type="button" class="header-btn btn-behavior" (click)="openBehaviorScoreModal()" title="บันทึกคะแนนความประพฤติของนักเรียนในรุ่นนี้ (คะแนนเต็ม 200)">
+        <mat-icon>edit_square</mat-icon>
+        <span>กรอกคะแนนความประพฤติ</span>
+      </button>
+
+      <!-- ปุ่มไปหน้าบันทึกเวลาสอบและเวลาการฝึกอบรม -->
+      <button type="button" class="header-btn btn-time" (click)="goToTrainingExamTime()" title="ไปยังหน้าบันทึกเวลาการฝึกอบรมและเวลาสอบ (คิดเป็นร้อยละ)">
+        <mat-icon>timer</mat-icon>
+        <span>บันทึกเวลาฝึกอบรม/สอบ</span>
+      </button>
+
+      <!-- ไปหน้า ประมวลผลการเรียน -->
+      <button type="button" class="header-btn" (click)="goToScorePage()">
+        <mat-icon>list_alt</mat-icon>
+        <span>ไปหน้า ประมวลผลการเรียน</span>
+      </button>
+    </div>
   </div>
 
   <div class="page-body">
@@ -72,6 +88,24 @@
           </select>
         </div>
       </div>
+
+      <!-- Quick Shortcuts for Selected Batch -->
+      @if (selectedBatch) {
+        <div class="batch-quick-actions">
+          <span class="quick-label">
+            <mat-icon>stars</mat-icon>
+            คะแนนพิเศษประจำรุ่นนี้:
+          </span>
+          <button type="button" class="btn-quick-chip btn-chip-purple" (click)="openBehaviorScoreModal()" title="บันทึกคะแนนความประพฤติ (เต็ม 200)">
+            <mat-icon>edit_square</mat-icon>
+            <span>กรอกคะแนนความประพฤติ (เต็ม 200)</span>
+          </button>
+          <button type="button" class="btn-quick-chip btn-chip-blue" (click)="goToTrainingExamTime()" title="ไปยังหน้าบันทึกเวลาการฝึกอบรมและเวลาสอบ">
+            <mat-icon>timer</mat-icon>
+            <span>บันทึกเวลาฝึกอบรมและสอบ (%)</span>
+          </button>
+        </div>
+      }
 
       <!-- Section 2: Max Score -->
       <ng-container *ngIf="selectedSubjectId">

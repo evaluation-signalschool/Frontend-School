@@ -149,8 +149,8 @@ export class ScoreList implements OnInit {
         if (res?.success && res.data) {
           this.subjectsList = res.data.map((s: any) => ({
             id: s.id || s.subject_id,
-            subject_name: s.subject_name || s.name || 'ไม่มีชื่อวิชา', // 👈 ดักชื่อวิชาไว้
-            group_id: s.group_id, // 👈 สำคัญมาก! ต้องเก็บ group_id ของวิชานี้ไว้ด้วย
+            subject_name: s.subject_name || s.name || 'ไม่มีชื่อวิชา', // เก็บชื่อวิชา
+            group_id: s.group_id, // จัดเก็บรหัสกลุ่มวิชา (group_id) เพื่อใช้อ้างอิง
           }));
           this.cdr.detectChanges();
           console.log('โหลดรายวิชาสำเร็จ:', this.subjectsList); // แอบดูข้อมูลใน Console
@@ -208,7 +208,7 @@ export class ScoreList implements OnInit {
   }
 
   reProcess(): void {
-    // 👈 เปลี่ยนมาหาค่าจาก selectedSubjectId เหมือนกัน
+    // ดึงค่าข้อมูลจากรหัสวิชาที่เลือก
     const selectedSubj = this.subjectsList.find((s) => s.id === this.selectedSubjectId);
     const groupId = selectedSubj?.group_id || selectedSubj?.id;
 

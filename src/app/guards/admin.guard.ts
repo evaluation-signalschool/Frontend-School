@@ -15,8 +15,7 @@ export const adminGuard: CanActivateFn = (route, state) => {
   }
 
   // หากไม่มี Session หรือไม่ได้ล็อกอิน ให้ Redirect ไปหน้า /admin/login ทันที
-  router.navigate(['/admin/login'], {
+  return router.createUrlTree(['/admin/login'], {
     queryParams: { returnUrl: state.url },
   });
-  return false;
 };

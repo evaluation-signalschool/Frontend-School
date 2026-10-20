@@ -507,7 +507,7 @@ $text-color: #4a607a;
   }
 }
 
-/* 💜 Dropdown เลือกรุ่น & Badge คะแนนเฉลี่ย */
+/* เมนูดรอปดาวน์เลือกรุ่น และป้ายแสดงคะแนนเฉลี่ย */
 .cohort-selector-card {
   display: flex;
   align-items: center;
@@ -542,7 +542,7 @@ $text-color: #4a607a;
   }
 }
 // ─────────────────────────────────────────────────────────────
-// 💜 FIX: POPUP MAT-SELECT (วางไว้นอก .dashboard-container)
+// ปรับแต่งป๊อปอัปเมนู mat-select (อยู่นอกคอนเทนเนอร์ dashboard)
 // ─────────────────────────────────────────────────────────────
 ::ng-deep .cdk-overlay-pane .purple-pastel-panel {
   background-color: #ffffff !important;
@@ -784,7 +784,7 @@ table {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 💜 CUSTOM MAT-SELECT POPUP OVERRIDE
+// ปรับแต่งสไตล์ป๊อปอัป mat-select เพิ่มเติม
 // (พื้นหลังขาวบริสุทธิ์ + สไลด์แถบม่วงพาสเทล + ซ่อนติ๊กถูก)
 // ─────────────────────────────────────────────────────────────
 ::ng-deep .purple-pastel-panel {
@@ -814,7 +814,7 @@ table {
     padding: 0 16px !important;
     transition: all 0.2s ease-in-out !important;
 
-    /* ❌ ซ่อนเครื่องหมายติ๊กถูกทั้งหมด */
+    /* ซ่อนเครื่องหมายถูกทั้งหมด */
     .mat-pseudo-checkbox,
     .mat-mdc-option-pseudo-checkbox,
     .mdc-list-item__start,
@@ -822,7 +822,7 @@ table {
       display: none !important;
     }
 
-    /* 💜 แถบสไลด์สีม่วงพาสเทลขณะชี้/เลือก */
+    /* แถบสีม่วงพาสเทลขณะชี้หรือเลือก */
     &:hover, 
     &:focus,
     &.mdc-list-item--selected,
@@ -1018,7 +1018,7 @@ table {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 💜 GLOBAL/OVERRIDE: สไตล์ปรับสี POPUP เมนูของ MAT-SELECT
+// สไตล์ปรับแต่งสีป๊อปอัปเมนูของ mat-select ในระดับส่วนกลาง (Global)
 // (สามารถวางท้ายไฟล์นี้ หรือนำไปไว้ใน styles.scss หลักได้ครับ)
 // ─────────────────────────────────────────────────────────────
 ::ng-deep .purple-pastel-panel {
@@ -1584,9 +1584,9 @@ td {
   width: 100%;
   max-width: 100%;
   margin: 0;
-  border-radius: 12px; // ✅ มุมโค้งสวย
+  border-radius: 12px; // กำหนดความโค้งมนของขอบ
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.15); // ✅ เงาเบาๆ
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.15); // เงาตกกระทบแบบนุ่มนวล
   // width: 100%;
   // max-width: 1192px;
   // margin: 0 auto;
@@ -1697,13 +1697,13 @@ td {
 
   .section-title {
     font-size: 48px;
-    font-weight: 800; // ✅ หนาขึ้น
+    font-weight: 800; // กำหนดความหนาของตัวอักษร
     color: #030000;
     border-left: 4px solid #ffffff;
     padding-left: 12px;
-    font-family: 'Sarabun', sans-serif; // ✅ ฟอนต์ Sarabun
+    font-family: 'Sarabun', sans-serif; // กำหนดรูปแบบฟอนต์ Sarabun
     letter-spacing: 0.5px;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); // ✅ เงาเบาๆ ให้อ่านง่าย
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); // เงาข้อความเพื่อให้อ่านง่ายขึ้น
 
     @media (max-width: 768px) {
       font-size: 28px;
@@ -1774,7 +1774,7 @@ td {
 
 .staff-img {
   width: 100%;
-  aspect-ratio: 3 / 4; // ✅ สัดส่วนคงที่ ไม่ fixed px
+  aspect-ratio: 3 / 4; // สัดส่วนภาพแบบคงที่
   background: #f9f5ff;
   display: flex;
   align-items: center;

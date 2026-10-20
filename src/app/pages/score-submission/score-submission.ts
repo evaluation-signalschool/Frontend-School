@@ -49,11 +49,10 @@ export class ScoreSubmission implements OnInit {
 
   get printFontSize(): string {
     const count = this.gradeItems?.length || 0;
-    if (count >= 40) return '5.5pt';
-    if (count >= 35) return '6pt';
-    if (count >= 32) return '7pt';
-    if (count >= 28) return '8pt';
-    if (count >= 24) return '9pt';
+    if (count >= 40) return '6.5pt';
+    if (count >= 35) return '7.5pt';
+    if (count >= 30) return '8pt';
+    if (count >= 25) return '8.5pt';
     if (count >= 20) return '9.5pt';
     if (count >= 15) return '10pt';
     return '11pt';
@@ -165,6 +164,9 @@ export class ScoreSubmission implements OnInit {
             last_score_date: item.last_score_date
           };
         });
+
+        // จัดเรียงตามลำดับกลุ่มวิชา M -> MN -> S -> P และตามตัวเลข 01..32
+        this.sortGradeItems(this.gradeItems);
 
         this.calculateRowspans(this.gradeItems);
         this.updateSummary();
@@ -366,6 +368,48 @@ export class ScoreSubmission implements OnInit {
       console.error('Error saving', error);
       Swal.fire('ข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้', 'error');
     }
+  }
+
+  sortGradeItems(items: GradeItem[]): void {
+    const getGroupPrefixOrder = (name: string): number => {
+      const upper = (name || '').trim().toUpperCase();
+      if (upper.startsWith('MN') || upper.includes('รอง')) return 2;
+      if (upper.startsWith('M') || upper.includes('หลัก')) return 1;
+      if (upper.startsWith('S') || upper.includes('ประกอบ')) return 3;
+      if (upper.startsWith('P') || upper.includes('ปฏิบัติ')) return 4;
+      return 5;
+    };
+
+    const compareGroupNames = (aName: string, bName: string): number => {
+      const a = (aName || '').trim();
+      const b = (bName || '').trim();
+      const orderA = getGroupPrefixOrder(a);
+      const orderB = getGroupPrefixOrder(b);
+      if (orderA !== orderB) return orderA - orderB;
+      const matchA = a.match(/\d+/);
+      const matchB = b.match(/\d+/);
+      if (matchA && matchB) {
+        const numA = parseInt(matchA[0], 10);
+        const numB = parseInt(matchB[0], 10);
+        if (numA !== numB) return numA - numB;
+      }
+      return a.localeCompare(b, 'th', { numeric: true, sensitivity: 'base' });
+    };
+
+    items.sort((a, b) => {
+      const groupComp = compareGroupNames(a.groupName || '', b.groupName || '');
+      if (groupComp !== 0) return groupComp;
+
+      const matchSubA = (a.subjectCode || '').match(/\d+/);
+      const matchSubB = (b.subjectCode || '').match(/\d+/);
+      if (matchSubA && matchSubB) {
+        const numSubA = parseInt(matchSubA[0], 10);
+        const numSubB = parseInt(matchSubB[0], 10);
+        if (numSubA !== numSubB) return numSubA - numSubB;
+      }
+
+      return (a.subjectName || '').localeCompare(b.subjectName || '', 'th', { numeric: true });
+    });
   }
 
   calculateRowspans(items: GradeItem[]) {

@@ -76,8 +76,12 @@
                   {{ subject.raw_score }}
                 </ng-container>
                 <ng-template #notEvaluated>
-                  <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <span class="text-muted" style="font-size: 0.9em; color: #ff9800;">ยังไม่ประเมินผู้สอน</span>
+                  <div
+                    style="display: flex; align-items: center; justify-content: center; gap: 8px"
+                  >
+                    <span class="text-muted" style="font-size: 0.9em; color: #ff9800"
+                      >ยังไม่ประเมินผู้สอน</span
+                    >
                     <button class="evaluate-btn" (click)="goToEvaluation(subject.subject_id)">
                       ประเมิน
                     </button>

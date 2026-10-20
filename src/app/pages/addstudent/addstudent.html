@@ -59,18 +59,8 @@
       </div>
     </div>
 
-    <!-- แท็บเลือกโหมด -->
-    <div class="modal-tabs">
-      <button type="button" [class.active]="activeTab === 'single'" (click)="switchTab('single')">
-        {{ isEditing ? '✏️ แก้ไขข้อมูลรายคน' : 'กรอกทีละคน' }}
-      </button>
-      <button type="button" [class.active]="activeTab === 'file'" (click)="switchTab('file')">
-        นำเข้าด้วยไฟล์
-      </button>
-    </div>
-
-    <!-- 📌 แท็บ 1: กรอกทีละคน / แก้ไข / เพิ่มหลายคน -->
-    <form *ngIf="activeTab === 'single'" class="modal-form" (ngSubmit)="onSubmitSingle()">
+    <!-- ส่วนฟอร์ม: กรอกข้อมูลนักเรียน / แก้ไขรายคน -->
+    <form class="modal-form" (ngSubmit)="onSubmitSingle()">
       <div class="student-forms-container">
         <div *ngFor="let form of studentForms; let i = index" class="student-card-row">
           <div class="card-row-header">
@@ -122,80 +112,46 @@
           </div>
 
           <div class="form-row">
+            <div class="form-group" style="flex: 1.2;">
+              <label for="affiliation-{{ i }}">สังกัด</label>
+              <input
+                type="text"
+                id="affiliation-{{ i }}"
+                name="affiliation-{{ i }}"
+                class="form-control"
+                [(ngModel)]="form.affiliation"
+                placeholder="เช่น กรมทหารสื่อสาร, ส.1 พัน.101"
+              />
+            </div>
+            <div class="form-group" style="flex: 0.8;">
+              <label for="phone-{{ i }}">เบอร์โทรศัพท์</label>
+              <input
+                type="tel"
+                id="phone-{{ i }}"
+                name="phone-{{ i }}"
+                class="form-control"
+                [(ngModel)]="form.phone"
+                placeholder="เช่น 0812345678"
+                pattern="[0-9]{9,10}"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
             <div class="form-group">
-              <label for="password-{{ i }}"
-                >รหัสผ่าน {{ isEditing ? '(เว้นว่างหากไม่เปลี่ยน)' : '' }}</label
-              >
-              <div class="password-input-wrapper" style="position: relative">
-                <input
-                  [type]="showPassword ? 'text' : 'password'"
-                  id="password-{{ i }}"
-                  name="password-{{ i }}"
-                  class="form-control"
-                  [(ngModel)]="form.password"
-                  style="padding-right: 40px"
-                />
-                <button
-                  type="button"
-                  class="toggle-password-btn"
-                  (click)="togglePasswordVisibility()"
-                  style="
-                    position: absolute;
-                    right: 10px;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    background: none;
-                    border: none;
-                    cursor: pointer;
-                    color: #666;
-                    padding: 0;
-                    display: flex;
-                    align-items: center;
-                  "
-                  title="{{ showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน' }}"
-                >
-                  <mat-icon style="font-size: 20px; width: 20px; height: 20px">
-                    {{ showPassword ? 'visibility_off' : 'visibility' }}
-                  </mat-icon>
-                </button>
-              </div>
+              <label for="email-{{ i }}">
+                อีเมล <span class="label-hint">(อีเมล Google สำหรับให้นักเรียนล็อกอินเข้าสู่ระบบ หรือเว้นว่างได้)</span>
+              </label>
+              <input
+                type="email"
+                id="email-{{ i }}"
+                name="email-{{ i }}"
+                class="form-control"
+                [(ngModel)]="form.email"
+                placeholder="เช่น student@gmail.com"
+              />
             </div>
           </div>
-
-          <div class="form-group">
-            <label for="affiliation-{{ i }}">สังกัด</label>
-            <input
-              type="text"
-              id="affiliation-{{ i }}"
-              name="affiliation-{{ i }}"
-              class="form-control"
-              [(ngModel)]="form.affiliation"
-            />
-          </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="email-{{ i }}">อีเมล</label>
-                <input
-                  type="email"
-                  id="email-{{ i }}"
-                  name="email-{{ i }}"
-                  class="form-control"
-                  [(ngModel)]="form.email"
-                />
-              </div>
-              <div class="form-group">
-                <label for="phone-{{ i }}">เบอร์โทรศัพท์</label>
-                <input
-                  type="tel"
-                  id="phone-{{ i }}"
-                  name="phone-{{ i }}"
-                  class="form-control"
-                  [(ngModel)]="form.phone"
-                  pattern="[0-9]{9,10}"
-                />
-              </div>
-            </div>
         </div>
         <!-- ปิด student-card-row -->
       </div>
@@ -213,21 +169,26 @@
         </div>
 
         <div *ngIf="showPasteArea" class="paste-area-box">
-          <label
-            >วางข้อความรายชื่อนักเรียนที่คัดลอกมาจาก Excel หรือ ตาราง (รหัสผ่าน | ยศ-ชื่อ-สกุล |
-            สังกัด | อีเมล | เบอร์โทรศัพท์)</label
-          >
+          <label>
+            วางข้อความรายชื่อนักเรียนที่คัดลอกมาจาก Excel หรือ ตาราง
+            <span class="paste-helper-text">
+              (คอลัมน์สัมพันธ์กับแบบฟอร์มด้านบน: <strong>ยศ</strong> | <strong>ชื่อ</strong> | <strong>นามสกุล</strong> | <strong>สังกัด</strong> | <strong>เบอร์โทรศัพท์</strong> | <strong>อีเมล</strong>)
+            </span>
+          </label>
           <textarea
             class="form-control textarea-code"
             rows="5"
             [(ngModel)]="pastedData"
             name="pastedData"
-            placeholder="วางข้อมูลที่นี่..."
+            placeholder="คัดลอกจาก Excel มาวางที่นี่ เช่น:
+พ.อ.	สมชาย	ใจดี	กรมทหารสื่อสาร	0812345678	somchai@gmail.com
+ร.อ. สมเกียรติ มั่นคง	ศสส.	0899876543	somkiat@gmail.com"
           ></textarea>
           <div class="paste-actions">
             <button type="button" class="btn-gray" (click)="togglePasteArea()">ปิด</button>
             <button type="button" class="btn-green" (click)="processPastedData()">
-              นำเข้าข้อมูล
+              <mat-icon style="font-size: 18px; width: 18px; height: 18px; vertical-align: middle;">playlist_add</mat-icon>
+              นำเข้าสู่ฟอร์มรายคน
             </button>
           </div>
         </div>
@@ -243,49 +204,7 @@
       </div>
     </form>
 
-    <!-- 📌 แท็บ 3: นำเข้าด้วยไฟล์ -->
-    <form *ngIf="activeTab === 'file'" class="modal-form" (ngSubmit)="onSubmitFile()">
-      <div class="file-upload-zone">
-        <div class="upload-icon">
-          <svg
-            width="48"
-            height="48"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="17 8 12 3 7 8"></polyline>
-            <line x1="12" y1="3" x2="12" y2="15"></line>
-          </svg>
-        </div>
-
-        <p class="upload-text" *ngIf="!selectedFileName">
-          ลากไฟล์รายชื่อ <strong>.csv</strong> หรือ <strong>.txt</strong> วางในช่องนี้
-          หรือคลิกเพื่อเลือกไฟล์
-        </p>
-        <p class="upload-text" *ngIf="selectedFileName" style="color: #673ab7">
-          ไฟล์ที่เลือก: <strong>{{ selectedFileName }}</strong>
-        </p>
-
-        <input
-          type="file"
-          accept=".csv, .txt"
-          class="file-input-hidden"
-          (change)="onFileSelected($event)"
-        />
-      </div>
-
-      <div class="form-actions center">
-        <button type="button" class="btn-gray" (click)="onCancel()">ยกเลิก</button>
-        <button type="submit" class="btn-purple btn-wide">เพิ่มข้อมูลจากไฟล์</button>
-      </div>
-    </form>
-
-    <!-- 📊 ส่วนตารางรายชื่อนักเรียน (Student List Table) -->
+    <!-- ส่วนตารางรายชื่อนักเรียน -->
     <div class="student-list-section">
       <div
         class="section-header"
@@ -310,10 +229,9 @@
             <tr>
               <th class="text-center" style="width: 60px">ลำดับ</th>
               <th>ยศ - ชื่อ - นามสกุล</th>
-              <th>อีเมล</th>
-              <th>เบอร์โทรศัพท์</th>
-              <th>รหัสผ่าน</th>
               <th>สังกัด</th>
+              <th>อีเมล (Google)</th>
+              <th>เบอร์โทรศัพท์</th>
               <th class="text-center" style="width: 100px">จัดการ</th>
             </tr>
           </thead>
@@ -330,33 +248,13 @@
                   >{{ student.rank }} {{ student.firstName }} {{ student.lastName }}</span
                 >
               </td>
-              <td>{{ student.email || '-' }}</td>
-              <td>{{ student.phone || '-' }}</td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 8px">
-                  <span style="font-family: monospace; font-size: 14px">
-                    {{ student.showPassword ? student.password || '-' : '••••••••' }}
-                  </span>
-                  <button
-                    type="button"
-                    (click)="student.showPassword = !student.showPassword"
-                    style="
-                      background: none;
-                      border: none;
-                      cursor: pointer;
-                      color: #666;
-                      padding: 0;
-                      display: flex;
-                    "
-                    title="{{ student.showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน' }}"
-                  >
-                    <mat-icon style="font-size: 18px; width: 18px; height: 18px">
-                      {{ student.showPassword ? 'visibility_off' : 'visibility' }}
-                    </mat-icon>
-                  </button>
-                </div>
-              </td>
               <td>{{ student.affiliation || '-' }}</td>
+              <td>
+                <span [style.color]="student.email ? '#374151' : '#9ca3af'">
+                  {{ student.email || '-' }}
+                </span>
+              </td>
+              <td>{{ student.phone || '-' }}</td>
               <td class="text-center actions-cell">
                 <!-- ปุ่มแก้ไข -->
                 <button

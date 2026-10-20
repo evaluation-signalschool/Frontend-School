@@ -78,7 +78,7 @@ export class ScoreService {
     return new HttpHeaders(headersConfig);
   }
 
-  // ✅ สร้าง Helper สำหรับ Admin Token โดยเฉพาะ เพื่อลดความซ้ำซ้อน
+  // ฟังก์ชันช่วยเหลือสำหรับแนบ Token ของผู้ดูแลระบบ เพื่อลดความซ้ำซ้อนของโค้ด
   private getAdminHeaders(): HttpHeaders {
     const token = this.authService.getAdminToken();
     const headersConfig: { [name: string]: string } = {
@@ -110,10 +110,10 @@ export class ScoreService {
     return this.http
       .get<AdminSubjectScoresResponse>(
         `${environment.apiUrl}/admin/scores?batch_id=${batchId}&subject_id=${subjectId}`,
-        { headers: this.getAdminHeaders() }, // ✅ ใช้ Helper Method
+        { headers: this.getAdminHeaders() }, // แนบส่วนหัวของผู้ดูแลระบบ
       )
       .pipe(
-        // ✅ ดักจับ Error 404 แล้วคืนค่าข้อมูลว่างกลับไปแทน (แก้ปัญหาหน้าเว็บพังครั้งแรก)
+        // ดักจับข้อผิดพลาด 404 แล้วส่งคืนข้อมูลว่าง เพื่อป้องกันหน้าเว็บแสดงผลผิดพลาด
         catchError((error) => {
           if (error.status === 404) {
             return of({ success: true, max_score: 0, data: [] } as AdminSubjectScoresResponse);
@@ -142,7 +142,7 @@ export class ScoreService {
     return this.http.post<any>(
       `${environment.apiUrl}/admin/scores/bulk`,
       payload,
-      { headers: this.getAdminHeaders() }, // ✅ ปรับมาใช้ Admin Header
+      { headers: this.getAdminHeaders() }, // แนบส่วนหัวของผู้ดูแลระบบ
     );
   }
 
@@ -150,7 +150,7 @@ export class ScoreService {
   getProcessGroupScores(batchId: number, groupId: number): Observable<any> {
     return this.http.get<any>(
       `${environment.apiUrl}/score/process-group?batch_id=${batchId}&group_id=${groupId}`,
-      { headers: this.getAdminHeaders() }, // ✅ ปรับมาใช้ Admin Header
+      { headers: this.getAdminHeaders() }, // แนบส่วนหัวของผู้ดูแลระบบ
     );
   }
 
@@ -158,7 +158,7 @@ export class ScoreService {
   getBatchScoresSummary(batchId: number): Observable<any> {
     return this.http.get<any>(
       `${environment.apiUrl}/score/process-batch?batch_id=${batchId}`,
-      { headers: this.getAdminHeaders() }, // ✅ ปรับมาใช้ Admin Header
+      { headers: this.getAdminHeaders() }, // แนบส่วนหัวของผู้ดูแลระบบ
     );
   }
 
@@ -167,6 +167,14 @@ export class ScoreService {
     return this.http.post<any>(
       `${environment.apiUrl}/scores/special-bulk`,
       payload,
+      { headers: this.getAdminHeaders() },
+    );
+  }
+
+  // ดึงข้อมูลคะแนนพิเศษทั้งรุ่น (เวลาฝึกอบรม, เวลาสอบ, ความประพฤติ) พร้อมข้อมูลสังกัด
+  getBatchSummaryScores(batchId: number): Observable<any> {
+    return this.http.get<any>(
+      `${environment.apiUrl}/scores/summary-scores?batch_id=${batchId}`,
       { headers: this.getAdminHeaders() },
     );
   }
@@ -200,6 +208,17 @@ export class ScoreService {
     return this.http.post<any>(
       `${environment.apiUrl}/score/ranking`,
       payload,
+      { headers: this.getAdminHeaders() }
+    );
+  }
+
+  // ==========================================
+  // จัดอันดับสำหรับการเลือกลงหน่วย (สูตร: คะแนนดิบ*หน่วยกิต, รวม 80% + ประพฤติ 20% ทศนิยม 4 ตำแหน่ง)
+  // ==========================================
+  getUnitSelectionRanking(batchId: number): Observable<any> {
+    return this.http.post<any>(
+      `${environment.apiUrl}/score/unit-selection-ranking`,
+      { batch_id: batchId },
       { headers: this.getAdminHeaders() }
     );
   }

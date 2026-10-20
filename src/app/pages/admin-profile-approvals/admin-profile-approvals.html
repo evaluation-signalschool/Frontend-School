@@ -3,39 +3,124 @@
     <button (click)="goBack()" class="btn btn-outline-secondary" style="border: none; background: transparent; padding: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 50%;">
       <mat-icon style="color: #555;">arrow_back</mat-icon>
     </button>
-    <h2 class="page-title" style="margin: 0;">อนุมัติการแก้ไขข้อมูลโปรไฟล์</h2>
+    <div>
+      <h2 class="page-title" style="margin: 0;">อนุมัติการแก้ไขข้อมูลโปรไฟล์</h2>
+      <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+        ตรวจสอบและอนุมัติคำร้องขอแก้ไขยศ ชื่อ-นามสกุล ของนักเรียน (รายการรออนุมัติจะแสดงขึ้นก่อน)
+      </p>
+    </div>
   </div>
 
   <div class="card-container">
-    <div class="card-header">
-      <h3>รายการคำร้องขอแก้ไขข้อมูลนักเรียน</h3>
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <h3 style="margin: 0;">รายการคำร้องขอแก้ไขข้อมูลนักเรียน</h3>
+      <div class="header-stats" style="font-size: 0.9rem; color: #64748b;">
+        <span>ทั้งหมด <strong>{{ requests.length }}</strong> รายการ</span>
+        <span *ngIf="pendingCount > 0" style="color: #e67e22; margin-left: 10px; font-weight: 600;">
+          (รออนุมัติ {{ pendingCount }} รายการ)
+        </span>
+      </div>
     </div>
 
-    <div *ngIf="isLoading" style="text-align: center; padding: 2rem;">
-      <p>กำลังโหลดข้อมูล...</p>
+    <!-- ── Filter & Search Toolbar (แถบกรองและค้นหา เพื่อไม่ให้ตาลายเวลาแถวยาว) ── -->
+    <div class="filter-toolbar">
+      <!-- 1. Status Filter Tabs -->
+      <div class="status-tabs">
+        <button 
+          type="button" 
+          class="tab-btn" 
+          [class.active]="selectedStatus === 'all'" 
+          (click)="setStatusFilter('all')">
+          ทั้งหมด <span class="tab-badge all">{{ requests.length }}</span>
+        </button>
+        <button 
+          type="button" 
+          class="tab-btn" 
+          [class.active]="selectedStatus === 'pending'" 
+          (click)="setStatusFilter('pending')">
+          รออนุมัติ <span class="tab-badge pending">{{ pendingCount }}</span>
+        </button>
+        <button 
+          type="button" 
+          class="tab-btn" 
+          [class.active]="selectedStatus === 'approved'" 
+          (click)="setStatusFilter('approved')">
+          อนุมัติแล้ว <span class="tab-badge approved">{{ approvedCount }}</span>
+        </button>
+        <button 
+          type="button" 
+          class="tab-btn" 
+          [class.active]="selectedStatus === 'rejected'" 
+          (click)="setStatusFilter('rejected')">
+          ไม่อนุมัติ <span class="tab-badge rejected">{{ rejectedCount }}</span>
+        </button>
+      </div>
+
+      <!-- 2. Search & Page Size Options -->
+      <div class="toolbar-right">
+        <div class="search-box">
+          <mat-icon class="search-icon">search</mat-icon>
+          <input 
+            type="text" 
+            [(ngModel)]="searchQuery" 
+            (ngModelChange)="onSearchChange()" 
+            placeholder="ค้นหาชื่อ, รหัสนักเรียน, หลักสูตร..." 
+            class="search-input" />
+          <button 
+            *ngIf="searchQuery" 
+            type="button" 
+            class="btn-clear" 
+            (click)="searchQuery = ''; onSearchChange()" 
+            title="ล้างข้อความ">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="page-size-selector">
+          <label>แสดง:</label>
+          <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} แถว</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="isLoading" style="text-align: center; padding: 3rem;">
+      <p style="color: #64748b;">กำลังโหลดข้อมูลคำร้อง...</p>
     </div>
 
     <div *ngIf="!isLoading && requests.length === 0" style="text-align: center; padding: 3rem; color: #666;">
       <mat-icon style="font-size: 48px; height: 48px; width: 48px; margin-bottom: 1rem; color: #bdbdbd;">inbox</mat-icon>
-      <p>ไม่มีคำร้องขอแก้ไขข้อมูลในขณะนี้</p>
+      <p>ไม่มีคำร้องขอแก้ไขข้อมูลในระบบ</p>
     </div>
 
-    <div class="table-responsive" *ngIf="!isLoading && requests.length > 0">
+    <div *ngIf="!isLoading && requests.length > 0 && filteredRequests.length === 0" style="text-align: center; padding: 3rem; color: #666;">
+      <mat-icon style="font-size: 48px; height: 48px; width: 48px; margin-bottom: 1rem; color: #bdbdbd;">search_off</mat-icon>
+      <p>ไม่พบรายการคำร้องที่ตรงกับเงื่อนไขการค้นหา</p>
+      <button class="btn btn-sm btn-outline-secondary" (click)="selectedStatus = 'all'; searchQuery = ''; onSearchChange()" style="margin-top: 8px;">
+        ล้างตัวกรองทั้งหมด
+      </button>
+    </div>
+
+    <div class="table-responsive" *ngIf="!isLoading && filteredRequests.length > 0">
       <table class="table custom-table">
         <thead>
           <tr>
-            <th>วันที่ส่งคำร้อง</th>
-            <th style="text-align: center;">รหัสนักเรียน</th>
-            <th>ข้อมูลเดิม</th>
-            <th>ข้อมูลใหม่ที่ขอแก้ไข</th>
-            <th>เอกสารหลักฐาน</th>
-            <th>สถานะ</th>
-            <th class="text-center">จัดการ</th>
+            <th style="min-width: 140px;">วันที่ส่งคำร้อง</th>
+            <th style="text-align: center; min-width: 130px;">รหัสนักเรียน</th>
+            <th style="min-width: 180px;">ข้อมูลเดิม</th>
+            <th style="min-width: 180px;">ข้อมูลใหม่ที่ขอแก้ไข</th>
+            <th style="min-width: 150px;">เอกสารหลักฐาน</th>
+            <th style="min-width: 100px;">สถานะ</th>
+            <th class="text-center" style="min-width: 100px;">จัดการ</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let req of paginatedRequests">
-            <td>{{ req.created_at | date:'dd/MM/yyyy HH:mm' }}</td>
+          <tr *ngFor="let req of paginatedRequests" [class.row-pending]="req.status === 'pending'">
+            <td>
+              <div style="font-weight: 500;">{{ req.created_at | date:'dd/MM/yyyy' }}</div>
+              <div style="font-size: 0.8rem; color: #64748b;">{{ req.created_at | date:'HH:mm' }} น.</div>
+            </td>
             <td style="text-align: center; vertical-align: middle;">
               <strong>{{ req.student_code }}</strong><br>
               <span class="text-muted" style="font-size: 0.85em;">
@@ -54,9 +139,14 @@
               </div>
             </td>
             <td>
-              <button class="btn btn-sm btn-outline-primary" (click)="viewDocument(req.document_path)" [disabled]="!req.document_path">
-                <mat-icon style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px;">description</mat-icon>
-                เปิดเอกสาร
+              <button 
+                class="btn btn-sm" 
+                [ngClass]="viewedRequestIds.has(req.id) ? 'btn-success' : 'btn-outline-primary'"
+                (click)="viewDocument(req.document_path, req.id)" 
+                [disabled]="!req.document_path"
+                [title]="viewedRequestIds.has(req.id) ? 'เปิดดูเอกสารแล้ว (พร้อมดำเนินการอนุมัติ)' : 'เปิดดูเอกสารหลักฐาน'">
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px;">{{ viewedRequestIds.has(req.id) ? 'check_circle' : 'description' }}</mat-icon>
+                <span>{{ viewedRequestIds.has(req.id) ? 'เปิดดูแล้ว' : 'เปิดเอกสาร' }}</span>
               </button>
             </td>
             <td>
@@ -84,14 +174,21 @@
       </table>
     </div>
 
-    <!-- Pagination Controls -->
-    <div class="pagination-controls" *ngIf="!isLoading && requests.length > pageSize" style="display: flex; justify-content: flex-end; align-items: center; padding: 16px; gap: 16px; border-top: 1px solid #eee;">
-      <span style="font-size: 14px; color: #666;">
-        หน้าที่ {{ currentPage }} จาก {{ totalPages }} (ทั้งหมด {{ requests.length }} รายการ)
-      </span>
-      <div style="display: flex; gap: 8px;">
-        <button class="btn btn-sm btn-outline-secondary" [disabled]="currentPage === 1" (click)="prevPage()" style="border-radius: 4px; padding: 4px 12px;">ก่อนหน้า</button>
-        <button class="btn btn-sm btn-outline-secondary" [disabled]="currentPage === totalPages" (click)="nextPage()" style="border-radius: 4px; padding: 4px 12px;">ถัดไป</button>
+    <!-- Pagination Controls (แบบละเอียด ป้องกันเลื่อนดูตาลาย) -->
+    <div class="pagination-controls" *ngIf="!isLoading && filteredRequests.length > 0">
+      <div class="pagination-info">
+        แสดงรายการที่ <strong>{{ getStartIndex() }}</strong> - <strong>{{ getEndIndex() }}</strong> จากทั้งหมด <strong>{{ filteredRequests.length }}</strong> รายการ
+      </div>
+      <div class="pagination-actions" *ngIf="totalPages > 1">
+        <button class="btn-page-nav" [disabled]="currentPage === 1" (click)="prevPage()" title="หน้าก่อนหน้า">
+          <mat-icon>chevron_left</mat-icon> ก่อนหน้า
+        </button>
+        <span class="page-current-pill">
+          หน้า {{ currentPage }} / {{ totalPages }}
+        </span>
+        <button class="btn-page-nav" [disabled]="currentPage === totalPages" (click)="nextPage()" title="หน้าถัดไป">
+          ถัดไป <mat-icon>chevron_right</mat-icon>
+        </button>
       </div>
     </div>
   </div>

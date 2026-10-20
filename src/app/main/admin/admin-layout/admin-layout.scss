@@ -1,0 +1,756 @@
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+// ── Color Theme (Light & Pastel Purple - Matching Signalschool) ──
+$primary-purple: #8e44ad;
+$primary-purple-dark: #732d91;
+$pastel-purple-bg: #f5f0f9;
+$pastel-purple-light: #f8f4fc;
+$pastel-purple-active: #ede4f7;
+$border-purple: #e8def8;
+$border-purple-light: #f0eaf7;
+
+$text-dark: #2c3e50;
+$text-secondary: #64748b;
+$text-muted: #8c98a4;
+
+$accent-teal-bg: #ccfbf1;
+$accent-teal-text: #0f766e;
+$accent-teal-border: #99f6e4;
+
+$accent-super-bg: #fce7f3;
+$accent-super-text: #db2777;
+$accent-super-border: #fbcfe8;
+
+// Dimensions
+$sidebar-width-expanded: 268px;
+$sidebar-width-collapsed: 72px;
+$header-height: 104px;
+
+:host {
+  display: block;
+  width: 100%;
+  min-height: calc(100vh - #{$header-height});
+  font-family: 'Sarabun', sans-serif;
+  box-sizing: border-box;
+}
+
+// ── Overall Layout Wrapper ──
+.admin-wrapper {
+  display: flex;
+  width: 100%;
+  height: calc(100vh - #{$header-height});
+  overflow: hidden;
+  background-color: #faf7fc;
+  position: relative;
+  box-sizing: border-box;
+
+  &.collapsed {
+    .admin-sidebar {
+      width: $sidebar-width-collapsed;
+    }
+  }
+}
+
+// ── Backdrop for Mobile ──
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(44, 62, 80, 0.45);
+  backdrop-filter: blur(3px);
+  z-index: 1100;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+// ── Mobile Bar (only <= 992px) ──
+.admin-mobile-bar {
+  display: none;
+  position: sticky;
+  top: $header-height;
+  z-index: 990;
+  width: 100%;
+  height: 50px;
+  background: #ffffff;
+  color: $text-dark;
+  padding: 0 16px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid $border-purple;
+  box-shadow: 0 2px 8px rgba(142, 68, 173, 0.06);
+
+  .mobile-toggle-btn {
+    color: $primary-purple;
+    margin-right: 8px;
+    &:hover {
+      background: $pastel-purple-light;
+    }
+  }
+
+  .mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+
+    .brand-shield-icon {
+      color: $primary-purple;
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
+    }
+
+    .mobile-brand-title {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: #3e1554;
+    }
+  }
+
+  .mobile-role-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    background: $pastel-purple-light;
+    color: $primary-purple;
+    border: 1px solid $border-purple;
+
+    &.super-pill {
+      background: $accent-super-bg;
+      color: $accent-super-text;
+      border-color: $accent-super-border;
+    }
+  }
+}
+
+// ── Sidebar Container (Light Theme) ──
+.admin-sidebar {
+  width: $sidebar-width-expanded;
+  height: 100%;
+  position: relative;
+  top: 0;
+  background: #ffffff;
+  border-right: 1px solid $border-purple;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  z-index: 100;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 2px 0 12px rgba(142, 68, 173, 0.04);
+  box-sizing: border-box;
+
+  // Custom Light Purple Scrollbar
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #e2d7ed;
+    border-radius: 4px;
+    &:hover {
+      background: #cbb9df;
+    }
+  }
+}
+
+// ── 1. Header / Brand Area ──
+.sidebar-header {
+  padding: 14px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid $border-purple;
+  background: linear-gradient(135deg, #fdfaff 0%, #f7effc 100%);
+  min-height: 64px;
+  box-sizing: border-box;
+
+  .brand-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    text-decoration: none;
+    overflow: hidden;
+
+    .brand-icon-wrapper {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #9b59b6, #8e44ad);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      flex-shrink: 0;
+      box-shadow: 0 3px 8px rgba(142, 68, 173, 0.25);
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      &.super-icon {
+        background: linear-gradient(135deg, #ec4899, #8e44ad);
+        box-shadow: 0 3px 8px rgba(236, 72, 153, 0.25);
+      }
+    }
+
+    .brand-info {
+      display: flex;
+      flex-direction: column;
+      white-space: nowrap;
+
+      .brand-title {
+        color: #2e1065;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.25;
+      }
+
+      .brand-subtitle {
+        color: $primary-purple;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.3px;
+      }
+    }
+  }
+
+  .brand-collapsed-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    cursor: pointer;
+    margin: 0 auto;
+    box-shadow: 0 3px 8px rgba(142, 68, 173, 0.25);
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  .btn-toggle-collapse {
+    color: #7f8c8d;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: $pastel-purple-active;
+      color: $primary-purple;
+    }
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  .btn-close-mobile {
+    color: #7f8c8d;
+    display: none;
+    &:hover {
+      color: $primary-purple;
+      background: $pastel-purple-light;
+    }
+  }
+}
+
+// ── 2. Search Box ──
+.sidebar-search-box {
+  padding: 12px 14px 6px;
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  .search-icon {
+    position: absolute;
+    left: 24px;
+    color: $text-muted;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+  }
+
+  .search-input {
+    width: 100%;
+    background: #f8f5fc;
+    border: 1px solid $border-purple;
+    border-radius: 8px;
+    padding: 8px 30px 8px 34px;
+    color: $text-dark;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.2s ease;
+
+    &::placeholder {
+      color: #94a3b8;
+    }
+
+    &:focus {
+      border-color: $primary-purple;
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(142, 68, 173, 0.12);
+    }
+  }
+
+  .btn-clear-search {
+    position: absolute;
+    right: 22px;
+    background: transparent;
+    border: none;
+    color: $text-muted;
+    cursor: pointer;
+    display: flex;
+    padding: 0;
+
+    &:hover {
+      color: $text-dark;
+    }
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+}
+
+// ── 3. Navigation List ──
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 10px 20px;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #e2d7ed;
+    border-radius: 4px;
+  }
+
+  .menu-group {
+    margin-bottom: 12px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .group-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: $primary-purple;
+      padding: 8px 12px 4px;
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0.85;
+    }
+
+    .group-divider {
+      height: 1px;
+      background: $border-purple-light;
+      margin: 8px 6px;
+    }
+
+    .menu-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+
+      li {
+        margin: 0;
+      }
+    }
+  }
+
+  // ── Nav Link Items ──
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    color: #475569;
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 500;
+    transition: all 0.18s ease;
+    position: relative;
+    white-space: nowrap;
+    user-select: none;
+
+    &:hover {
+      background: #f8f3fc;
+      color: $primary-purple;
+
+      .item-icon-wrapper {
+        color: $primary-purple;
+      }
+    }
+
+    .item-icon-wrapper {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #64748b;
+      flex-shrink: 0;
+      transition: color 0.18s ease;
+
+      .nav-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .nav-text {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    // Badges
+    .item-badge {
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 6px;
+      letter-spacing: 0.3px;
+      flex-shrink: 0;
+
+      &.badge-teal {
+        background: $accent-teal-bg;
+        color: $accent-teal-text;
+        border: 1px solid $accent-teal-border;
+      }
+
+      &.badge-indigo {
+        background: $pastel-purple-active;
+        color: $primary-purple-dark;
+        border: 1px solid $border-purple;
+      }
+    }
+
+    .collapsed-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      position: absolute;
+      top: 6px;
+      right: 6px;
+
+      &.badge-teal {
+        background: #0d9488;
+      }
+      &.badge-indigo {
+        background: $primary-purple;
+      }
+    }
+
+    // ── Active State ──
+    &.active-item {
+      background: linear-gradient(90deg, #ede4f7 0%, #f8f4fc 100%);
+      color: #581c87;
+      font-weight: 600;
+      border-left: 3.5px solid $primary-purple;
+      padding-left: 8.5px;
+      box-shadow: 0 1px 4px rgba(142, 68, 173, 0.08);
+
+      .item-icon-wrapper {
+        color: $primary-purple;
+      }
+    }
+  }
+
+  .no-menu-found {
+    padding: 24px 16px;
+    text-align: center;
+    color: $text-muted;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+      opacity: 0.6;
+      color: $primary-purple;
+    }
+  }
+}
+
+// ── 4. Sidebar Footer (Profile & Logout) ──
+.sidebar-footer {
+  padding: 12px;
+  background: #fbf8fd;
+  border-top: 1px solid $border-purple;
+  box-sizing: border-box;
+
+  .admin-profile-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid $border-purple;
+    box-shadow: 0 1px 4px rgba(142, 68, 173, 0.05);
+
+    .profile-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: $pastel-purple-active;
+      color: $primary-purple;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      mat-icon {
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+      }
+
+      &.super-avatar {
+        background: $accent-super-bg;
+        color: $accent-super-text;
+        border: 1px solid $accent-super-border;
+      }
+    }
+
+    .profile-meta {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      .admin-name {
+        color: $text-dark;
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .role-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 10.5px;
+        color: $primary-purple;
+        font-weight: 500;
+
+        .role-icon {
+          font-size: 12px;
+          width: 12px;
+          height: 12px;
+        }
+
+        &.super-pill {
+          color: $accent-super-text;
+        }
+      }
+    }
+
+    .btn-footer-logout {
+      color: #ef4444;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      transition: background 0.15s ease;
+
+      &:hover {
+        background: #fee2e2;
+      }
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  .collapsed-footer {
+    display: flex;
+    justify-content: center;
+
+    .btn-footer-logout {
+      color: #ef4444;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: #fef2f2;
+      border: 1px solid #fee2e2;
+
+      &:hover {
+        background: #fee2e2;
+      }
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+}
+
+// ── Collapsed Specific Styles ──
+.admin-sidebar.sidebar-collapsed {
+  .sidebar-header {
+    justify-content: center;
+    padding: 14px 8px;
+
+    .btn-toggle-collapse {
+      margin-top: 4px;
+    }
+  }
+
+  .sidebar-nav {
+    padding: 8px 6px 20px;
+
+    .nav-link {
+      padding: 10px;
+      justify-content: center;
+
+      &.active-item {
+        border-left: none;
+        padding-left: 10px;
+        background: $pastel-purple-active;
+        box-shadow: 0 0 8px rgba(142, 68, 173, 0.15);
+      }
+    }
+  }
+}
+
+// ── Main Content Area ──
+.admin-main-content {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: auto;
+  background-color: #faf7fc;
+  position: relative;
+
+  .route-loading-bar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3.5px;
+    background: linear-gradient(90deg, #8e44ad, #c084fc, #ec4899, #8e44ad);
+    background-size: 200% 100%;
+    animation: loadingSlide 1.2s infinite linear;
+    z-index: 9999;
+  }
+}
+
+@keyframes loadingSlide {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+// ── Responsive (Mobile & Tablet <= 992px) ──
+@media (max-width: 992px) {
+  .admin-wrapper {
+    flex-direction: column;
+    height: auto;
+    min-height: calc(100vh - 64px);
+    overflow: visible;
+  }
+
+  .admin-main-content {
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 auto;
+    height: auto;
+    overflow-x: hidden;
+  }
+
+  .admin-mobile-bar {
+    display: flex;
+    width: 100%;
+    top: 64px;
+    flex-shrink: 0;
+  }
+
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100vh;
+    z-index: 1200;
+    width: 280px !important;
+    transform: translateX(-100%);
+    box-shadow: none;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &.mobile-open {
+      transform: translateX(0);
+      box-shadow: 12px 0 28px rgba(142, 68, 173, 0.25);
+    }
+
+    .hide-mobile {
+      display: none !important;
+    }
+
+    .show-mobile-only {
+      display: flex !important;
+    }
+  }
+
+  .admin-wrapper.collapsed .admin-sidebar {
+    width: 280px !important;
+  }
+}

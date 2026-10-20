@@ -109,44 +109,59 @@ $text-dark: #2c3e50;
   border: 1px solid $border-purple;
   border-radius: 10px;
   overflow: hidden;
+  background: #ffffff;
 }
 
 .detail-grade-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 
   thead {
     background-color: #f7f2fb;
     border-bottom: 2px solid $border-purple;
 
     th {
-      padding: 12px 10px;
+      padding: 10px 8px;
       font-size: var(--dynamic-font-size, 14px);
       font-weight: 600;
       color: $text-dark;
-      border-right: 1px solid rgba($border-purple, 0.5);
-      &:last-child { border-right: none; }
-      &.text-center { text-align: center; }
+      border: 1px solid rgba($border-purple, 0.6);
+      text-align: center;
+      vertical-align: middle;
+
       &.text-left { text-align: left; padding-left: 14px; }
+      &.col-no { width: 55px; }
+      &.col-subject { width: auto; }
+      &.col-credit { width: 75px; }
+      &.col-raw { width: 85px; }
+      &.col-grade { width: 70px; }
+      &.col-point { width: 80px; }
+      &.col-index { width: 90px; }
     }
   }
 
   tbody tr {
-    border-bottom: 1px solid $border-purple;
+    border-bottom: 1px solid rgba($border-purple, 0.4);
     &:last-child { border-bottom: none; }
 
+    &:hover {
+      background-color: #fbf8fe;
+    }
+
     td {
-      padding: 6px 10px;
+      padding: 8px 10px;
       font-size: var(--dynamic-font-size, 14px);
       color: $text-dark;
-      border-right: 1px solid rgba($border-purple, 0.3);
-      &:last-child { border-right: none; }
+      border: 1px solid rgba($border-purple, 0.4);
+      vertical-align: middle;
 
       &.text-center { text-align: center; }
       &.text-left { text-align: left; padding-left: 14px; }
       &.font-medium { font-weight: 500; }
       &.text-bold { font-weight: 600; }
       &.grade-text { color: $primary-purple; font-size: calc(var(--dynamic-font-size, 14px) + 1px); }
+      &.index-text { color: #555; }
     }
   }
 
@@ -266,11 +281,10 @@ $text-dark: #2c3e50;
     padding: 0 !important;
     display: flex;
     flex-direction: column;
-    gap: 10px; /* Reduce gap slightly for print */
-    overflow: hidden; /* Enforce 1 page by hiding overflow */
+    gap: 10px;
+    overflow: hidden;
   }
 
-  /* Adjust paddings for print to save space */
   .student-info-card {
     padding: 10px 15px;
     gap: 6px;
@@ -281,7 +295,7 @@ $text-dark: #2c3e50;
   }
 
   .detail-grade-table th, .detail-grade-table td {
-    padding: 4px 6px; /* Tighter table for print */
+    padding: 4px 6px;
   }
 
   .no-print, .dialog-header {

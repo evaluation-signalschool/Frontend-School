@@ -14,7 +14,7 @@
   <!-- ================= Header Section ================= -->
   <header class="page-header">
     <div class="header-left">
-      <button class="back-btn" (click)="goBack()" title="ย้อนกลับ">
+      <button class="back-btn" (click)="goBack()" title="กลับไปยังหน้าแรก">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="15 18 9 12 15 6"></polyline>
         </svg>
@@ -126,7 +126,7 @@
   <ng-container *ngIf="isActive">
     <!-- กรณีไม่มีรายวิชาในหลักสูตร -->
     <div class="empty-data-card" *ngIf="subjects.length === 0">
-      <p>ยังไม่มีข้อมูลรายวิชาหรือผลการเรียนที่บันทึกไว้ในหลักสูตรนี้</p>
+      <p>ไม่พบข้อมูลการประเมิน หรือยังไม่มีข้อมูลรายวิชาในหลักสูตรนี้</p>
       <p class="hint" *ngIf="isAdmin">แอดมินสามารถเพิ่มรายวิชาและกรอกคะแนนได้จากเมนูจัดการหลักสูตรและรายวิชา</p>
     </div>
 

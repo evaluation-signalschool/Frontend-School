@@ -1,10 +1,29 @@
 <div class="register-container">
   <!-- Header Section -->
   <header class="header">
-    <h1 class="title">ลงทะเบียน</h1>
+    <div class="header-nav">
+      <button type="button" class="back-nav-btn" (click)="onBack()" title="กลับไปหน้าเข้าสู่ระบบ">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        <span>กลับ</span>
+      </button>
+    </div>
+    <h1 class="title">{{ isGoogleProfileMode ? 'กรอกข้อมูลส่วนตัว' : 'ลงทะเบียน' }}</h1>
     <div class="course-context" *ngIf="courseName">
       <p class="course-name"><strong>หลักสูตร:</strong> {{ courseName }}</p>
       <p class="batch-name"><strong>รุ่น:</strong> {{ batchName }}</p>
+    </div>
+
+    <!-- แถบแจ้งเตือนเมื่อล็อกอินผ่าน Google ครั้งแรก -->
+    <div class="google-notice-banner" *ngIf="isGoogleProfileMode">
+      <div class="banner-badge">
+        <span class="dot"></span>
+        <span>เข้าสู่ระบบด้วย Google สำเร็จ</span>
+      </div>
+      <p class="banner-desc">
+        กรุณาระบุยศ หน่วยต้นสังกัด และเบอร์โทรศัพท์ให้ครบถ้วน เพื่อเริ่มใช้งานและดูผลคะแนน (ระบบจะบันทึกข้อมูลเมื่อกดยืนยันด้านล่างเท่านั้น)
+      </p>
     </div>
   </header>
 
@@ -14,78 +33,185 @@
     <!-- Row 1: ยศ และ ชื่อ-สกุล -->
     <div class="row-two-cols">
       <div class="input-group flex-1">
-        <label for="rank">ยศ</label>
-        <input type="text" id="rank" name="rank" placeholder="" [(ngModel)]="formData.rank" />
-         <small class="hint-text"> *กรุณาระบุชื่อยศเต็ม </small>
+        <label for="rank">
+          ยศ
+          <span class="required-asterisk">*</span>
+        </label>
+        <input 
+          type="text" 
+          id="rank" 
+          name="rank" 
+          placeholder="เช่น ร้อยเอก, พันโท" 
+          [(ngModel)]="formData.rank"
+          (ngModelChange)="onRankModelChange($event)"
+          (keydown)="onRankKeyDown($event)"
+          (input)="onRankInput($event)"
+          (paste)="onRankPaste($event)"
+          required
+        />
+        <small class="hint-text"> *กรุณาระบุชื่อยศเต็ม (ห้ามใส่ตัวเลขหรือเครื่องหมาย @) </small>
       </div>
       <div class="input-group flex-2">
-        <label for="fullName">ชื่อ-สกุล</label>
-        <input type="text" id="fullName" name="fullName" placeholder="" [(ngModel)]="formData.fullName" required />
+        <label for="fullName">
+          ชื่อ-สกุล
+          <span class="required-asterisk">*</span>
+        </label>
+        <input 
+          type="text" 
+          id="fullName" 
+          name="fullName" 
+          placeholder="เช่น สมชาย ใจดี" 
+          [(ngModel)]="formData.fullName"
+          (ngModelChange)="onFullNameModelChange($event)"
+          (keydown)="onFullNameKeyDown($event)"
+          (input)="onFullNameInput($event)"
+          (paste)="onFullNamePaste($event)"
+          required 
+        />
+        <small class="hint-text"> *ระบุชื่อและนามสกุล (ห้ามใส่ตัวเลข) </small>
       </div>
     </div>
 
     <!-- Row 2: หน่วยต้นสังกัด -->
     <div class="input-group">
-      <label for="affiliation">หน่วยต้นสังกัด</label>
-      <input type="text" id="affiliation" name="affiliation" placeholder="" [(ngModel)]="formData.affiliation" required />
+      <label for="affiliation">
+        หน่วยต้นสังกัด
+        <span class="required-asterisk">*</span>
+      </label>
+      <input type="text" id="affiliation" name="affiliation" placeholder="เช่น กบร.สส, ศทส.สส." [(ngModel)]="formData.affiliation" required />
     </div>
 
     <!-- Row 3: เบอร์โทร -->
     <div class="input-group">
-      <label for="phone">เบอร์โทรศัพท์</label>
-      <input type="tel" id="phone" name="phone" placeholder="" [(ngModel)]="formData.phone" pattern="[0-9]{9,10}" required />
+      <label for="phone">
+        เบอร์โทรศัพท์
+        <span class="required-asterisk">*</span>
+      </label>
+      <input 
+        type="tel" 
+        id="phone" 
+        name="phone" 
+        placeholder="เช่น 0812345678" 
+        [(ngModel)]="formData.phone" 
+        (input)="onPhoneInput($event)"
+        pattern="[0-9]{9,10}" 
+        required 
+      />
     </div>
 
     <!-- Row 4: อีเมล -->
     <div class="input-group">
-      <label for="email">อีเมล</label>
-      <input type="email" id="email" name="email" placeholder="" [(ngModel)]="formData.email" required />
+      <div class="label-with-tag">
+        <label for="email">อีเมล</label>
+        <span class="verified-tag" *ngIf="isGoogleProfileMode">
+          ✓ ยืนยันผ่าน Google แล้ว
+        </span>
+      </div>
+      <input 
+        type="email" 
+        id="email" 
+        name="email" 
+        placeholder="" 
+        [(ngModel)]="formData.email" 
+        [disabled]="isGoogleProfileMode"
+        required 
+      />
     </div>
 
-    <!-- Row 5: รหัสผ่าน -->
-    <div class="input-group password-group">
-      <label for="password">
-        รหัสผ่าน 
-        <span class="required-asterisk">*</span>
-      </label>
-      
-      <div class="password-input-wrapper">
-        <input 
-          id="password"
-          [type]="showPassword ? 'text' : 'password'" 
-          name="password" 
-          placeholder="" 
-          [(ngModel)]="formData.password"
-          maxlength="10"
-          minlength="10"
-          required
-        />
-        <button type="button" class="toggle-password" (click)="togglePasswordVisibility()" aria-label="Toggle password">
-          
-          <!-- 1. ไอคอนปิดตา (Eye Off) - แสดงตอนซ่อนรหัสผ่าน -->
-          <svg *ngIf="!showPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path>
-            <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path>
-            <line x1="2" y1="2" x2="22" y2="22"></line>
-            <path d="M10.33 10.33a3 3 0 0 0 4.24 4.24"></path>
-          </svg>
+    <!-- Row 5 & 6: รหัสผ่าน (ซ่อนเมื่อล็อกอินด้วย Google) -->
+    <ng-container *ngIf="!isGoogleProfileMode">
+      <!-- Row 5: รหัสผ่าน -->
+      <div class="input-group password-group">
+        <label for="password">
+          รหัสผ่าน 
+          <span class="required-asterisk">*</span>
+        </label>
+        
+        <div class="password-input-wrapper">
+          <input 
+            id="password"
+            [type]="showPassword ? 'text' : 'password'" 
+            name="password" 
+            placeholder="กรอกรหัสผ่าน (อย่างน้อย 4 ตัวอักษร)" 
+            [(ngModel)]="formData.password"
+            (ngModelChange)="onPasswordModelChange($event)"
+            (keydown)="preventSpace($event)"
+            (input)="onPasswordInput($event)"
+            (paste)="onPasswordPaste($event, 'password')"
+            minlength="4"
+            required
+          />
+          <button type="button" class="toggle-password" (click)="togglePasswordVisibility()" aria-label="Toggle password">
+            <!-- ไอคอนปิดตา (Eye Off) -->
+            <svg *ngIf="!showPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path>
+              <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path>
+              <line x1="2" y1="2" x2="22" y2="22"></line>
+              <path d="M10.33 10.33a3 3 0 0 0 4.24 4.24"></path>
+            </svg>
 
-          <!-- 2. ไอคอนเปิดตา (Eye) - แสดงตอนแสดงรหัสผ่าน -->
-          <svg *ngIf="showPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path>
-            <circle cx="12" cy="12" r="3"></circle>
-          </svg>
-        </button>
+            <!-- ไอคอนเปิดตา (Eye) -->
+            <svg *ngIf="showPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
+
+        <small class="hint-text"> *ตั้งรหัสผ่านอย่างน้อย 4 ตัวอักษร (ห้ามมีช่องว่าง/เว้นวรรค) </small>
       </div>
 
-      <!-- ข้อความคำแนะนำการตั้งรหัสผ่าน -->
-      <small class="hint-text"> *กรุณาใส่รหัสผ่านเป็นเลขประจำตัวทหาร 10 หลัก หรือ ตั้งรหัสผ่านได้ด้วยตนเอง </small>
-    </div>
+      <!-- Row 6: ยืนยันรหัสผ่าน -->
+      <div class="input-group password-group">
+        <label for="confirmPassword">
+          ยืนยันรหัสผ่าน 
+          <span class="required-asterisk">*</span>
+        </label>
+        
+        <div class="password-input-wrapper">
+          <input 
+            id="confirmPassword"
+            [type]="showConfirmPassword ? 'text' : 'password'" 
+            name="confirmPassword" 
+            placeholder="กรอกรหัสผ่านอีกครั้งเพื่อยืนยัน" 
+            [(ngModel)]="formData.confirmPassword"
+            (ngModelChange)="onConfirmPasswordModelChange($event)"
+            (keydown)="preventSpace($event)"
+            (input)="onConfirmPasswordInput($event)"
+            (paste)="onPasswordPaste($event, 'confirmPassword')"
+            minlength="4"
+            required
+          />
+          <button type="button" class="toggle-password" (click)="toggleConfirmPasswordVisibility()" aria-label="Toggle confirm password">
+            <svg *ngIf="!showConfirmPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path>
+              <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path>
+              <line x1="2" y1="2" x2="22" y2="22"></line>
+              <path d="M10.33 10.33a3 3 0 0 0 4.24 4.24"></path>
+            </svg>
+            <svg *ngIf="showConfirmPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
 
-    <!-- Submit Button -->
+        <small class="hint-text" *ngIf="formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword" style="color: #ef4444;">
+          *รหัสผ่านทั้งสองช่องไม่ตรงกัน
+        </small>
+        <small class="hint-text" *ngIf="formData.password && formData.confirmPassword && formData.password === formData.confirmPassword" style="color: #10b981;">
+          ✓ รหัสผ่านตรงกันเรียบร้อย
+        </small>
+      </div>
+    </ng-container>
+
+    <!-- Action Buttons -->
     <div class="action-container">
+      <button type="button" class="cancel-btn" (click)="onCancel()">
+        ยกเลิก
+      </button>
       <button type="submit" class="submit-btn">
-        ยืนยัน
+        {{ isGoogleProfileMode ? 'ยืนยันข้อมูลและเข้าสู่ระบบ' : 'ยืนยัน' }}
       </button>
     </div>
 

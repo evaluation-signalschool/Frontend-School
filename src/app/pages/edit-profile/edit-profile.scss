@@ -3,7 +3,7 @@ $primary-color: #5c41e2;
 $primary-light: #f3f0ff;
 $primary-hover: #482dc7;
 
-// 🌟 สีม่วง-เทาอ่อนตามรูปภาพ (#f5f4f9)
+// โทนสีม่วงอมเทาอ่อน (#f5f4f9)
 $bg-light: #f5f4f9;      
 $dropdown-bg: #f1ebfd;         
 $dropdown-border: #dcd0f9;
@@ -16,14 +16,14 @@ $warning-text: #8c6200;
 $border-color: #d1d5db;
 $text-muted: #746788;
 
-// 🌟 สั่งบังคับสีม่วงให้ทั้งหน้าจอ
+// กำหนดโทนสีม่วงครอบคลุมทั้งหน้าจอ
 html, body {
     background-color: $bg-light !important;
     margin: 0;
     padding: 0;
 }
 
-// 🌟 ตัวครอบหลักที่จะดันสีม่วงให้เต็มหน้าจอ
+// กรอบโครงสร้างหลักสำหรับขยายพื้นที่เต็มหน้าจอ
 .profile-edit-page {
     background-color: $bg-light !important;
     min-height: 100vh;
@@ -297,6 +297,25 @@ html, body {
     &-danger {
         background-color: $danger-color;
         color: #ffffff;
+    }
+}
+
+.btn-toggle-method {
+    background: transparent;
+    color: #64748b;
+    transition: all 0.2s ease;
+    border: none;
+    font-weight: 500;
+
+    &.active {
+        background: #ffffff !important;
+        color: #4f46e5 !important;
+        box-shadow: 0 1px 4px rgba(79, 70, 229, 0.2);
+        font-weight: 600;
+    }
+
+    &:hover:not(.active) {
+        color: #1e293b;
     }
 }
 

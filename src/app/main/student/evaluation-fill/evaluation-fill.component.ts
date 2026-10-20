@@ -26,11 +26,11 @@ export class EvaluationFillComponent implements OnInit {
   type: string = '';
   courseTitle: string = '';
 
-  // ✅ รายวิชาในรุ่นนั้นๆ สำหรับ Dropdown
+  // รายชื่อวิชาในรุ่นที่เลือก สำหรับแสดงผลในดรอปดาวน์
   availableSubjects: { id: any; name: string }[] = [];
   selectedSubjectId: string = ''; // subject ที่ผู้กรอกเลือก
 
-  // สำหรับฟอร์ม
+  // สำหรับประเมิน
   instructorName: string = '';
 
   constructor(
@@ -127,7 +127,7 @@ export class EvaluationFillComponent implements OnInit {
                 answer_comment: '',
               }));
 
-              // ✅ โหลดรายวิชาของรุ่นนี้มาเตรียมไว้สำหรับ Dropdown
+              // โหลดรายชื่อวิชาของรุ่นนี้มาเตรียมไว้สำหรับแสดงในดรอปดาวน์
               this.courseService.getSubjectsByBatch(this.batchId).subscribe({
                 next: (subRes: any) => {
                   if (subRes.success && subRes.data) {
@@ -158,19 +158,19 @@ export class EvaluationFillComponent implements OnInit {
             console.error('เกิดข้อผิดพลาดในการจัดการข้อมูล:', e);
           } finally {
             this.isLoading = false;
-            this.cdr.detectChanges(); // 👈 บังคับรีเฟรชหน้าจอทันที
+            this.cdr.detectChanges(); // สั่งอัปเดตการแสดงผลบนหน้าจอทันที
           }
         },
         error: (err: any) => {
           console.error('3. API ตอบกลับแบบ Error:', err);
           Swal.fire({ icon: 'warning', title: 'ไม่พบข้อมูล', text: 'ไม่พบข้อมูลแบบประเมินในระบบ (อาจยังไม่ได้สร้างลิงก์สำหรับรุ่นนี้)', confirmButtonText: 'ตกลง' });
           this.isLoading = false;
-          this.cdr.detectChanges(); // 👈 บังคับรีเฟรชหน้าจอทันที
+          this.cdr.detectChanges(); // สั่งอัปเดตการแสดงผลบนหน้าจอทันที
         },
       });
   }
 
-  // ✅ กรองคำถามตามรายวิชาที่กดเข้ามา (คำถามทั่วไป + คำถามเฉพาะวิชานั้น)
+  // กรองคำถามตามรายวิชาที่เลือก (คำถามทั่วไปและคำถามเฉพาะวิชานั้น)
   get displayedQuestions(): any[] {
     if (!this.questions) return [];
     return this.questions.filter((q) => {
@@ -185,6 +185,19 @@ export class EvaluationFillComponent implements OnInit {
       }
       return true;
     });
+  }
+
+  // ฟังก์ชันทำความสะอาดข้อความ ป้องกันการโจมตี XSS
+  sanitizeText(text: string | null | undefined): string | null {
+    if (!text) return null;
+    return text
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<[^>]+>/g, '')
+      .trim();
+  }
+
+  onCommentInput(q: any): void {
+    // ให้ผู้ใช้พิมพ์ได้ตามปกติ เพื่อให้การตรวจสอบความปลอดภัยทำงานตอนกดส่ง
   }
 
   onSubmit() {
@@ -203,10 +216,29 @@ export class EvaluationFillComponent implements OnInit {
       return;
     }
 
+    // ตรวจสอบความปลอดภัย ป้องกันการกรอกสคริปต์อันตราย (XSS)
+    const dangerousScriptRegex = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>|<[^>]*script|javascript:|onerror\s*=|onload\s*|<iframe|<embed|<object/i;
+    const hasMaliciousScript = this.displayedQuestions.some(
+      (q) => q.answer_comment && dangerousScriptRegex.test(q.answer_comment)
+    );
+
+    if (hasMaliciousScript) {
+      Swal.fire({
+        icon: 'error',
+        title: 'ส่งไม่สำเร็จ: กรอกสคริปต์อันตราย (Security)',
+        text: 'ระบบตรวจพบแท็กหรือสคริปต์ที่เป็นอันตราย เพื่อความปลอดภัย (XSS Prevention) ไม่อนุญาตให้ส่งข้อมูลนี้',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#d33'
+      });
+      return;
+    }
+
     const answers = this.displayedQuestions.map((q) => ({
       question_id: q.id,
       score_value: q.question_type === 'choice' ? q.answer_score : null,
-      comment: (q.question_type === 'text' || q.question_type === 'dropdown' || q.question_type === 'dropdown_subject') ? q.answer_comment : null,
+      comment: (q.question_type === 'text' || q.question_type === 'dropdown' || q.question_type === 'dropdown_subject') 
+        ? this.sanitizeText(q.answer_comment) 
+        : null,
     }));
 
     const studentDataStr = localStorage.getItem('student_data');
@@ -215,7 +247,7 @@ export class EvaluationFillComponent implements OnInit {
     const payload = {
       studentId: studentId,
       formId: this.formDetails.form_id,
-      subjectId: this.selectedSubjectId || this.subjectId, // ✅ ใช้วิชาที่เลือกจาก Dropdown
+      subjectId: this.selectedSubjectId || this.subjectId, // ใช้รหัสวิชาที่เลือกจากดรอปดาวน์
       instructorName: this.instructorName,
       answers: answers,
     };
@@ -235,8 +267,28 @@ export class EvaluationFillComponent implements OnInit {
       },
       error: (err: any) => {
         console.error('Submit error', err);
-        const msg = err.error?.message || 'เกิดข้อผิดพลาดในการส่งข้อมูล';
-        Swal.fire({ icon: 'error', title: 'ข้อผิดพลาด', text: msg, confirmButtonText: 'ตกลง' });
+
+        // กรณี Server Down (เช่น HTTP 500) หรือไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้
+        if (!err.status || err.status === 0 || err.status >= 500) {
+          Swal.fire({
+            icon: 'error',
+            title: 'ส่งไม่สำเร็จ',
+            text: 'ระบบขัดข้อง กรุณาลองใหม่อีกครั้งในภายหลัง',
+            confirmButtonText: 'ตกลง',
+            confirmButtonColor: '#d33'
+          });
+          return;
+        }
+
+        const msg = err.error?.message || 'ระบบขัดข้อง กรุณาลองใหม่อีกครั้งในภายหลัง';
+        const isSecurity = msg.includes('สคริปต์') || msg.includes('Security');
+        Swal.fire({
+          icon: 'error',
+          title: isSecurity ? 'ส่งไม่สำเร็จ: กรอกสคริปต์อันตราย (Security)' : 'ส่งไม่สำเร็จ',
+          text: msg,
+          confirmButtonText: 'ตกลง',
+          confirmButtonColor: '#d33'
+        });
       },
     });
   }

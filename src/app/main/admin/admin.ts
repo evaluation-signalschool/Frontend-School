@@ -36,7 +36,6 @@ export class Admin implements OnInit {
     this.adminRole = data?.role || 'admin';
     this.adminUsername = data?.username || (data?.email?.includes('@') ? data.email.split('@')[0] : data?.email) || '';
     this.adminEmail = data?.email || '';
-    this.cdr.detectChanges();
   }
 
   get isSuperAdmin(): boolean {

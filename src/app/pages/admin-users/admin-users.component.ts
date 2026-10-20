@@ -140,7 +140,10 @@ export class AdminUsersComponent implements OnInit {
   }
 
   // --- Modal: เพิ่มแอดมินใหม่ ---
+  hasAttemptedCreate: boolean = false;
+
   openCreateModal(): void {
+    this.hasAttemptedCreate = false;
     this.createForm = {
       name: '',
       username: '',
@@ -152,11 +155,14 @@ export class AdminUsersComponent implements OnInit {
   }
 
   closeCreateModal(): void {
+    this.hasAttemptedCreate = false;
     this.showCreateModal = false;
     this.cdr.detectChanges();
   }
 
   submitCreate(): void {
+    this.hasAttemptedCreate = true;
+    this.cdr.detectChanges();
     const { name, username, password, role } = this.createForm;
 
     if (!name.trim() || !username.trim() || !password.trim()) {

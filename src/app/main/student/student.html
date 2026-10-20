@@ -19,27 +19,6 @@
           <mat-icon>login</mat-icon> เข้าสู่ระบบนักเรียน
         </button>
       </div>
-
-      <div class="registration-banner" *ngIf="isRegistrationOpen">
-        <h2>เปิดรับสมัครนักเรียนใหม่</h2>
-        <p>หลักสูตรนี้กำลังเปิดรับสมัคร หากยังไม่มีรหัสผู้ใช้งาน กรุณาลงทะเบียน</p>
-        <button class="register-action-btn" (click)="navigateToRegister()">
-          <mat-icon>app_registration</mat-icon> ลงทะเบียนเรียนรุ่นนี้
-        </button>
-      </div>
-    </div>
-
-    <div class="chart-container">
-      <iframe
-        width="100%"
-        height="450"
-        src="https://lookerstudio.google.com/embed/reporting/b482bd10-b6da-447f-8651-b8ba6a71b73f/page/p_9vcxiz9lxd"
-        frameborder="0"
-        style="border: 0; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05)"
-        allowfullscreen
-        sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-      >
-      </iframe>
     </div>
   </ng-container>
 
@@ -49,15 +28,41 @@
       
       <!-- Student Profile Card -->
       <div class="profile-card" *ngIf="studentData">
-        <div class="profile-avatar">
-          <mat-icon>person</mat-icon>
-        </div>
-        <div class="profile-details">
-          <h3>{{ studentData.rank_name }}{{ studentData.first_name }} {{ studentData.last_name }}</h3>
-          <p>รหัสประจำตัว: {{ studentData.student_code }}</p>
+        <div class="profile-card-header">
+          <div class="profile-title-area">
+            <span class="profile-badge">
+              <mat-icon>school</mat-icon> ข้อมูลผู้เรียน
+            </span>
+            <h2 class="student-name">
+              {{ studentData.rank_name }}{{ studentData.first_name }} {{ studentData.last_name }}
+            </h2>
+          </div>
           <button class="edit-profile-btn" (click)="goToEditProfile()">
-            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">edit</mat-icon> แก้ไขโปรไฟล์
+            <mat-icon>edit</mat-icon> แก้ไขโปรไฟล์
           </button>
+        </div>
+
+        <div class="profile-details-grid" *ngIf="studentData.affiliation || studentData.email || studentData.phone">
+          <div class="detail-item" *ngIf="studentData.affiliation">
+            <span class="detail-label">
+              <mat-icon>apartment</mat-icon> สังกัด
+            </span>
+            <span class="detail-value">{{ studentData.affiliation }}</span>
+          </div>
+
+          <div class="detail-item" *ngIf="studentData.email">
+            <span class="detail-label">
+              <mat-icon>email</mat-icon> อีเมล
+            </span>
+            <span class="detail-value text-truncate" [title]="studentData.email">{{ studentData.email }}</span>
+          </div>
+
+          <div class="detail-item" *ngIf="studentData.phone">
+            <span class="detail-label">
+              <mat-icon>phone</mat-icon> เบอร์โทรศัพท์
+            </span>
+            <span class="detail-value">{{ studentData.phone }}</span>
+          </div>
         </div>
       </div>
 

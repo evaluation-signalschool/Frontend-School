@@ -39,6 +39,11 @@ export class StudentService {
     return this.http.put<any>(`${environment.apiUrl}/students/${id}`, studentData);
   }
 
+  // 4.1 ฟังก์ชันอัปเดตสังกัดของนักเรียนแบบกลุ่ม (สำหรับการเลือกลงหน่วย Unit Selection)
+  updateBatchAffiliations(assignments: { student_id: number; affiliation: string }[]): Observable<any> {
+    return this.http.put<any>(`${environment.apiUrl}/students/batch/affiliations`, { assignments });
+  }
+
   // 5. ฟังก์ชันลบข้อมูลนักเรียนรายคน (DELETE)
   deleteStudent(id: number): Observable<any> {
     return this.http.delete<any>(`${environment.apiUrl}/students/${id}`);

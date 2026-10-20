@@ -1,0 +1,184 @@
+<div class="admin-wrapper" [class.collapsed]="isCollapsed">
+
+  <!-- ฉากหลังทึบเวลาเปิดเมนูบนมือถือ/แท็บเล็ต -->
+  <div 
+    class="sidebar-backdrop" 
+    *ngIf="isMobileOpen" 
+    (click)="closeMobile()"
+    aria-label="ปิดเมนู">
+  </div>
+
+  <!-- แถบด้านบนสำหรับจอมือถือ (แสดงเฉพาะหน้าจอเล็ก) -->
+  <div class="admin-mobile-bar" *ngIf="isMobileView">
+    <button mat-icon-button class="mobile-toggle-btn" (click)="toggleMobile()" title="เปิดเมนูการจัดการ">
+      <mat-icon>menu</mat-icon>
+    </button>
+    <div class="mobile-brand">
+      <mat-icon class="brand-shield-icon">{{ isSuperAdmin ? 'shield' : 'admin_panel_settings' }}</mat-icon>
+      <span class="mobile-brand-title">Admin Console</span>
+    </div>
+    <span class="mobile-role-pill" [class.super-pill]="isSuperAdmin">
+      {{ isSuperAdmin ? 'Super' : 'Admin' }}
+    </span>
+  </div>
+
+  <!-- แถบเมนูด้านข้าง (Admin Sidebar) -->
+  <aside 
+    class="admin-sidebar" 
+    [class.mobile-open]="isMobileOpen"
+    [class.sidebar-collapsed]="isCollapsed">
+    
+    <!-- ส่วนหัว Sidebar: โลโก้ และปุ่มย่อ/ขยาย -->
+    <div class="sidebar-header">
+      <div class="brand-area" *ngIf="!isCollapsed" routerLink="/admin">
+        <div class="brand-icon-wrapper" [class.super-icon]="isSuperAdmin">
+          <mat-icon>{{ isSuperAdmin ? 'shield' : 'admin_panel_settings' }}</mat-icon>
+        </div>
+        <div class="brand-info">
+          <span class="brand-title">ระบบจัดการผู้ดูแล</span>
+          <span class="brand-subtitle">Admin Management</span>
+        </div>
+      </div>
+
+      <div class="brand-collapsed-icon" *ngIf="isCollapsed" routerLink="/admin" [matTooltip]="'แดชบอร์ดหลัก'" matTooltipPosition="right">
+        <mat-icon class="collapsed-shield">{{ isSuperAdmin ? 'shield' : 'admin_panel_settings' }}</mat-icon>
+      </div>
+
+      <!-- ปุ่มยุบ/ขยายสำหรับ Desktop -->
+      <button 
+        mat-icon-button 
+        class="btn-toggle-collapse hide-mobile" 
+        (click)="toggleCollapse()" 
+        [title]="isCollapsed ? 'ขยายแถบเมนู' : 'ย่อแถบเมนู'"
+        [matTooltip]="isCollapsed ? 'ขยายเมนู' : ''"
+        matTooltipPosition="right">
+        <mat-icon>{{ isCollapsed ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+      </button>
+
+      <!-- ปุ่มปิดเมนูสำหรับ Mobile -->
+      <button 
+        mat-icon-button 
+        class="btn-close-mobile show-mobile-only" 
+        (click)="closeMobile()" 
+        title="ปิดเมนู">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <!-- ช่องค้นหาเมนูด่วน (แสดงเมื่อไม่ได้ย่อแถบ) -->
+    <div class="sidebar-search-box" *ngIf="!isCollapsed">
+      <mat-icon class="search-icon">search</mat-icon>
+      <input 
+        type="text" 
+        [(ngModel)]="searchQuery" 
+        (ngModelChange)="onSearchChange()"
+        placeholder="ค้นหาเมนูการจัดการ..." 
+        class="search-input" />
+      <button 
+        *ngIf="searchQuery" 
+        type="button" 
+        class="btn-clear-search" 
+        (click)="searchQuery = ''; onSearchChange()" 
+        title="ล้างข้อความ">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <!-- รายการเมนูทั้งหมด (Nav List) -->
+    <nav class="sidebar-nav">
+      <div class="menu-group" *ngFor="let category of filteredCategories; trackBy: trackByCategory">
+        <!-- หัวข้อกลุ่มเมนู (ซ่อนเมื่อย่อแถบ) -->
+        <div class="group-title" *ngIf="!isCollapsed">
+          <span>{{ category.name }}</span>
+        </div>
+        <div class="group-divider" *ngIf="isCollapsed"></div>
+
+        <!-- รายการเมนูแต่ละข้อ -->
+        <ul class="menu-list">
+          <li *ngFor="let item of category.items; trackBy: trackByItem">
+            <a 
+              [routerLink]="item.route" 
+              routerLinkActive="active-item" 
+              [routerLinkActiveOptions]="{ exact: !!item.exact }"
+              class="nav-link"
+              [matTooltip]="isCollapsed ? item.title : ''"
+              matTooltipPosition="right"
+              [title]="isCollapsed ? item.title : ''">
+              
+              <div class="item-icon-wrapper">
+                <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
+              </div>
+
+              <span class="nav-text" *ngIf="!isCollapsed">{{ item.title }}</span>
+
+              <!-- Badge ป้ายบอกสถานะ เช่น นนส./ช่าง หรือ Super -->
+              <span 
+                class="item-badge" 
+                [ngClass]="item.badgeClass || ''" 
+                *ngIf="item.badge && !isCollapsed">
+                {{ item.badge }}
+              </span>
+
+              <!-- จุดระบุ badge ตอนย่อ -->
+              <span 
+                class="collapsed-badge-dot" 
+                [ngClass]="item.badgeClass || ''" 
+                *ngIf="item.badge && isCollapsed">
+              </span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- กรณีค้นหาแล้วไม่เจอ -->
+      <div class="no-menu-found" *ngIf="filteredCategories.length === 0 && searchQuery">
+        <mat-icon>search_off</mat-icon>
+        <span>ไม่พบเมนู "{{ searchQuery }}"</span>
+      </div>
+    </nav>
+
+    <!-- ส่วนท้าย Sidebar: ข้อมูลโปรไฟล์แอดมิน + ปุ่มออกจากระบบ -->
+    <div class="sidebar-footer">
+      <div class="admin-profile-card" *ngIf="!isCollapsed">
+        <div class="profile-avatar" [class.super-avatar]="isSuperAdmin">
+          <mat-icon>{{ isSuperAdmin ? 'shield' : 'account_circle' }}</mat-icon>
+        </div>
+        <div class="profile-meta">
+          <span class="admin-name" [title]="adminName">{{ adminName }}</span>
+          <span class="role-pill" [class.super-pill]="isSuperAdmin">
+            <mat-icon class="role-icon">{{ isSuperAdmin ? 'verified' : 'person' }}</mat-icon>
+            {{ isSuperAdmin ? 'Super Admin' : 'Admin' }}
+          </span>
+        </div>
+        <button 
+          mat-icon-button 
+          class="btn-footer-logout" 
+          (click)="onLogout()" 
+          title="ออกจากระบบ">
+          <mat-icon>logout</mat-icon>
+        </button>
+      </div>
+
+      <!-- เมื่อย่อ Sidebar: แสดงไอคอน Logout อย่างเดียว -->
+      <div class="collapsed-footer" *ngIf="isCollapsed">
+        <button 
+          mat-icon-button 
+          class="btn-footer-logout collapsed" 
+          (click)="onLogout()" 
+          [matTooltip]="'ออกจากระบบ'"
+          matTooltipPosition="right">
+          <mat-icon>logout</mat-icon>
+        </button>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- พื้นที่แสดงเนื้อหาของแต่ละหน้า (Content Area) -->
+  <main class="admin-main-content">
+    <!-- แถบ Loading Bar วิ่งด้านบนทันทีที่กดเปลี่ยนหน้า -->
+    <div class="route-loading-bar" *ngIf="isNavigating"></div>
+    <router-outlet></router-outlet>
+  </main>
+
+</div>

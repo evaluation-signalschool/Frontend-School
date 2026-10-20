@@ -13,14 +13,24 @@ export interface StudentData {
   first_name: string;
   last_name: string;
   rank_name: string;
+  affiliation?: string;
+  email?: string;
+  google_id?: string;
+  phone?: string;
+  picture?: string;
   course_name?: string;
   batch_name?: string;
+  course_id?: number;
+  profile_completed?: number;
   status?: string;
 }
 
 export interface StudentLoginRequest {
   batch_id: number;
-  student_code: string;
+  student_code?: string;
+  identifier?: string;
+  email?: string;
+  phone?: string;
   password: string;
 }
 
@@ -29,6 +39,7 @@ export interface StudentLoginResponse {
   message: string;
   token?: string;
   studentData?: StudentData;
+  isProfileComplete?: boolean;
 }
 
 @Injectable({
@@ -37,9 +48,57 @@ export interface StudentLoginResponse {
 export class AuthService {
   constructor(private http: HttpClient) {}
 
-  // ฟังก์ชันยิง API Login
+  // ฟังก์ชันยิง API Login เดิม
   studentLogin(payload: StudentLoginRequest): Observable<StudentLoginResponse> {
     return this.http.post<StudentLoginResponse>(`${environment.apiUrl}/student-login`, payload);
+  }
+
+  // ฟังก์ชันยิง API เข้าสู่ระบบด้วย Google
+  studentGoogleLogin(payload: {
+    credential?: string;
+    batch_id?: number;
+    google_id?: string;
+    email?: string;
+    name?: string;
+    picture?: string;
+  }): Observable<{
+    success: boolean;
+    message: string;
+    isProfileComplete: boolean;
+    token?: string;
+    studentData?: StudentData;
+    needsBatchSelection?: boolean;
+  }> {
+    return this.http.post<any>(`${environment.apiUrl}/student/google-login`, payload);
+  }
+
+  // ฟังก์ชันบันทึกข้อมูลส่วนตัวของนักเรียนให้ครบถ้วน (ครั้งแรก)
+  completeStudentProfile(payload: {
+    student_id?: number;
+    batch_id?: number;
+    rank_name: string;
+    first_name: string;
+    last_name: string;
+    affiliation: string;
+    phone: string;
+    email?: string;
+    google_id?: string;
+    picture?: string;
+  }): Observable<{
+    success: boolean;
+    message: string;
+    isProfileComplete: boolean;
+    token?: string;
+    studentData?: StudentData;
+  }> {
+    return this.http.post<any>(`${environment.apiUrl}/student/complete-profile`, payload);
+  }
+
+  // ฟังก์ชันยกเลิกการกรอกข้อมูล Google และล้างข้อมูลชั่วคราวที่ไม่สมบูรณ์ในระบบ
+  cancelStudentGoogleLogin(studentId?: number): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/student/cancel-google-login`, {
+      student_id: studentId || 0,
+    });
   }
 
   // บันทึก Token ลง localStorage

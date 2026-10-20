@@ -89,6 +89,136 @@ $purple-border: #d6c5e8;
   font-size: 16px;
 }
 
+// ── Remember Me Row ───────────────────
+.remember-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 4px 6px;
+  user-select: none;
+  flex-wrap: wrap;
+}
+
+.remember-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  margin: 0;
+
+  &:hover {
+    .custom-checkbox:not(.checked) {
+      border-color: $purple-mid;
+      box-shadow: 0 0 0 3px rgba(123, 63, 160, 0.12);
+    }
+    .remember-text {
+      color: $purple-dark;
+    }
+  }
+}
+
+.hidden-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.custom-checkbox {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  border-radius: 6px;
+  border: 2px solid $purple-border;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+
+  &.checked {
+    background: linear-gradient(135deg, $purple-dark, $purple-mid);
+    border-color: $purple-mid;
+    box-shadow: 0 2px 8px rgba(62, 5, 73, 0.25);
+
+    .check-icon {
+      animation: checkPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+  }
+
+  .check-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: #ffffff;
+    line-height: 16px;
+    font-weight: 700;
+  }
+}
+
+@keyframes checkPop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.remember-text {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: #4b4b4b;
+  transition: color 0.2s ease;
+  line-height: 1.2;
+}
+
+.remember-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #f4f0fa;
+  color: #7b6f8a;
+  border: 1px solid #e3daee;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+
+  .badge-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    line-height: 14px;
+  }
+
+  &.badge-active {
+    background: rgba(123, 63, 160, 0.12);
+    color: $purple-dark;
+    border-color: rgba(123, 63, 160, 0.35);
+    box-shadow: 0 1px 4px rgba(62, 5, 73, 0.08);
+
+    .badge-icon {
+      color: $purple-mid;
+    }
+  }
+}
+
+@media (max-width: 400px) {
+  .remember-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
 // ── Error ─────────────────────────────
 .error-message {
   display: flex;

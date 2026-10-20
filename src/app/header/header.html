@@ -58,6 +58,32 @@
   >
     <mat-icon>menu</mat-icon>
   </button>
+
+  <!-- 4. ส่วนสำหรับแอดมิน: แสดงป้ายโปรไฟล์บนเดสก์ท็อป และปุ่มเมนูบนมือถือ -->
+  <div class="admin-header-actions" *ngIf="isAdmin">
+    <!-- Desktop: ป้ายสถานะแอดมิน -->
+    <div class="admin-top-badge hide-mobile" routerLink="/admin" title="คลิกเพื่อไปหน้าแดชบอร์ดหลัก">
+      <div class="top-badge-avatar" [class.super]="isSuperAdmin">
+        <mat-icon>{{ isSuperAdmin ? 'shield' : 'account_circle' }}</mat-icon>
+      </div>
+      <div class="top-badge-text">
+        <span class="top-badge-name">{{ adminName }}</span>
+        <span class="top-badge-role" [class.super]="isSuperAdmin">
+          {{ isSuperAdmin ? 'Super Admin' : 'Admin' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Mobile: ปุ่มเปิดแถบเมนูด้านข้าง -->
+    <button
+      mat-icon-button
+      class="admin-sidebar-toggle-btn show-mobile-only"
+      (click)="toggleAdminSidebar()"
+      title="เปิดเมนูด้านข้าง"
+    >
+      <mat-icon>menu</mat-icon>
+    </button>
+  </div>
 </mat-toolbar>
 
 <!-- ส่วนที่เหลือปล่อยไว้ตามเดิมได้เลยครับ... -->

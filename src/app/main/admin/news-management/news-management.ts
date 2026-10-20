@@ -23,7 +23,9 @@ export class NewsManagement implements OnInit {
     title: '',
     type: 'announce',
     news_date: '',
-    description: ''
+    description: '',
+    file_url: '',
+    file_name: ''
   };
   selectedFile: File | null = null;
   isSubmitting = false;
@@ -82,6 +84,15 @@ export class NewsManagement implements OnInit {
       if (this.formData.news_date) {
         formData.append('news_date', this.formData.news_date);
       }
+      
+      if (this.formData.file_url) {
+        formData.append('file_url', this.formData.file_url.trim());
+        formData.append('file_name', this.formData.file_name ? this.formData.file_name.trim() : 'เอกสารแนบ Google Drive');
+      } else {
+        formData.append('file_url', '');
+        formData.append('file_name', '');
+      }
+
       if (this.selectedFile) {
         formData.append('file', this.selectedFile);
       }
@@ -160,7 +171,9 @@ export class NewsManagement implements OnInit {
       title: '',
       type: 'announce',
       news_date: '',
-      description: ''
+      description: '',
+      file_url: '',
+      file_name: ''
     };
     this.selectedFile = null;
     this.editMode = false;
@@ -176,8 +189,13 @@ export class NewsManagement implements OnInit {
       title: item.title,
       type: item.type,
       news_date: item.news_date ? new Date(item.news_date).toISOString().split('T')[0] : '',
-      description: item.description
+      description: item.description,
+      file_url: item.file_url || '',
+      file_name: item.file_name || ''
     };
+    this.selectedFile = null;
+    const fileInput = document.querySelector('.file-input') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -195,5 +213,10 @@ export class NewsManagement implements OnInit {
       return url;
     }
     return this.getBackendUrl() + url;
+  }
+
+  isGoogleDrive(url: string): boolean {
+    if (!url) return false;
+    return url.includes('drive.google.com') || url.includes('docs.google.com');
   }
 }

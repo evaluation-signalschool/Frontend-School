@@ -1,237 +1,308 @@
 <div class="admin-page">
-  <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <!-- ปุ่มย้อนกลับ (ทำหน้าที่ออกจากระบบ) -->
-      <button mat-icon-button class="back-button" (click)="onLogout()" title="ออกจากระบบ">
-        <mat-icon>chevron_left</mat-icon>
-      </button>
-      <h1 class="course-title" style="margin: 0;">ส่วนจัดการระบบ (สำหรับผู้ดูแลระบบ)</h1>
-    </div>
-
-    <!-- ปุ่มออกจากระบบ -->
-    <button class="btn-logout" (click)="onLogout()" style="background-color: #fff1f0; color: #ff4d4f; border: 1px solid #ffa39e; padding: 6px 16px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px; transition: all 0.2s;">
-      <mat-icon style="font-size: 18px; width: 18px; height: 18px;">logout</mat-icon>
-      ออกจากระบบ
-    </button>
-  </div>
-
-  <!-- แถบโปรไฟล์ผู้ดูแลระบบปัจจุบัน -->
-  <div class="admin-profile-bar">
-    <div class="profile-info-wrap">
-      <div class="avatar-circle" [ngClass]="{'superadmin-avatar': isSuperAdmin}">
+  <!-- ส่วนหัวและสถานะผู้ดูแลระบบ (Hero Header) -->
+  <header class="admin-hero-header">
+    <div class="hero-left">
+      <div class="hero-avatar" [ngClass]="{'superadmin-avatar': isSuperAdmin}">
         <mat-icon>{{ isSuperAdmin ? 'shield' : 'account_circle' }}</mat-icon>
       </div>
-      <div class="user-meta">
-        <div class="meta-row">
-          <span class="user-name">{{ adminName }}</span>
+      <div class="hero-info">
+        <div class="hero-title-row">
+          <h1 class="hero-title">ส่วนจัดการระบบ (สำหรับผู้ดูแลระบบ)</h1>
           <span class="role-badge" [ngClass]="isSuperAdmin ? 'badge-superadmin' : 'badge-admin'">
             <mat-icon class="badge-icon">{{ isSuperAdmin ? 'verified_user' : 'person' }}</mat-icon>
             {{ isSuperAdmin ? 'ผู้ดูแลระบบหลัก (Super Admin)' : 'เจ้าหน้าที่ดูแลระบบ (Admin)' }}
           </span>
         </div>
-        <span class="user-username" *ngIf="adminUsername">ชื่อผู้ใช้: {{ adminUsername }}</span>
+        <p class="hero-subtitle">
+          ผู้ใช้งาน: <strong>{{ (adminUsername ? adminUsername : adminName) }}</strong>
+          <span class="sub-name" *ngIf="adminUsername && adminName && adminName !== adminUsername && adminName !== 'ผู้ดูแลระบบหลัก (Super Admin)' && adminName !== 'ผู้ดูแลระบบ'">(ชื่อ: {{ adminName }})</span>
+          <span class="hero-divider">•</span>
+          <span>เลือกเมนูการจัดการข้อมูลและลิงก์แบบประเมินด้านล่าง</span>
+        </p>
       </div>
     </div>
-  </div>
+  </header>
 
   <div class="content-container">
-    <p>หน้านี้เป็นส่วนที่ใช้สำหรับผู้ดูแลระบบในการจัดการลิงก์แบบประเมินและข้อมูลต่างๆ</p>
 
-    <!-- ส่วนข้อมูลและปุ่มลิงก์ที่แยกคลาสเรียบร้อยแล้ว -->
-    <div class="management-section">
-      <h3 class="section-title">เมนูการจัดการ</h3>
-
-      <!-- 🔵 หมวดหมู่: ข้อมูลพื้นฐาน (สีเขียว Teal) -->
-      <!-- จัดการหลักสูตรและรายวิชา -->
-      <div class="action-card course-management-card">
-        <div class="card-details">
-          <h4 class="card-title">จัดการหลักสูตรและรายวิชา</h4>
-          <p class="card-subtitle">เพิ่มหลักสูตรใหม่ หรือเพิ่มรายวิชาเข้าไปในหลักสูตรที่มีอยู่</p>
+    <!-- หมวดหมู่: ข้อมูลพื้นฐาน -->
+    <section class="menu-group group-teal">
+      <header class="group-header">
+        <span class="group-icon"><mat-icon>folder_shared</mat-icon></span>
+        <div>
+          <h3 class="group-title">ข้อมูลพื้นฐาน</h3>
+          <p class="group-desc">หลักสูตร รายวิชา ข้อมูลนักเรียน และข่าวสาร</p>
         </div>
+      </header>
 
-        <button mat-raised-button class="btn-navigate btn-teal" routerLink="/admin/addcourse">
-          <mat-icon class="btn-icon">add_box</mat-icon>
-          <span>เพิ่มหลักสูตร / เพิ่มวิชา</span>
-        </button>
-      </div>
-
-      <!-- จัดการข้อมูลนักเรียน -->
-      <div class="action-card student-management-card">
-        <div class="card-details">
-          <h4 class="card-title">จัดการข้อมูลนักเรียน</h4>
-          <p class="card-subtitle">เพิ่ม นำเข้า แก้ไข และจัดการรายชื่อนักเรียนในระบบ</p>
-        </div>
-
-        <button mat-raised-button class="btn-navigate btn-teal" routerLink="/admin/addstudent">
-          <mat-icon class="btn-icon">add</mat-icon>
-          <span>เพิ่มข้อมูลนักเรียน</span>
-        </button>
-      </div>
-
-      <!-- อนุมัติการแก้ไขข้อมูล -->
-      <div class="action-card profile-approvals-card">
-        <div class="card-details">
-          <h4 class="card-title">อนุมัติการแก้ไขข้อมูลโปรไฟล์</h4>
-          <p class="card-subtitle">ตรวจสอบและอนุมัติคำขอเปลี่ยนยศ หรือเปลี่ยนชื่อของนักเรียน</p>
-        </div>
-
-        <button mat-raised-button class="btn-navigate btn-teal" routerLink="/admin/profile-approvals">
-          <mat-icon class="btn-icon">how_to_reg</mat-icon>
-          <span>อนุมัติการแก้ไขโปรไฟล์</span>
-        </button>
-      </div>
-
-      <!-- จัดการข่าวสาร -->
-      <div class="action-card news-management-card">
-        <div class="card-details">
-          <h4 class="card-title">จัดการข่าวสารและประกาศ</h4>
-          <p class="card-subtitle">เพิ่มข่าวสารใหม่ อัปโหลดไฟล์แนบ และลบข่าวสาร</p>
-        </div>
-
-        <button mat-raised-button class="btn-navigate btn-teal" routerLink="/admin/news-management">
-          <mat-icon class="btn-icon">campaign</mat-icon>
-          <span>จัดการข่าวสาร</span>
-        </button>
-      </div>
-
-      <!-- 🔵 หมวดหมู่: การจัดการคะแนน (สีน้ำเงิน Blue) -->
-      <!-- แบบกรอกคะแนนนักเรียน -->
-      <div class="action-card">
-        <div class="card-details">
-          <h4 class="card-title">แบบกรอกคะแนนนักเรียน</h4>
-          <p class="card-subtitle">สำหรับเข้าสู่หน้าบันทึกและจัดการคะแนนในระบบ</p>
-        </div>
-
-        <button mat-raised-button class="btn-navigate" routerLink="/admin/scoremanagement">
-          <mat-icon class="btn-icon">edit</mat-icon>
-          ไปยังหน้ากรอกคะแนน
-        </button>
-      </div>
-
-      <!-- ตรวจสอบสถานะการส่งคะแนน -->
-      <div class="action-card score-submission-card">
-        <div class="card-details">
-          <h4 class="card-title">ตรวจสอบสถานะการส่งคะแนน</h4>
-          <p class="card-subtitle">เช็คสถานะการส่งคะแนนของแต่ละรายวิชา ว่าอาจารย์ส่งครบแล้วหรือยัง</p>
-        </div>
-
-        <button mat-raised-button class="btn-navigate" routerLink="/admin/score-submission">
-          <mat-icon class="btn-icon">fact_check</mat-icon>
-          <span>ตรวจสอบการส่งคะแนน</span>
-        </button>
-      </div>
-
-      <!-- จัดลำดับผลการเรียน (Student Rankings) -->
-      <div class="action-card ranking-card">
-        <div class="card-details">
-          <h4 class="card-title">จัดลำดับผลการเรียน (Student Rankings)</h4>
-          <p class="card-subtitle">แสดงอันดับที่ 1 ถึง N พร้อมระบบปลดล็อคลำดับซ้ำด้วยวิชาที่แอดมินเลือก และส่งออก Excel/พิมพ์</p>
-        </div>
-
-        <button mat-raised-button class="btn-navigate" routerLink="/admin/ranking">
-          <mat-icon class="btn-icon">military_tech</mat-icon>
-          <span>จัดลำดับผลการเรียน</span>
-        </button>
-      </div>
-
-      <!-- 🔵 หมวดหมู่: แบบประเมิน (สีม่วง Purple) -->
-      <!-- จัดการและสร้างแบบฟอร์มประเมิน -->
-      <div class="action-card form-management-card">
-        <div class="card-details">
-          <h4 class="card-title">จัดการและสร้างแบบประเมิน</h4>
-          <p class="card-subtitle">สร้าง ผูกหลักสูตร  และเปิด-ปิดใช้งานแบบประเมิน</p>
-        </div>
-
-        <button mat-raised-button class="btn-navigate btn-purple" routerLink="/admin/form">
-          <mat-icon class="btn-icon">assignment</mat-icon>
-          ไปยังหน้าจัดการแบบประเมิน
-        </button>
-      </div>
-
-      <!-- แสดงข้อมูลแบบฟอร์มประเมิน -->
-      <div class="action-card form-view-card">
-        <div class="card-details">
-          <h4 class="card-title">แสดงข้อมูลแบบประเมิน</h4>
-          <p class="card-subtitle">ตรวจสอบข้อมูลการตอบแบบประเมินและข้อเสนอแนะ</p>
-        </div>
-
-        <button mat-raised-button class="btn-navigate btn-purple" routerLink="/admin/form-view">
-          <mat-icon class="btn-icon">visibility</mat-icon>
-          ไปยังหน้าข้อมูลแบบประเมิน
-        </button>
-      </div>
-
-      <!-- 🔵 หมวดหมู่: ประกาศนียบัตรและเอกสารสำคัญ (สีส้ม Orange) -->
-      <!-- ออกใบประกาศนีบัตร -->
-      <div class="action-card certificate-card">
-        <div class="card-details">
-          <h4 class="card-title">ออกใบประกาศนีบัตร</h4>
-          <p class="card-subtitle">จัดการและออกใบประกาศนีบัตรสำหรับผู้สำเร็จการศึกษา</p>
-        </div>
-
-        <button mat-raised-button class="btn-navigate btn-orange" routerLink="/admin/certificate">
-          <mat-icon class="btn-icon">card_membership</mat-icon>
-          ไปยังหน้าออกใบประกาศฯ
-        </button>
-      </div>
-
-      <!-- ออกใบทรานสคริปต์ (Transcript) -->
-      <div class="action-card transcript-card">
-        <div class="card-details">
-          <h4 class="card-title">ออกใบทรานสคริปต์ (Transcript)</h4>
-          <p class="card-subtitle">พิมพ์และออกใบแสดงผลการฝึกอบรม (ระเบียบแสดงผลการฝึกอบรม) สำหรับผู้เรียน</p>
-        </div>
-
-        <button mat-raised-button class="btn-navigate btn-orange" routerLink="/admin/transcript">
-          <mat-icon class="btn-icon">description</mat-icon>
-          ไปยังหน้าออกใบทรานสคริปต์
-        </button>
-      </div>
-
-      <!-- 🔵 หมวดหมู่: สรุปผลและวิเคราะห์สถิติ (AI Summary) -->
-      <div class="action-card ai-summary-card">
-        <div class="card-details">
-          <h4 class="card-title">จัดการบทสรุปผลการฝึกอบรม (AI Analysis)</h4>
-          <p class="card-subtitle">ใช้ AI ช่วยวิเคราะห์สถิติจริง ตรวจสอบ ปรับปรุง และบันทึกบทสรุปเผยแพร่</p>
-        </div>
-
-        <button mat-raised-button class="btn-navigate btn-purple" routerLink="/admin/training-summary">
-          <mat-icon class="btn-icon">auto_awesome</mat-icon>
-          <span>จัดการบทสรุป & AI</span>
-        </button>
-      </div>
-
-      <!-- 🛡️ หมวดหมู่: ความปลอดภัยและการบริหารระบบ (Administration & Audit) -->
-      <!-- จัดการผู้ดูแลระบบ (เฉพาะ Super Admin) -->
-      <div class="action-card admin-users-card" *ngIf="isSuperAdmin">
-        <div class="card-details">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <h4 class="card-title" style="color: #4338ca;">จัดการผู้ดูแลระบบ (Admin Users)</h4>
-            <span class="superadmin-badge-small">สำหรับแอดมินหลัก</span>
+      <div class="card-grid">
+        <!-- จัดการหลักสูตรและรายวิชา -->
+        <a class="action-card" id="menu-addcourse" routerLink="/admin/addcourse">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>add_box</mat-icon></span>
+            <div class="card-details">
+              <h4 class="card-title">จัดการหลักสูตรและรายวิชา</h4>
+              <p class="card-subtitle">เพิ่มหลักสูตรใหม่ หรือเพิ่มรายวิชาเข้าไปในหลักสูตรที่มีอยู่</p>
+            </div>
           </div>
-          <p class="card-subtitle">เพิ่มผู้ดูแลระบบคนใหม่ กำหนดสิทธิ์การใช้งาน ระงับบัญชี และรีเซ็ตรหัสผ่าน</p>
-        </div>
+          <span class="card-cta">เพิ่มหลักสูตร / เพิ่มวิชา <mat-icon>arrow_forward</mat-icon></span>
+        </a>
 
-        <button mat-raised-button class="btn-navigate btn-indigo" routerLink="/admin/users">
-          <mat-icon class="btn-icon">manage_accounts</mat-icon>
-          <span>จัดการผู้ดูแลระบบ</span>
-        </button>
+        <!-- จัดการข้อมูลนักเรียน -->
+        <a class="action-card" id="menu-addstudent" routerLink="/admin/addstudent">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>group_add</mat-icon></span>
+            <div class="card-details">
+              <h4 class="card-title">จัดการข้อมูลนักเรียน</h4>
+              <p class="card-subtitle">เพิ่ม นำเข้า แก้ไข และจัดการรายชื่อนักเรียนในระบบ</p>
+            </div>
+          </div>
+          <span class="card-cta">เพิ่มข้อมูลนักเรียน <mat-icon>arrow_forward</mat-icon></span>
+        </a>
+
+        <!-- อนุมัติการแก้ไขข้อมูล -->
+        <a class="action-card" id="menu-profile-approvals" routerLink="/admin/profile-approvals">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>how_to_reg</mat-icon></span>
+            <div class="card-details">
+              <h4 class="card-title">อนุมัติการแก้ไขข้อมูลโปรไฟล์</h4>
+              <p class="card-subtitle">ตรวจสอบและอนุมัติคำขอเปลี่ยนยศ หรือเปลี่ยนชื่อของนักเรียน</p>
+            </div>
+          </div>
+          <span class="card-cta">อนุมัติการแก้ไขโปรไฟล์ <mat-icon>arrow_forward</mat-icon></span>
+        </a>
+
+        <!-- จัดการข่าวสาร -->
+        <a class="action-card" id="menu-news" routerLink="/admin/news-management">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>campaign</mat-icon></span>
+            <div class="card-details">
+              <h4 class="card-title">จัดการข่าวสารและประกาศ</h4>
+              <p class="card-subtitle">เพิ่มข่าวสารใหม่ อัปโหลดไฟล์แนบ และลบข่าวสาร</p>
+            </div>
+          </div>
+          <span class="card-cta">จัดการข่าวสาร <mat-icon>arrow_forward</mat-icon></span>
+        </a>
       </div>
+    </section>
 
-      <!-- บันทึกประวัติกิจกรรมและการเข้าใช้งาน (Activity Logs) -->
-      <div class="action-card admin-logs-card">
-        <div class="card-details">
-          <h4 class="card-title" style="color: #0f766e;">ประวัติการทำงานและเข้าสู่ระบบ (Activity Logs)</h4>
-          <p class="card-subtitle">ตรวจสอบประวัติการปฏิบัติงาน การบันทึกคะแนน อนุมัติข้อมูล และการเข้าสู่ระบบย้อนหลัง</p>
+    <!-- หมวดหมู่: คะแนนและผลการเรียน - รวมเวลาฝึกอบรมและการเลือกลงหน่วย -->
+    <section class="menu-group group-blue">
+      <header class="group-header">
+        <span class="group-icon"><mat-icon>grading</mat-icon></span>
+        <div>
+          <h3 class="group-title">คะแนนและผลการเรียน</h3>
+          <p class="group-desc">บันทึกคะแนน ตรวจสอบการส่งคะแนน ผลการเรียน จัดลำดับ เวลาฝึกอบรม/สอบ และการเลือกลงหน่วย</p>
         </div>
+      </header>
 
-        <button mat-raised-button class="btn-navigate btn-slate" routerLink="/admin/logs">
-          <mat-icon class="btn-icon">history</mat-icon>
-          <span>ดูประวัติกิจกรรม</span>
-        </button>
+      <div class="card-grid">
+        <!-- แบบกรอกคะแนนนักเรียน -->
+        <a class="action-card" id="menu-scoremanagement" routerLink="/admin/scoremanagement">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>edit_note</mat-icon></span>
+            <div class="card-details">
+              <h4 class="card-title">แบบกรอกคะแนนนักเรียน</h4>
+              <p class="card-subtitle">สำหรับเข้าสู่หน้าบันทึกและจัดการคะแนนในระบบ</p>
+            </div>
+          </div>
+          <span class="card-cta">ไปยังหน้ากรอกคะแนน <mat-icon>arrow_forward</mat-icon></span>
+        </a>
+
+        <!-- ตรวจสอบสถานะการส่งคะแนน -->
+        <a class="action-card" id="menu-score-submission" routerLink="/admin/score-submission">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>fact_check</mat-icon></span>
+            <div class="card-details">
+              <h4 class="card-title">ตรวจสอบสถานะการส่งคะแนน</h4>
+              <p class="card-subtitle">เช็คสถานะการส่งคะแนนของแต่ละรายวิชา ว่าอาจารย์ส่งครบแล้วหรือยัง</p>
+            </div>
+          </div>
+          <span class="card-cta">ตรวจสอบการส่งคะแนน <mat-icon>arrow_forward</mat-icon></span>
+        </a>
+
+        <!-- ดูผลการเรียนทั้งหมด (ภาพรวมทั้งรุ่น) -->
+        <a class="action-card" id="menu-classoverview" routerLink="/admin/classoverview">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>assessment</mat-icon></span>
+            <div class="card-details">
+              <h4 class="card-title">ดูผลการเรียนทั้งหมด (ภาพรวมทั้งรุ่น)</h4>
+              <p class="card-subtitle">ดูสรุปผลการเรียน เกรดเฉลี่ยสะสม (GPA) และตารางคะแนนรวมดิบทุกวิชา (Master Grid) ของนักเรียนทั้งรุ่น</p>
+            </div>
+          </div>
+          <span class="card-cta">ดูผลการเรียนทั้งหมด <mat-icon>arrow_forward</mat-icon></span>
+        </a>
+
+        <!-- จัดลำดับผลการเรียน (Student Rankings) -->
+        <a class="action-card" id="menu-ranking" routerLink="/admin/ranking">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>military_tech</mat-icon></span>
+            <div class="card-details">
+              <h4 class="card-title">จัดลำดับผลการเรียน (Student Rankings)</h4>
+              <p class="card-subtitle">แสดงอันดับที่ 1 ถึง N พร้อมระบบปลดล็อคลำดับซ้ำด้วยวิชาที่แอดมินเลือก และส่งออก Excel/พิมพ์</p>
+            </div>
+          </div>
+          <span class="card-cta">จัดลำดับผลการเรียน <mat-icon>arrow_forward</mat-icon></span>
+        </a>
+
+        <!-- บันทึกเวลาการฝึกอบรมและเวลาสอบ (Training & Exam Time Attendance) -->
+        <a class="action-card" id="menu-training-exam-time" routerLink="/admin/training-exam-time">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>timer</mat-icon></span>
+            <div class="card-details">
+              <h4 class="card-title">บันทึกเวลาการฝึกอบรมและเวลาสอบ (คิดเป็นร้อยละ)</h4>
+              <p class="card-subtitle">บันทึกและจัดการเวลาในการฝึกอบรม และเวลาในการสอบ (ร้อยละ 0 - 100%) เพื่อใช้ประมวลผลการสำเร็จการศึกษา</p>
+            </div>
+          </div>
+          <span class="card-cta">บันทึกเวลาฝึกอบรม/สอบ <mat-icon>arrow_forward</mat-icon></span>
+        </a>
+
+        <!-- เลือกลงหน่วย (สำหรับรุ่นที่ต้องเลือกหน่วย / Unit Selection) -->
+        <a class="action-card" id="menu-unit-selection" routerLink="/admin/unit-selection">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>account_tree</mat-icon></span>
+            <div class="card-details">
+              <div class="title-row">
+                <h4 class="card-title">เลือกลงหน่วย (สำหรับรุ่นที่ต้องเลือกหน่วย)</h4>
+                <span class="special-badge-blue">หน้าใหม่</span>
+              </div>
+              <p class="card-subtitle">จัดสรรและบันทึกการเลือกหน่วยบรรจุของนักเรียนตามลำดับผลการเรียน (1 ถึง N) พร้อมระบบบริหารโควตาหน่วย</p>
+              <div class="target-courses-notice">
+                <mat-icon class="notice-icon">verified</mat-icon>
+                <span><strong>ข้อกำหนด:</strong> ใช้สำหรับหลักสูตร <strong>นนส.ทบ.</strong> และ <strong>ช่างอิเล็กทรอนิกส์</strong> เท่านั้น (เนื่องจากมีเพียง 2 หลักสูตรนี้ที่ใช้ระบบเลือกลงหน่วย)</span>
+              </div>
+            </div>
+          </div>
+          <span class="card-cta">เลือกลงหน่วย <mat-icon>arrow_forward</mat-icon></span>
+        </a>
       </div>
+    </section>
 
-    </div>
+    <!-- หมวดหมู่: แบบประเมินและสรุปผล -->
+    <section class="menu-group group-purple">
+      <header class="group-header">
+        <span class="group-icon"><mat-icon>assignment</mat-icon></span>
+        <div>
+          <h3 class="group-title">แบบประเมินและสรุปผล</h3>
+          <p class="group-desc">สร้างแบบประเมิน ดูผลการตอบ และวิเคราะห์สรุปผลด้วย AI</p>
+        </div>
+      </header>
+
+      <div class="card-grid">
+        <!-- จัดการและสร้างแบบฟอร์มประเมิน -->
+        <a class="action-card" id="menu-form" routerLink="/admin/form">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>post_add</mat-icon></span>
+            <div class="card-details">
+              <h4 class="card-title">จัดการและสร้างแบบประเมิน</h4>
+              <p class="card-subtitle">สร้าง ผูกหลักสูตร และเปิด-ปิดใช้งานแบบประเมิน</p>
+            </div>
+          </div>
+          <span class="card-cta">ไปยังหน้าจัดการแบบประเมิน <mat-icon>arrow_forward</mat-icon></span>
+        </a>
+
+        <!-- แสดงข้อมูลแบบฟอร์มประเมิน -->
+        <a class="action-card" id="menu-form-view" routerLink="/admin/form-view">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>visibility</mat-icon></span>
+            <div class="card-details">
+              <h4 class="card-title">แสดงข้อมูลแบบประเมิน</h4>
+              <p class="card-subtitle">ตรวจสอบข้อมูลการตอบแบบประเมินและข้อเสนอแนะ</p>
+            </div>
+          </div>
+          <span class="card-cta">ไปยังหน้าข้อมูลแบบประเมิน <mat-icon>arrow_forward</mat-icon></span>
+        </a>
+
+        <!-- สรุปผลและวิเคราะห์สถิติ (AI Summary) -->
+        <a class="action-card" id="menu-training-summary" routerLink="/admin/training-summary">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>auto_awesome</mat-icon></span>
+            <div class="card-details">
+              <h4 class="card-title">จัดการบทสรุปผลการฝึกอบรม (AI Analysis)</h4>
+              <p class="card-subtitle">ใช้ AI ช่วยวิเคราะห์สถิติจริง ตรวจสอบ ปรับปรุง และบันทึกบทสรุปเผยแพร่</p>
+            </div>
+          </div>
+          <span class="card-cta">จัดการบทสรุป &amp; AI <mat-icon>arrow_forward</mat-icon></span>
+        </a>
+      </div>
+    </section>
+
+    <!-- หมวดหมู่: ประกาศนียบัตรและเอกสารสำคัญ -->
+    <section class="menu-group group-orange">
+      <header class="group-header">
+        <span class="group-icon"><mat-icon>workspace_premium</mat-icon></span>
+        <div>
+          <h3 class="group-title">เอกสารและประกาศนียบัตร</h3>
+          <p class="group-desc">ออกใบประกาศนียบัตรและใบแสดงผลการฝึกอบรม</p>
+        </div>
+      </header>
+
+      <div class="card-grid">
+        <!-- ออกใบประกาศนียบัตร -->
+        <a class="action-card" id="menu-certificate" routerLink="/admin/certificate">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>card_membership</mat-icon></span>
+            <div class="card-details">
+              <h4 class="card-title">ออกใบประกาศนียบัตร</h4>
+              <p class="card-subtitle">จัดการและออกใบประกาศนียบัตรสำหรับผู้สำเร็จการศึกษา</p>
+            </div>
+          </div>
+          <span class="card-cta">ไปยังหน้าออกใบประกาศฯ <mat-icon>arrow_forward</mat-icon></span>
+        </a>
+
+        <!-- ออกใบทรานสคริปต์ (Transcript) -->
+        <a class="action-card" id="menu-transcript" routerLink="/admin/transcript">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>description</mat-icon></span>
+            <div class="card-details">
+              <h4 class="card-title">ออกใบทรานสคริปต์ (Transcript)</h4>
+              <p class="card-subtitle">พิมพ์และออกใบแสดงผลการฝึกอบรม (ระเบียบแสดงผลการฝึกอบรม) สำหรับผู้เรียน</p>
+            </div>
+          </div>
+          <span class="card-cta">ไปยังหน้าออกใบทรานสคริปต์ <mat-icon>arrow_forward</mat-icon></span>
+        </a>
+      </div>
+    </section>
+
+    <!-- หมวดหมู่: ความปลอดภัยและการบริหารระบบ -->
+    <section class="menu-group group-indigo">
+      <header class="group-header">
+        <span class="group-icon"><mat-icon>admin_panel_settings</mat-icon></span>
+        <div>
+          <h3 class="group-title">การบริหารระบบและความปลอดภัย</h3>
+          <p class="group-desc">สิทธิ์ผู้ดูแลระบบ และประวัติการใช้งานย้อนหลัง</p>
+        </div>
+      </header>
+
+      <div class="card-grid">
+        <!-- จัดการผู้ดูแลระบบ (เฉพาะ Super Admin) -->
+        <a class="action-card" id="menu-admin-users" routerLink="/admin/users" *ngIf="isSuperAdmin">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>manage_accounts</mat-icon></span>
+            <div class="card-details">
+              <div class="title-row">
+                <h4 class="card-title">จัดการผู้ดูแลระบบ (Admin Users)</h4>
+                <span class="superadmin-badge-small">สำหรับแอดมินหลัก</span>
+              </div>
+              <p class="card-subtitle">เพิ่มผู้ดูแลระบบคนใหม่ กำหนดสิทธิ์การใช้งาน ระงับบัญชี และรีเซ็ตรหัสผ่าน</p>
+            </div>
+          </div>
+          <span class="card-cta">จัดการผู้ดูแลระบบ <mat-icon>arrow_forward</mat-icon></span>
+        </a>
+
+        <!-- บันทึกประวัติกิจกรรมและการเข้าใช้งาน (Activity Logs) -->
+        <a class="action-card" id="menu-admin-logs" routerLink="/admin/logs">
+          <div class="card-head">
+            <span class="card-icon"><mat-icon>history</mat-icon></span>
+            <div class="card-details">
+              <h4 class="card-title">ประวัติการทำงานและเข้าสู่ระบบ (Activity Logs)</h4>
+              <p class="card-subtitle">ตรวจสอบประวัติการปฏิบัติงาน การบันทึกคะแนน อนุมัติข้อมูล และการเข้าสู่ระบบย้อนหลัง</p>
+            </div>
+          </div>
+          <span class="card-cta">ดูประวัติกิจกรรม <mat-icon>arrow_forward</mat-icon></span>
+        </a>
+      </div>
+    </section>
 
   </div>
 </div>

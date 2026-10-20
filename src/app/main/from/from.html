@@ -1,8 +1,12 @@
 <div class="admin-page">
-
   <div class="admin-header-title-container">
     <div class="header-content-wrapper">
-      <button mat-icon-button routerLink="/admin" class="btn-header-back" title="ย้อนกลับไปหน้าผู้ดูแลระบบ">
+      <button
+        mat-icon-button
+        routerLink="/admin"
+        class="btn-header-back"
+        title="ย้อนกลับไปหน้าผู้ดูแลระบบ"
+      >
         <mat-icon>chevron_left</mat-icon>
       </button>
       <h2 class="main-content-title">จัดการแบบประเมิน</h2>
@@ -10,120 +14,281 @@
   </div>
 
   <div class="content-container">
-
-    <!-- ส่วนที่ 1: หน้าสร้าง/แก้ไขแบบฟอร์ม -->
+    <!-- ส่วนที่ 1: หน้าสร้าง/แก้ไขแบบประเมิน -->
     <div class="management-section data-entry-section">
-      <p class="instruction-text">สร้างชุดคำถามประเมินสำหรับหลักสูตรและรุ่นที่เลือก</p>
+      <!-- Hero -->
+      <div class="form-hero" [class.edit-mode]="isEditMode">
+        <div class="hero-icon">
+          <mat-icon>{{ isEditMode ? 'edit_note' : 'post_add' }}</mat-icon>
+        </div>
+        <div class="hero-text">
+          <span class="mode-indicator" [class.edit-mode]="isEditMode">
+            <span class="mode-dot"></span>
+            {{ isEditMode ? 'กำลังอยู่ในโหมดแก้ไขข้อมูล' : 'สร้างแบบประเมินใหม่' }}
+          </span>
+          <h3 class="hero-title">
+            {{ isEditMode ? 'แก้ไขแบบประเมิน' : 'ออกแบบแบบประเมินของคุณ' }}
+          </h3>
+          <p class="instruction-text">
+            สร้างชุดคำถามประเมินสำหรับหลักสูตรและรุ่นที่เลือก — ช่องที่มีเครื่องหมาย
+            <span class="required-star">*</span> จำเป็นต้องกรอก
+          </p>
+        </div>
+      </div>
 
-      <h3 class="mode-indicator" [class.edit-mode]="isEditMode">
-        {{ isEditMode ? '📝 กำลังอยู่ในโหมดแก้ไขข้อมูล' : '✨ สร้างแบบประเมินใหม่' }}
-      </h3>
-
+      <!-- STEP 1: ข้อมูลทั่วไป -->
+      <section class="form-step">
+        <div class="step-header">
+          <span class="step-number">1</span>
+          <div class="step-heading">
+            <h4 class="step-title">ข้อมูลทั่วไป</h4>
+            <p class="step-desc">เลือกหลักสูตร รุ่น กลุ่มเป้าหมาย และประเภทแบบประเมิน</p>
+          </div>
+        </div>
+        <div class="step-body">
       <div class="form-row">
         <div class="form-group flex-1">
-          <label class="input-label">ผูกกับหลักสูตร</label>
-          <select class="custom-input" [(ngModel)]="formData.courseName" (change)="onCourseChange()">
+          <label class="input-label">ผูกกับหลักสูตร <span class="required-star">*</span></label>
+          <select
+            class="custom-input"
+            [class.is-invalid]="hasSubmitted && !formData.courseName"
+            [(ngModel)]="formData.courseName"
+            (change)="onCourseChange()"
+          >
             <option value="" disabled selected>เลือกหลักสูตร</option>
             <option *ngFor="let course of courseGroups" [value]="course.course_name">
               {{ course.course_name }}
             </option>
           </select>
+          <div *ngIf="hasSubmitted && !formData.courseName" class="field-error-text">
+            <mat-icon>error_outline</mat-icon> กรุณาเลือกหลักสูตร
+          </div>
         </div>
 
         <div class="form-group flex-1">
-          <label class="input-label">รุ่นนักเรียน</label>
-          <select class="custom-input" [(ngModel)]="formData.generationId" [disabled]="!formData.courseName"
-            (change)="onGenerationChange()">
+          <label class="input-label">รุ่นนักเรียน <span class="required-star">*</span></label>
+          <select
+            class="custom-input"
+            [class.is-invalid]="hasSubmitted && !formData.generationId"
+            [(ngModel)]="formData.generationId"
+            [disabled]="!formData.courseName"
+            (change)="onGenerationChange()"
+          >
             <option value="" disabled selected>เลือกรุ่นนักเรียน</option>
             <option *ngFor="let batch of availableBatches" [value]="batch.batch_id">
               {{ batch.batch_name }}
             </option>
           </select>
+          <div *ngIf="hasSubmitted && !formData.generationId" class="field-error-text">
+            <mat-icon>error_outline</mat-icon> กรุณาเลือกรุ่นนักเรียน
+          </div>
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group flex-1">
-
-          <label class="input-label">กลุ่มเป้าหมาย (Target Group)</label>
-          <select class="custom-input" [(ngModel)]="formData.targetGroup" (change)="onTargetGroupChange()">
+          <label class="input-label">กลุ่มเป้าหมาย (Target Group) <span class="required-star">*</span></label>
+          <select
+            class="custom-input"
+            [class.is-invalid]="hasSubmitted && !formData.targetGroup"
+            [(ngModel)]="formData.targetGroup"
+            (change)="onTargetGroupChange()"
+          >
             <option value="" disabled selected>เลือกกลุ่มเป้าหมาย</option>
             <option *ngFor="let group of targetGroups" [value]="group.value">
               {{ group.label }}
             </option>
           </select>
+          <div *ngIf="hasSubmitted && !formData.targetGroup" class="field-error-text">
+            <mat-icon>error_outline</mat-icon> กรุณาเลือกกลุ่มเป้าหมาย
+          </div>
         </div>
 
         <div class="form-group flex-1">
-          <label class="input-label">ประเภทแบบฟอร์ม</label>
+          <label class="input-label">ประเภทแบบประเมิน <span class="required-star">*</span></label>
 
-          <div style="display: flex; gap: 8px;">
-            <select class="custom-input" [(ngModel)]="formData.formType" (change)="onTypeChange()" style="flex: 1;" [disabled]="!formData.targetGroup">
+          <div class="type-select-row">
+            <select
+              class="custom-input"
+              [class.is-invalid]="hasSubmitted && !formData.formType"
+              [(ngModel)]="formData.formType"
+              (change)="onTypeChange()"
+              style="flex: 1"
+              [disabled]="!formData.targetGroup"
+            >
               <option value="" disabled selected>เลือกประเภท</option>
               <option *ngFor="let type of availableFormTypes" [value]="type.value">
                 {{ type.label }}
               </option>
             </select>
-            <button type="button" class="btn-icon"
-              style="background: #f3e8ff; color: #673ab7; border-radius: 6px; padding: 0 12px; border: 1px dashed #673ab7;"
-              (click)="addNewFormType()" title="เพิ่มประเภทแบบประเมินใหม่">
-              <mat-icon style="font-size: 20px; width: 20px; height: 20px;">add</mat-icon>
+            <button
+              type="button"
+              class="btn-type-action add"
+              (click)="addNewFormType()"
+              title="เพิ่มประเภทแบบประเมินใหม่"
+            >
+              <mat-icon>add</mat-icon>
             </button>
-            <button *ngIf="isCustomFormType(formData.formType)" type="button" class="btn-icon"
-              style="background: #ffebee; color: #f44336; border-radius: 6px; padding: 0 12px; border: 1px dashed #f44336;"
-              (click)="removeCustomFormType()" title="ลบประเภทนี้ออก">
-              <mat-icon style="font-size: 20px; width: 20px; height: 20px;">delete</mat-icon>
+            <button
+              *ngIf="isCustomFormType(formData.formType)"
+              type="button"
+              class="btn-type-action remove"
+              (click)="removeCustomFormType()"
+              title="ลบประเภทนี้ออก"
+            >
+              <mat-icon>delete_outline</mat-icon>
             </button>
           </div>
-          <div *ngIf="isDuplicateForm()" style="color: #ef4444; font-size: 13px; margin-top: 6px; display: flex; align-items: center; gap: 4px;">
-            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">error_outline</mat-icon>
-            รุ่นนี้มีการสร้างแบบฟอร์มประเภทนี้ไปแล้ว ไม่สามารถสร้างซ้ำได้
+          <div *ngIf="hasSubmitted && !formData.formType" class="field-error-text">
+            <mat-icon>error_outline</mat-icon> กรุณาเลือกประเภทแบบประเมิน
+          </div>
+          <div
+            *ngIf="isDuplicateForm()"
+            style="
+              color: #ef4444;
+              font-size: 13px;
+              margin-top: 6px;
+              display: flex;
+              align-items: center;
+              gap: 4px;
+            "
+          >
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px">error_outline</mat-icon>
+            รุ่นนี้มีการสร้างแบบประเมินประเภทนี้ไปแล้ว ไม่สามารถสร้างซ้ำได้
           </div>
         </div>
-
       </div>
+        </div>
+      </section>
 
+      <!-- STEP 2: รายละเอียดแบบประเมิน -->
+      <section class="form-step">
+        <div class="step-header">
+          <span class="step-number">2</span>
+          <div class="step-heading">
+            <h4 class="step-title">รายละเอียดแบบประเมิน</h4>
+            <p class="step-desc">ตั้งชื่อและเขียนคำชี้แจงที่ผู้ตอบจะเห็นก่อนเริ่มทำแบบประเมิน</p>
+          </div>
+        </div>
+        <div class="step-body">
       <div class="form-group">
-        <label class="input-label">ชื่อแบบประเมิน</label>
-        <input type="text" class="custom-input" placeholder="เช่น แบบประเมินอาจารย์ผู้สอน ประจำภาคเรียน..."
-          [(ngModel)]="formData.formName" />
+        <label class="input-label">ชื่อแบบประเมิน <span class="required-star">*</span></label>
+        <input
+          type="text"
+          class="custom-input"
+          [class.is-invalid]="hasSubmitted && (!formData.formName || !formData.formName.trim())"
+          placeholder="เช่น แบบประเมินอาจารย์ผู้สอน ประจำภาคเรียน..."
+          [(ngModel)]="formData.formName"
+        />
+        <div *ngIf="hasSubmitted && (!formData.formName || !formData.formName.trim())" class="field-error-text">
+          <mat-icon>error_outline</mat-icon> กรุณาระบุชื่อแบบประเมิน
+        </div>
       </div>
 
-      <!-- ✅ ใหม่: คำชี้แจง/วัตถุประสงค์ -->
+      <!-- ส่วนระบุคำชี้แจงและวัตถุประสงค์ -->
       <div class="form-group">
         <label class="input-label">
-          <mat-icon style="vertical-align: middle; font-size: 18px; margin-right: 4px;">info_outline</mat-icon>
-          คำชี้แจง / วัตถุประสงค์ (แสดงให้ผู้กรอกเห็น)
+          คำชี้แจง / วัตถุประสงค์ <span class="label-hint">(แสดงให้ผู้กรอกเห็น)</span>
+          <span class="required-star">*</span>
         </label>
-        <textarea class="custom-input" rows="4"
+        <textarea
+          class="custom-input"
+          [class.is-invalid]="hasSubmitted && (!formData.formDescription || !formData.formDescription.trim())"
+          rows="4"
           placeholder="เช่น วัตถุประสงค์: เพื่อนำผลการประเมินไปใช้ในการปรับปรุง แก้ไข และพัฒนาด้านการจัดหลักสูตร..."
           [(ngModel)]="formData.formDescription"
-          style="resize: vertical; font-family: inherit; line-height: 1.6;"></textarea>
+          style="resize: vertical; font-family: inherit; line-height: 1.6"
+        ></textarea>
+        <div *ngIf="hasSubmitted && (!formData.formDescription || !formData.formDescription.trim())" class="field-error-text">
+          <mat-icon>error_outline</mat-icon> กรุณาระบุคำชี้แจง / วัตถุประสงค์
+        </div>
       </div>
 
-      <hr style="margin: 24px 0; border: 0; border-top: 1px solid #ddd;" />
-      <h3 style="color: #6a1b9a; font-weight: 500; margin-bottom: 16px;">
-        <mat-icon style="vertical-align: middle; margin-right: 8px;">list_alt</mat-icon> ชุดคำถาม
-      </h3>
+        </div>
+      </section>
+
+      <!-- STEP 3: ชุดคำถาม -->
+      <section class="form-step">
+        <div class="step-header">
+          <span class="step-number">3</span>
+          <div class="step-heading">
+            <h4 class="step-title">ชุดคำถาม</h4>
+            <p class="step-desc">เพิ่มคำถามและกำหนดรูปแบบคำตอบที่ต้องการ</p>
+          </div>
+          <span class="step-counter">
+            <mat-icon>quiz</mat-icon>
+            {{ formData.questions.length }} ข้อ
+          </span>
+        </div>
+        <div class="step-body">
+
+      <div *ngIf="hasSubmitted && (!formData.questions || formData.questions.length === 0)" class="field-error-text" style="margin-bottom: 16px">
+        <mat-icon>error_outline</mat-icon> กรุณาสร้างคำถามอย่างน้อย 1 ข้อ
+      </div>
 
       <!-- วนลูปแสดงกล่องคำถาม (Dynamic Questions) -->
-      <div *ngFor="let q of formData.questions; let qIndex = index" class="question-card"
-        style="background: #f9f9f9; padding: 16px; border-radius: 8px; border: 1px solid #e0e0e0; margin-bottom: 16px; position: relative;">
-        <button mat-icon-button color="warn" (click)="removeQuestion(qIndex)"
-          style="position: absolute; top: 8px; right: 8px;" title="ลบคำถามข้อนี้">
-          <mat-icon>close</mat-icon>
-        </button>
-
-        <div style="font-weight: bold; margin-bottom: 12px; color: #555;">คำถามข้อที่ {{ qIndex + 1 }}</div>
+      <div
+        *ngFor="let q of formData.questions; let qIndex = index"
+        class="question-card"
+        [attr.data-type]="q.question_type"
+      >
+        <div class="question-card-header">
+          <div class="q-badge">
+            <span class="q-number">{{ qIndex + 1 }}</span>
+            <span class="q-label">คำถามข้อที่ {{ qIndex + 1 }}</span>
+          </div>
+          <span class="q-type-chip">
+            <mat-icon>{{
+              q.question_type === 'choice'
+                ? 'radio_button_checked'
+                : q.question_type === 'dropdown'
+                  ? 'arrow_drop_down_circle'
+                  : q.question_type === 'dropdown_subject'
+                    ? 'menu_book'
+                    : 'short_text'
+            }}</mat-icon>
+            {{
+              q.question_type === 'choice'
+                ? 'เลือกตอบ'
+                : q.question_type === 'dropdown'
+                  ? 'รายการเลือก'
+                  : q.question_type === 'dropdown_subject'
+                    ? 'รายวิชา'
+                    : 'เขียนตอบ'
+            }}
+          </span>
+          <button
+            type="button"
+            mat-icon-button
+            class="btn-remove-question"
+            (click)="removeQuestion(qIndex)"
+            title="ลบคำถามข้อนี้"
+          >
+            <mat-icon>delete_outline</mat-icon>
+          </button>
+        </div>
 
         <div class="form-row">
-          <div class="form-group" style="flex: 3;">
-            <label class="input-label">ข้อความคำถาม</label>
-            <input type="text" class="custom-input" placeholder="พิมพ์คำถามของคุณ..." [(ngModel)]="q.question_text" />
+          <div class="form-group" style="flex: 3">
+            <label class="input-label">ข้อความคำถาม <span class="required-star">*</span></label>
+            <input
+              type="text"
+              class="custom-input"
+              [class.is-invalid]="hasSubmitted && (!q.question_text || !q.question_text.trim())"
+              placeholder="พิมพ์คำถามของคุณ..."
+              [(ngModel)]="q.question_text"
+            />
+            <div *ngIf="hasSubmitted && (!q.question_text || !q.question_text.trim())" class="field-error-text">
+              <mat-icon>error_outline</mat-icon> กรุณาระบุข้อความคำถาม
+            </div>
           </div>
-          <div class="form-group" style="flex: 1.3;">
+          <div class="form-group" style="flex: 1.3">
             <label class="input-label">ประเภทคำตอบ</label>
-            <select class="custom-input" [(ngModel)]="q.question_type" (change)="onQuestionTypeChange(qIndex)">
+            <select
+              class="custom-input"
+              [(ngModel)]="q.question_type"
+              (change)="onQuestionTypeChange(qIndex)"
+            >
               <option value="choice">แบบเลือกตอบ (Multiple Choice)</option>
               <option value="dropdown">แบบรายการเลือก (Dropdown)</option>
               <option value="dropdown_subject">แบบรายการเลือกรายวิชา (Subject Dropdown)</option>
@@ -132,77 +297,195 @@
           </div>
         </div>
 
-        <!-- ✅ กำหนดคำถามเฉพาะวิชา -->
-        <div *ngIf="availableSubjects.length > 0" style="margin-bottom: 14px; background: #fff8f1; padding: 10px 14px; border-radius: 8px; border: 1px solid #fed7aa; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <label class="input-label" style="font-size: 13px; color: #c2410c; margin: 0; font-weight: 600;">
+        <!-- ส่วนกำหนดคำถามเฉพาะรายวิชา -->
+        <div
+          *ngIf="availableSubjects.length > 0"
+          style="
+            margin-bottom: 14px;
+            background: #fff8f1;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #fed7aa;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+          "
+        >
+          <label
+            class="input-label"
+            style="font-size: 13px; color: #c2410c; margin: 0; font-weight: 600"
+          >
             ถามเฉพาะรายวิชา:
           </label>
-          <select class="custom-input" [(ngModel)]="q.subject_for" style="max-width: 300px; font-size: 13px; padding: 6px 10px; background: #fff;">
+          <select
+            class="custom-input"
+            [(ngModel)]="q.subject_for"
+            style="max-width: 300px; font-size: 13px; padding: 6px 10px; background: #fff"
+          >
             <option [ngValue]="undefined">— แสดงกับทุกรายวิชา (ทั่วไป) —</option>
             <option *ngFor="let sub of availableSubjects" [value]="sub.id">{{ sub.name }}</option>
           </select>
-          <span style="font-size: 12px; color: #ea580c;">
+          <span style="font-size: 12px; color: #ea580c">
             *ถ้าเลือกวิชา คำถามข้อนี้จะแสดงเฉพาะเมื่อผู้เรียนเลือกประเมินวิชานี้
           </span>
         </div>
 
         <!-- ถ้าเป็นแบบ Radio (choice) -->
-        <div *ngIf="q.question_type === 'choice'" class="choices-container"
-          style="margin-top: 12px; padding-left: 16px; border-left: 3px solid #6a1b9a;">
-          <label class="input-label" style="display: block; font-size: 13px; color: #555; font-weight: 600; margin-bottom: 8px;">รายการตัวเลือก (Choices)</label>
+        <div
+          *ngIf="q.question_type === 'choice'"
+          class="choices-container"
+          style="margin-top: 12px; padding-left: 16px; border-left: 3px solid #6a1b9a"
+        >
+          <label
+            class="input-label"
+            style="
+              display: block;
+              font-size: 13px;
+              color: #555;
+              font-weight: 600;
+              margin-bottom: 8px;
+            "
+            >รายการตัวเลือก (Choices)</label
+          >
 
-          <div *ngFor="let c of q.choices; let cIndex = index"
-            style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
-            <span style="color: #999; font-size: 13px; min-width: 18px;">{{ cIndex + 1 }}.</span>
-            <input type="text" class="custom-input" placeholder="ข้อความตัวเลือก" [(ngModel)]="c.choice_text"
-              style="flex: 3; margin: 0 !important;" />
-            <input type="number" class="custom-input" placeholder="คะแนน" [(ngModel)]="c.score_value"
-              style="flex: 1; background-color: #f5f5f5; color: #888; cursor: not-allowed; margin: 0 !important;" readonly
-              title="คะแนนถูกกำหนดไว้คงที่" />
-            <button type="button" mat-icon-button color="warn" (click)="removeChoice(qIndex, cIndex)" style="flex-shrink: 0;"
-              title="ลบตัวเลือกนี้">
-              <mat-icon style="font-size: 18px;">remove_circle_outline</mat-icon>
+          <div
+            *ngFor="let c of q.choices; let cIndex = index"
+            style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center"
+          >
+            <span style="color: #999; font-size: 13px; min-width: 18px">{{ cIndex + 1 }}.</span>
+            <input
+              type="text"
+              class="custom-input"
+              [class.is-invalid]="hasSubmitted && (!c.choice_text || !c.choice_text.trim())"
+              placeholder="ข้อความตัวเลือก"
+              [(ngModel)]="c.choice_text"
+              style="flex: 3; margin: 0 !important"
+            />
+            <input
+              type="number"
+              class="custom-input"
+              placeholder="คะแนน"
+              [(ngModel)]="c.score_value"
+              style="
+                flex: 1;
+                background-color: #f5f5f5;
+                color: #888;
+                cursor: not-allowed;
+                margin: 0 !important;
+              "
+              readonly
+              title="คะแนนถูกกำหนดไว้คงที่"
+            />
+            <button
+              type="button"
+              mat-icon-button
+              color="warn"
+              (click)="removeChoice(qIndex, cIndex)"
+              style="flex-shrink: 0"
+              title="ลบตัวเลือกนี้"
+            >
+              <mat-icon style="font-size: 18px">remove_circle_outline</mat-icon>
             </button>
           </div>
 
-          <button type="button" mat-button color="primary" (click)="addChoice(qIndex)" style="margin-top: 8px; padding: 0 8px;">
-            <mat-icon style="font-size: 18px; margin-right: 4px;">add</mat-icon> เพิ่มตัวเลือก
+          <button
+            type="button"
+            mat-button
+            color="primary"
+            (click)="addChoice(qIndex)"
+            style="margin-top: 8px; padding: 0 8px"
+          >
+            <mat-icon style="font-size: 18px; margin-right: 4px">add</mat-icon> เพิ่มตัวเลือก
           </button>
         </div>
 
-        <!-- ✅ ถ้าเป็นแบบ Dropdown พิมพ์ตัวเลือกเอง -->
-        <div *ngIf="q.question_type === 'dropdown'" class="choices-container"
-          style="margin-top: 12px; padding-left: 16px; border-left: 3px solid #0284c7;">
-          <label class="input-label" style="display: block; font-size: 13px; color: #0284c7; font-weight: 600; margin-bottom: 8px;">รายการตัวเลือก (Dropdown Options)</label>
+        <!-- รูปแบบตัวเลือกลงรายการแบบกำหนดเอง (Dropdown Custom) -->
+        <div
+          *ngIf="q.question_type === 'dropdown'"
+          class="choices-container"
+          style="margin-top: 12px; padding-left: 16px; border-left: 3px solid #0284c7"
+        >
+          <label
+            class="input-label"
+            style="
+              display: block;
+              font-size: 13px;
+              color: #0284c7;
+              font-weight: 600;
+              margin-bottom: 8px;
+            "
+            >รายการตัวเลือก (Dropdown Options)</label
+          >
 
-          <div *ngFor="let c of q.choices; let cIndex = index"
-            style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
-            <span style="color: #999; font-size: 13px; min-width: 18px;">{{ cIndex + 1 }}.</span>
-            <input type="text" class="custom-input" placeholder="พิมพ์ข้อความตัวเลือก เช่น ตัวเลือกที่ {{ cIndex + 1 }}" [(ngModel)]="c.choice_text"
-              style="flex: 1; margin: 0 !important;" />
-            <button type="button" mat-icon-button color="warn" (click)="removeChoice(qIndex, cIndex)" style="flex-shrink: 0;"
-              title="ลบตัวเลือกนี้">
-              <mat-icon style="font-size: 18px;">remove_circle_outline</mat-icon>
+          <div
+            *ngFor="let c of q.choices; let cIndex = index"
+            style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center"
+          >
+            <span style="color: #999; font-size: 13px; min-width: 18px">{{ cIndex + 1 }}.</span>
+            <input
+              type="text"
+              class="custom-input"
+              [class.is-invalid]="hasSubmitted && (!c.choice_text || !c.choice_text.trim())"
+              placeholder="พิมพ์ข้อความตัวเลือก เช่น ตัวเลือกที่ {{ cIndex + 1 }}"
+              [(ngModel)]="c.choice_text"
+              style="flex: 1; margin: 0 !important"
+            />
+            <button
+              type="button"
+              mat-icon-button
+              color="warn"
+              (click)="removeChoice(qIndex, cIndex)"
+              style="flex-shrink: 0"
+              title="ลบตัวเลือกนี้"
+            >
+              <mat-icon style="font-size: 18px">remove_circle_outline</mat-icon>
             </button>
           </div>
 
-          <button type="button" mat-button color="primary" (click)="addChoice(qIndex)" style="margin-top: 8px; padding: 0 8px; color: #0284c7;">
-            <mat-icon style="font-size: 18px; margin-right: 4px;">add</mat-icon> เพิ่มตัวเลือก
+          <button
+            type="button"
+            mat-button
+            color="primary"
+            (click)="addChoice(qIndex)"
+            style="margin-top: 8px; padding: 0 8px; color: #0284c7"
+          >
+            <mat-icon style="font-size: 18px; margin-right: 4px">add</mat-icon> เพิ่มตัวเลือก
           </button>
         </div>
 
-        <!-- ✅ ถ้าเป็นแบบ Dropdown รายวิชาอัตโนมัติ -->
-        <div *ngIf="q.question_type === 'dropdown_subject'" class="choices-container"
-          style="margin-top: 12px; padding: 14px 16px; border-left: 4px solid #2563eb; background: #eff6ff; border-radius: 0 8px 8px 0;">
-          <div style="font-weight: 600; color: #1e40af; font-size: 14px; margin-bottom: 6px;">
+        <!-- รูปแบบตัวเลือกลงรายการแบบดึงรายวิชาอัตโนมัติ (Dropdown Subject) -->
+        <div
+          *ngIf="q.question_type === 'dropdown_subject'"
+          class="choices-container"
+          style="
+            margin-top: 12px;
+            padding: 14px 16px;
+            border-left: 4px solid #2563eb;
+            background: #eff6ff;
+            border-radius: 0 8px 8px 0;
+          "
+        >
+          <div style="font-weight: 600; color: #1e40af; font-size: 14px; margin-bottom: 6px">
             ดรอปดาวน์รายวิชาอัตโนมัติ
           </div>
-          <p style="font-size: 13px; color: #3b82f6; margin: 0 0 10px 0; line-height: 1.5;">
+          <p style="font-size: 13px; color: #3b82f6; margin: 0 0 10px 0; line-height: 1.5">
             ระบบจะดึงรายชื่อวิชาทั้งหมดของรุ่นนี้มาแสดงเป็นตัวเลือกดรอปดาวน์ให้ผู้ประเมินเลือกตอบโดยอัตโนมัติ
           </p>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 13px; color: #475569;">ตัวอย่างการแสดงผล:</span>
-            <select disabled style="padding: 6px 12px; border-radius: 6px; border: 1.5px solid #93c5fd; background: #ffffff; color: #1e40af; font-size: 13px; min-width: 220px;">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span style="font-size: 13px; color: #475569">ตัวอย่างการแสดงผล:</span>
+            <select
+              disabled
+              style="
+                padding: 6px 12px;
+                border-radius: 6px;
+                border: 1.5px solid #93c5fd;
+                background: #ffffff;
+                color: #1e40af;
+                font-size: 13px;
+                min-width: 220px;
+              "
+            >
               <option>— เลือกรายวิชา (ตัวอย่าง) —</option>
               <option *ngFor="let s of availableSubjects">{{ s.name }}</option>
               <option *ngIf="availableSubjects.length === 0">วิชาที่ 1, วิชาที่ 2, ...</option>
@@ -211,57 +494,99 @@
         </div>
 
         <!-- ถ้าเป็นแบบข้อความ ไม่ต้องแสดงอะไรเพิ่ม -->
-        <div *ngIf="q.question_type === 'text'"
-          style="margin-top: 12px; font-style: italic; color: #888; font-size: 14px;">
-          * ผู้ใช้จะสามารถพิมพ์ข้อความตอบได้อย่างอิสระ
+        <div *ngIf="q.question_type === 'text'" class="text-answer-hint">
+          <mat-icon>edit_note</mat-icon>
+          ผู้ตอบจะสามารถพิมพ์ข้อความตอบได้อย่างอิสระ
         </div>
       </div>
 
       <!-- ปุ่มเพิ่มคำถามใหม่ -->
-      <button mat-stroked-button color="primary" (click)="addQuestion()"
-        style="border-radius: 20px; border-style: dashed; width: 100%; padding: 8px;">
-        <mat-icon>add</mat-icon> เพิ่มคำถามใหม่
+      <button type="button" class="btn-add-question" (click)="addQuestion()">
+        <span class="add-icon"><mat-icon>add</mat-icon></span>
+        เพิ่มคำถามใหม่
       </button>
+        </div>
+      </section>
 
-      <!-- ส่วนปุ่มกึ่งกลางหน้าจอ -->
-      <div class="final-action" style="margin-top: 32px; border-top: 1px solid #ddd; padding-top: 24px;">
-        <div *ngIf="!isEditMode" class="action-buttons-group" style="display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap;">
-          <button type="button" mat-stroked-button class="btn-preview" (click)="openCurrentPreview()"
-            style="border-radius: 8px; border: 1.5px solid #7c3aed; color: #7c3aed; font-weight: 600; padding: 0 18px; height: 42px; display: inline-flex; align-items: center; gap: 6px; background: #faf5ff;">
-            <mat-icon style="font-size: 20px; width: 20px; height: 20px;">visibility</mat-icon> ดูตัวอย่างแบบประเมิน (Preview)
+      <!-- แถบปุ่มดำเนินการ (ติดด้านล่างจอ) -->
+      <div class="final-action" [class.edit-mode]="isEditMode">
+        <div class="final-action-info">
+          <mat-icon>{{ isEditMode ? 'edit_note' : 'task_alt' }}</mat-icon>
+          <div>
+            <strong>{{ isEditMode ? 'กำลังแก้ไขแบบประเมิน' : 'พร้อมบันทึกแล้วหรือยัง?' }}</strong>
+            <span>{{ formData.questions.length }} คำถาม · ตรวจสอบตัวอย่างก่อนบันทึก</span>
+          </div>
+        </div>
+
+        <div *ngIf="!isEditMode" class="action-buttons-group">
+          <button
+            type="button"
+            mat-stroked-button
+            class="btn-preview"
+            (click)="openCurrentPreview()"
+          >
+            <mat-icon>visibility</mat-icon>
+            ดูตัวอย่างแบบประเมิน (Preview)
           </button>
-          <button mat-raised-button class="btn-submit-form" (click)="onCreateForm()" [disabled]="isDuplicateForm()" [style.opacity]="isDuplicateForm() ? 0.5 : 1" [style.cursor]="isDuplicateForm() ? 'not-allowed' : 'pointer'">
-            สร้างแบบประเมิน
+          <button
+            type="button"
+            mat-raised-button
+            class="btn-submit-form"
+            (click)="onCreateForm()"
+            [disabled]="isDuplicateForm()"
+          >
+            <mat-icon>save</mat-icon>
+            บันทึกแบบฟอร์ม
           </button>
         </div>
 
-        <div *ngIf="isEditMode" class="edit-buttons-group" style="display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap;">
-          <button type="button" mat-stroked-button class="btn-preview" (click)="openCurrentPreview()"
-            style="border-radius: 8px; border: 1.5px solid #7c3aed; color: #7c3aed; font-weight: 600; padding: 0 18px; height: 42px; display: inline-flex; align-items: center; gap: 6px; background: #faf5ff;">
-            <mat-icon style="font-size: 20px; width: 20px; height: 20px;">visibility</mat-icon> ดูตัวอย่างแบบประเมิน (Preview)
-          </button>
-          <button type="button" mat-raised-button class="btn-submit-form btn-update" (click)="onUpdateForm()">
-            บันทึกการแก้ไขแบบประเมิน
-          </button>
-          <button mat-stroked-button class="btn-cancel" (click)="resetForm()">
+        <div *ngIf="isEditMode" class="edit-buttons-group">
+          <button type="button" mat-stroked-button class="btn-cancel" (click)="resetForm()">
             ยกเลิก
+          </button>
+          <button
+            type="button"
+            mat-stroked-button
+            class="btn-preview"
+            (click)="openCurrentPreview()"
+          >
+            <mat-icon>visibility</mat-icon>
+            ดูตัวอย่างแบบประเมิน (Preview)
+          </button>
+          <button
+            type="button"
+            mat-raised-button
+            class="btn-submit-form btn-update"
+            (click)="onUpdateForm()"
+          >
+            <mat-icon>save_as</mat-icon>
+            บันทึกการแก้ไขแบบประเมิน
           </button>
         </div>
       </div>
     </div>
 
-    <!-- ส่วนที่ 2: รายการแบบฟอร์มที่มีในระบบ -->
-    <div class="form-list-section mt-5">
-      <div class="list-header flex items-center mb-4">
-        <div class="vertical-line"></div>
-        <h2 class="section-title">ดูและจัดการแบบประเมิน</h2>
+    <!-- ส่วนที่ 2: รายการแบบประเมินที่มีในระบบ -->
+    <div class="form-list-section">
+      <div class="list-header">
+        <div class="list-header-icon"><mat-icon>folder_open</mat-icon></div>
+        <div>
+          <h2 class="section-title">ดูและจัดการแบบประเมิน</h2>
+          <p class="section-subtitle">
+            เลือกหลักสูตรและรุ่นเพื่อดู แก้ไข หรือสร้างแบบประเมินแต่ละประเภท
+          </p>
+        </div>
       </div>
 
-      <div class="filter-box" style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
-        <div class="form-row" style="margin-bottom: 0;">
+      <div class="filter-box">
+        <div class="form-row" style="margin-bottom: 0">
           <div class="form-group flex-1">
             <label class="input-label">หลักสูตร</label>
-            <select class="custom-input" [(ngModel)]="filterCourse" (change)="onFilterCourseChange()">
+            <select
+              class="custom-input"
+              [(ngModel)]="filterCourse"
+              (change)="onFilterCourseChange()"
+            >
               <option value="" disabled selected>เลือกหลักสูตร</option>
               <option *ngFor="let group of courseGroups" [value]="group.course_name">
                 {{ group.course_name }}
@@ -271,8 +596,12 @@
 
           <div class="form-group flex-1">
             <label class="input-label">รุ่น</label>
-            <select class="custom-input" [(ngModel)]="filterGeneration" [disabled]="!filterCourse"
-              (change)="onFilterGenerationChange()">
+            <select
+              class="custom-input"
+              [(ngModel)]="filterGeneration"
+              [disabled]="!filterCourse"
+              (change)="onFilterGenerationChange()"
+            >
               <option value="" disabled selected>เลือกรุ่น</option>
               <option *ngFor="let batch of filterBatches" [value]="batch.batch_id">
                 {{ batch.batch_name }}
@@ -283,218 +612,474 @@
           <div class="form-group flex-1">
             <label class="input-label">ประเภทแบบประเมิน</label>
             <select class="custom-input" [(ngModel)]="filterType" (change)="onFilterTypeChange()">
-              <option value="">ทั้งหมด</option>
-              <option *ngFor="let type of allFormTypesFlat" [value]="type.value">
-                {{ type.label }}
-              </option>
+              <option value="">ทั้งหมด (ทุกกลุ่ม)</option>
+              <optgroup *ngFor="let group of formGroupsForFilter" [label]="group.label">
+                <option *ngFor="let type of group.types" [value]="type.value">
+                  {{ type.label }}
+                </option>
+              </optgroup>
             </select>
           </div>
         </div>
       </div>
 
       <div class="table-container">
-
-        <div class="table-header" style="display: flex; padding: 12px; background: #e0e0e0; font-weight: bold; color: #555;">
-          <div class="col-course" style="flex: 2;">ประเภทการประเมิน</div>
-
-          <div class="col-link" style="flex: 2;">แบบประเมินในระบบ</div>
-          <div class="col-actions" style="flex: 1.2; text-align: center;">การจัดการ</div>
+        <div class="table-header">
+          <div class="col-course" style="flex: 2">ประเภทการประเมิน</div>
+          <div class="col-link" style="flex: 2">แบบประเมินในระบบ</div>
+          <div class="col-actions" style="flex: 1.2; text-align: center">การจัดการ</div>
         </div>
 
-        <div *ngIf="!filterCourse || !filterGeneration"
-          style="text-align: center; padding: 20px; color: #666; background: #fff;">
-          กรุณาเลือกหลักสูตรและรุ่นด้านบน เพื่อดูรายการแบบประเมิน
+        <div *ngIf="!filterCourse || !filterGeneration" class="table-empty">
+          <mat-icon>filter_alt</mat-icon>
+          <span>กรุณาเลือกหลักสูตรและรุ่นด้านบน เพื่อดูรายการแบบประเมิน</span>
         </div>
 
-        <div class="table-row" *ngFor="let row of displayTableData"
-          style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; background: #fff;">
-
-          <div class="col-course" style="flex: 2; font-weight: 500;">
+        <div class="table-row" *ngFor="let row of displayTableData">
+          <div class="col-course" style="flex: 2; font-weight: 500">
             {{ row.subjectName }}
           </div>
 
-          <div class="col-link" style="flex: 2;">
+          <div class="col-link" style="flex: 2">
             <ng-container *ngIf="row.hasForm">
-              <span style="display: flex; align-items: center; gap: 4px; color: #2e7d32; font-weight: 500;">
-                <mat-icon style="font-size: 18px; width: 18px; height: 18px;">check_circle</mat-icon>
-                {{ row.formDetails.formName || 'สร้างแบบฟอร์มเรียบร้อยแล้ว' }}
+              <span
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 4px;
+                  color: #2e7d32;
+                  font-weight: 500;
+                "
+              >
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px">check_circle</mat-icon>
+                {{ row.formDetails.formName || 'สร้างแบบประเมินเรียบร้อยแล้ว' }}
               </span>
             </ng-container>
             <ng-container *ngIf="!row.hasForm">
-              <span style="color: #999; font-style: italic;">ยังไม่ได้สร้างแบบประเมิน</span>
+              <span style="color: #999; font-style: italic">ยังไม่ได้สร้างแบบประเมิน</span>
             </ng-container>
           </div>
 
-          <div class="col-actions" style="flex: 1.2; display: flex; justify-content: center; align-items: center; gap: 6px;">
+          <div
+            class="col-actions"
+            style="flex: 1.2; display: flex; justify-content: center; align-items: center; gap: 6px"
+          >
             <ng-container *ngIf="row.hasForm">
-              <button mat-icon-button style="color: #7c3aed;" (click)="onPreviewFormAction(row.formDetails)" title="ดูตัวอย่างแบบฟอร์ม (Preview)">
+              <button
+                mat-icon-button
+                style="color: #7c3aed"
+                (click)="onPreviewFormAction(row.formDetails)"
+                title="ดูตัวอย่างแบบประเมิน (Preview)"
+              >
                 <mat-icon>visibility</mat-icon>
               </button>
-              <button mat-icon-button color="primary" (click)="onEditAction(row.formDetails)" title="แก้ไขฟอร์ม">
+              <button
+                mat-icon-button
+                color="primary"
+                (click)="onEditAction(row.formDetails)"
+                title="แก้ไขประเมิน"
+              >
                 <mat-icon>edit</mat-icon>
               </button>
-              <button mat-icon-button color="warn" (click)="onDeleteAction(row.formDetails.id)" title="ลบฟอร์ม">
+              <button
+                mat-icon-button
+                color="warn"
+                (click)="onDeleteAction(row.formDetails.id)"
+                title="ลบประเมิน"
+              >
                 <mat-icon>delete</mat-icon>
               </button>
             </ng-container>
 
             <ng-container *ngIf="!row.hasForm">
-              <button mat-stroked-button color="primary" (click)="onAddLinkAction(row)"
-                style="border-color: #8142ff; color: #8142ff; border-radius: 20px;">
-                <mat-icon style="font-size: 18px;">add</mat-icon> สร้างแบบประเมิน
+              <button
+                mat-stroked-button
+                color="primary"
+                (click)="onAddLinkAction(row)"
+                style="border-color: #8142ff; color: #8142ff; border-radius: 20px"
+              >
+                <mat-icon style="font-size: 18px">add</mat-icon> สร้างแบบประเมิน
               </button>
             </ng-container>
           </div>
-
         </div>
 
-        <div *ngIf="filterCourse && filterGeneration && displayTableData.length === 0"
-          style="text-align: center; padding: 2rem; color: #777; background: #fff;">
-          ไม่พบข้อมูลรายวิชาสำหรับรุ่นนี้
+        <div
+          *ngIf="filterCourse && filterGeneration && displayTableData.length === 0"
+          class="table-empty"
+        >
+          <mat-icon>inbox</mat-icon>
+          <span>ไม่พบข้อมูลรายวิชาสำหรับรุ่นนี้</span>
         </div>
       </div>
     </div>
-
   </div>
 
   <!-- ========================================== -->
-  <!-- 👁️ POPUP MODAL: PREVIEW แบบประเมินเสมือนจริง -->
+  <!-- หน้าต่างจำลองตัวอย่างแบบประเมินจริง (Preview Modal) -->
   <!-- ========================================== -->
-  <div *ngIf="showPreviewModal" class="preview-modal-backdrop" 
-    style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); z-index: 99999; display: flex; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;"
-    (click)="closePreviewModal()">
-    
-    <div class="preview-modal-container" 
-      style="background: #f8fafc; border-radius: 16px; width: 100%; max-width: 820px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); animation: modalPop 0.2s ease-out;"
-      (click)="$event.stopPropagation()">
-      
+  <div
+    *ngIf="showPreviewModal"
+    class="preview-modal-backdrop"
+    style="
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 99999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+    "
+    (click)="closePreviewModal()"
+  >
+    <div
+      class="preview-modal-container"
+      style="
+        background: #f8fafc;
+        border-radius: 16px;
+        width: 100%;
+        max-width: 820px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        animation: modalPop 0.2s ease-out;
+      "
+      (click)="$event.stopPropagation()"
+    >
       <!-- Header ของ Preview -->
-      <div style="background: linear-gradient(135deg, #673ab7, #9333ea); color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="background: rgba(255, 255, 255, 0.2); padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">
+      <div
+        style="
+          background: linear-gradient(135deg, #673ab7, #9333ea);
+          color: #fff;
+          padding: 16px 24px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        "
+      >
+        <div style="display: flex; align-items: center; gap: 10px">
+          <span
+            style="
+              background: rgba(255, 255, 255, 0.2);
+              padding: 4px 10px;
+              border-radius: 20px;
+              font-size: 12px;
+              font-weight: 600;
+              letter-spacing: 0.5px;
+            "
+          >
             👁️ โหมดดูตัวอย่าง (PREVIEW MODE)
           </span>
-          <span style="font-size: 14px; opacity: 0.9;">มุมมองที่ผู้ประเมินจะเห็น</span>
+          <span style="font-size: 14px; opacity: 0.9">มุมมองที่ผู้ประเมินจะเห็น</span>
         </div>
-        <button mat-icon-button (click)="closePreviewModal()" style="color: #fff;" title="ปิดหน้าต่าง">
+        <button
+          mat-icon-button
+          (click)="closePreviewModal()"
+          style="color: #fff"
+          title="ปิดหน้าต่าง"
+        >
           <mat-icon>close</mat-icon>
         </button>
       </div>
 
       <!-- Body ของ Preview -->
-      <div style="padding: 24px; overflow-y: auto; flex: 1;">
-        
-        <!-- กล่องหัวฟอร์มแบบประเมิน -->
-        <div style="background: #ffffff; border-radius: 12px; padding: 24px; border: 1px solid #e2e8f0; border-top: 6px solid #7c3aed; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-          <h2 style="font-size: 20px; font-weight: 700; color: #1e1b4b; margin: 0 0 8px 0;">
+      <div style="padding: 24px; overflow-y: auto; flex: 1">
+        <!-- กล่องหัวประเมินแบบประเมิน -->
+        <div
+          style="
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #e2e8f0;
+            border-top: 6px solid #7c3aed;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+          "
+        >
+          <h2 style="font-size: 20px; font-weight: 700; color: #1e1b4b; margin: 0 0 8px 0">
             {{ previewData.formName }} {{ previewData.generationName }}
           </h2>
-          <p style="color: #64748b; font-size: 14px; margin: 0 0 16px 0;">
+          <p style="color: #64748b; font-size: 14px; margin: 0 0 16px 0">
             คำอธิบาย : แบบประเมินชุดนี้สำหรับผู้เรียน / ผู้ประเมิน
           </p>
 
-          <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 16px 0;" />
+          <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 16px 0" />
 
           <!-- คำชี้แจง / วัตถุประสงค์ -->
-          <div *ngIf="previewData.formDescription" style="white-space: pre-line; line-height: 1.6; color: #334155; font-size: 14px; background: #faf5ff; padding: 14px; border-radius: 8px; border-left: 4px solid #9333ea; margin-bottom: 16px;">
+          <div
+            *ngIf="previewData.formDescription"
+            style="
+              white-space: pre-line;
+              line-height: 1.6;
+              color: #334155;
+              font-size: 14px;
+              background: #faf5ff;
+              padding: 14px;
+              border-radius: 8px;
+              border-left: 4px solid #9333ea;
+              margin-bottom: 16px;
+            "
+          >
             {{ previewData.formDescription }}
           </div>
-          <div *ngIf="!previewData.formDescription" style="line-height: 1.6; color: #475569; font-size: 14px; margin-bottom: 16px;">
-            <strong>วัตถุประสงค์ :</strong> เพื่อนำผลการประเมินไปใช้ในการปรับปรุง แก้ไข และพัฒนาด้านการจัดหลักสูตรและการจัดการเรียนการสอนให้ดียิ่งขึ้นในครั้งต่อไป<br>
-            <strong>คำชี้แจง :</strong> กรุณาทำเครื่องหมาย (/) ลงในช่องว่างที่ตรงตามความคิดเห็นของท่านมากที่สุด ดังนี้.-
+          <div
+            *ngIf="!previewData.formDescription"
+            style="line-height: 1.6; color: #475569; font-size: 14px; margin-bottom: 16px"
+          >
+            <strong>วัตถุประสงค์ :</strong> เพื่อนำผลการประเมินไปใช้ในการปรับปรุง แก้ไข
+            และพัฒนาด้านการจัดหลักสูตรและการจัดการเรียนการสอนให้ดียิ่งขึ้นในครั้งต่อไป<br />
+            <strong>คำชี้แจง :</strong> กรุณาทำเครื่องหมาย (/)
+            ลงในช่องว่างที่ตรงตามความคิดเห็นของท่านมากที่สุด ดังนี้.-
           </div>
 
           <!-- ถ้าเป็นแบบประเมินอาจารย์ผู้สอน -->
           <div *ngIf="previewData.formType === 'instructor'">
-            <div style="margin-bottom: 16px;" *ngIf="previewData.subjects && previewData.subjects.length > 0">
-              <label style="display: block; font-weight: 600; font-size: 14px; color: #1e293b; margin-bottom: 6px;">
-                วิชาที่สอน <span style="color: #ef4444;">*</span>
+            <div
+              style="margin-bottom: 16px"
+              *ngIf="previewData.subjects && previewData.subjects.length > 0"
+            >
+              <label
+                style="
+                  display: block;
+                  font-weight: 600;
+                  font-size: 14px;
+                  color: #1e293b;
+                  margin-bottom: 6px;
+                "
+              >
+                วิชาที่สอน <span style="color: #ef4444">*</span>
               </label>
-              <select [(ngModel)]="previewSelectedSubjectId"
-                style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 14px; outline: none; background: #fff;">
+              <select
+                [(ngModel)]="previewSelectedSubjectId"
+                style="
+                  width: 100%;
+                  padding: 10px 14px;
+                  border-radius: 8px;
+                  border: 1.5px solid #cbd5e1;
+                  font-size: 14px;
+                  outline: none;
+                  background: #fff;
+                "
+              >
                 <option value="">— เลือกลองวิชาเพื่อทดสอบตัวกรองคำถาม —</option>
                 <option *ngFor="let s of previewData.subjects" [value]="s.id">{{ s.name }}</option>
               </select>
-              <span style="font-size: 12px; color: #7c3aed; margin-top: 4px; display: block;">
+              <span style="font-size: 12px; color: #7c3aed; margin-top: 4px; display: block">
                 💡 ลองเปลี่ยนวิชาดู ระบบจะกรองและแสดงคำถามเฉพาะวิชานั้นให้เห็นแบบ Real-time ครับ
               </span>
             </div>
 
             <div>
-              <label style="display: block; font-weight: 600; font-size: 14px; color: #1e293b; margin-bottom: 6px;">
-                ยศ.- ชื่อ - สกุล ผู้สอน <span style="color: #ef4444;">*</span>
+              <label
+                style="
+                  display: block;
+                  font-weight: 600;
+                  font-size: 14px;
+                  color: #1e293b;
+                  margin-bottom: 6px;
+                "
+              >
+                ยศ.- ชื่อ - สกุล ผู้สอน <span style="color: #ef4444">*</span>
               </label>
-              <input type="text" [(ngModel)]="previewInstructorName" placeholder="ระบุชื่ออาจารย์ที่ท่านต้องการประเมิน"
-                style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 14px; outline: none;" />
+              <input
+                type="text"
+                [(ngModel)]="previewInstructorName"
+                placeholder="ระบุชื่ออาจารย์ที่ท่านต้องการประเมิน"
+                style="
+                  width: 100%;
+                  padding: 10px 14px;
+                  border-radius: 8px;
+                  border: 1.5px solid #cbd5e1;
+                  font-size: 14px;
+                  outline: none;
+                "
+              />
             </div>
           </div>
         </div>
 
         <!-- รายการคำถามในตัวอย่าง -->
         <div class="preview-questions-list">
-          <div *ngFor="let q of previewDisplayedQuestions; let i = index" 
-            style="background: #ffffff; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
-            
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
-              <div style="font-size: 15px; font-weight: 600; color: #1e293b; line-height: 1.5;">
+          <div
+            *ngFor="let q of previewDisplayedQuestions; let i = index"
+            style="
+              background: #ffffff;
+              border-radius: 12px;
+              padding: 20px;
+              border: 1px solid #e2e8f0;
+              margin-bottom: 16px;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+            "
+          >
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 14px;
+              "
+            >
+              <div style="font-size: 15px; font-weight: 600; color: #1e293b; line-height: 1.5">
                 {{ q.question_text || '(ยังไม่ได้ระบุข้อความคำถาม)' }}
-                <span style="color: #ef4444;" *ngIf="q.question_type === 'choice' || q.question_type === 'dropdown' || q.question_type === 'dropdown_subject'">*</span>
+                <span
+                  style="color: #ef4444"
+                  *ngIf="
+                    q.question_type === 'choice' ||
+                    q.question_type === 'dropdown' ||
+                    q.question_type === 'dropdown_subject'
+                  "
+                  >*</span
+                >
               </div>
-              <span *ngIf="q.subject_for" style="background: #ffedd5; color: #c2410c; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap;">
+              <span
+                *ngIf="q.subject_for"
+                style="
+                  background: #ffedd5;
+                  color: #c2410c;
+                  padding: 2px 8px;
+                  border-radius: 12px;
+                  font-size: 11px;
+                  font-weight: 600;
+                  white-space: nowrap;
+                "
+              >
                 🎯 คำถามเฉพาะวิชา
               </span>
             </div>
 
             <!-- แบบ Choice (Radio) -->
-            <div *ngIf="q.question_type === 'choice'" style="display: flex; flex-direction: column; gap: 10px;">
-              <label *ngFor="let c of q.choices" style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; color: #334155; padding: 6px 10px; border-radius: 6px; background: #f8fafc;">
-                <input type="radio" [name]="'preview_q_' + i" style="accent-color: #7c3aed;" />
+            <div
+              *ngIf="q.question_type === 'choice'"
+              style="display: flex; flex-direction: column; gap: 10px"
+            >
+              <label
+                *ngFor="let c of q.choices"
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 10px;
+                  cursor: pointer;
+                  font-size: 14px;
+                  color: #334155;
+                  padding: 6px 10px;
+                  border-radius: 6px;
+                  background: #f8fafc;
+                "
+              >
+                <input type="radio" [name]="'preview_q_' + i" style="accent-color: #7c3aed" />
                 <span>{{ c.choice_text || '(ยังไม่ได้ระบุข้อความตัวเลือก)' }}</span>
-                <span style="color: #94a3b8; font-size: 12px; margin-left: auto;">({{ c.score_value }} คะแนน)</span>
+                <span style="color: #94a3b8; font-size: 12px; margin-left: auto"
+                  >({{ c.score_value }} คะแนน)</span
+                >
               </label>
             </div>
 
             <!-- แบบ Dropdown ที่กำหนดตัวเลือกเอง -->
-            <div *ngIf="q.question_type === 'dropdown'" style="margin-top: 8px;">
-              <select style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 14px; outline: none; background: #fff;">
+            <div *ngIf="q.question_type === 'dropdown'" style="margin-top: 8px">
+              <select
+                style="
+                  width: 100%;
+                  padding: 10px 14px;
+                  border-radius: 8px;
+                  border: 1.5px solid #cbd5e1;
+                  font-size: 14px;
+                  outline: none;
+                  background: #fff;
+                "
+              >
                 <option value="">— กรุณาเลือกตัวเลือก —</option>
-                <option *ngFor="let c of q.choices">{{ c.choice_text || '(ตัวเลือกที่ไม่มีข้อความ)' }}</option>
-                <option *ngIf="!q.choices || q.choices.length === 0">ตัวเลือกที่ 1, ตัวเลือกที่ 2</option>
+                <option *ngFor="let c of q.choices">
+                  {{ c.choice_text || '(ตัวเลือกที่ไม่มีข้อความ)' }}
+                </option>
+                <option *ngIf="!q.choices || q.choices.length === 0">
+                  ตัวเลือกที่ 1, ตัวเลือกที่ 2
+                </option>
               </select>
             </div>
 
             <!-- แบบ Dropdown ดึงรายวิชาอัตโนมัติ -->
-            <div *ngIf="q.question_type === 'dropdown_subject'" style="margin-top: 8px;">
-              <select style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 14px; outline: none; background: #fff;">
+            <div *ngIf="q.question_type === 'dropdown_subject'" style="margin-top: 8px">
+              <select
+                style="
+                  width: 100%;
+                  padding: 10px 14px;
+                  border-radius: 8px;
+                  border: 1.5px solid #cbd5e1;
+                  font-size: 14px;
+                  outline: none;
+                  background: #fff;
+                "
+              >
                 <option value="">— กรุณาเลือกรายวิชา —</option>
                 <option *ngFor="let s of previewData.subjects">{{ s.name }}</option>
-                <option *ngIf="!previewData.subjects || previewData.subjects.length === 0">ตัวอย่างวิชาที่ 1, ตัวอย่างวิชาที่ 2</option>
+                <option *ngIf="!previewData.subjects || previewData.subjects.length === 0">
+                  ตัวอย่างวิชาที่ 1, ตัวอย่างวิชาที่ 2
+                </option>
               </select>
             </div>
 
             <!-- แบบ Text (พิมพ์ตอบ) -->
-            <div *ngIf="q.question_type === 'text'" style="margin-top: 8px;">
-              <textarea placeholder="พิมพ์คำตอบของคุณที่นี่..." rows="3"
-                style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 14px; outline: none; resize: vertical;"></textarea>
+            <div *ngIf="q.question_type === 'text'" style="margin-top: 8px">
+              <textarea
+                placeholder="พิมพ์คำตอบของคุณที่นี่..."
+                rows="3"
+                style="
+                  width: 100%;
+                  padding: 10px 14px;
+                  border-radius: 8px;
+                  border: 1.5px solid #cbd5e1;
+                  font-size: 14px;
+                  outline: none;
+                  resize: vertical;
+                "
+              ></textarea>
             </div>
-
           </div>
 
-          <div *ngIf="previewDisplayedQuestions.length === 0" style="text-align: center; padding: 40px; color: #94a3b8; background: #fff; border-radius: 12px;">
-            <mat-icon style="font-size: 40px; width: 40px; height: 40px; color: #cbd5e1;">quiz</mat-icon>
-            <p style="margin: 8px 0 0 0;">ไม่มีคำถามที่ตรงกับเงื่อนไข หรือยังไม่มีคำถาม</p>
+          <div
+            *ngIf="previewDisplayedQuestions.length === 0"
+            style="
+              text-align: center;
+              padding: 40px;
+              color: #94a3b8;
+              background: #fff;
+              border-radius: 12px;
+            "
+          >
+            <mat-icon style="font-size: 40px; width: 40px; height: 40px; color: #cbd5e1"
+              >quiz</mat-icon
+            >
+            <p style="margin: 8px 0 0 0">ไม่มีคำถามที่ตรงกับเงื่อนไข หรือยังไม่มีคำถาม</p>
           </div>
         </div>
-
       </div>
 
       <!-- Footer ของ Preview -->
-      <div style="background: #ffffff; border-top: 1px solid #e2e8f0; padding: 14px 24px; display: flex; justify-content: flex-end;">
-        <button mat-flat-button (click)="closePreviewModal()" style="background: #64748b; color: #fff; border-radius: 8px; padding: 0 20px;">
+      <div
+        style="
+          background: #ffffff;
+          border-top: 1px solid #e2e8f0;
+          padding: 14px 24px;
+          display: flex;
+          justify-content: flex-end;
+        "
+      >
+        <button
+          mat-flat-button
+          (click)="closePreviewModal()"
+          style="background: #64748b; color: #fff; border-radius: 8px; padding: 0 20px"
+        >
           ปิดหน้าต่างตัวอย่าง
         </button>
       </div>
-
     </div>
   </div>
 </div>

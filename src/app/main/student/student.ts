@@ -4,7 +4,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { HttpClient } from '@angular/common/http';
-import { RouterLink, ActivatedRoute, Router } from '@angular/router'; // 👈 นำเข้า Router
+import { RouterLink, ActivatedRoute, Router } from '@angular/router'; // นำเข้า Router สำหรับการเปลี่ยนเส้นทางหน้าเว็บ
 import { ScoreService } from '../../services/score.service';
 import { SubjectService } from '../../services/subject.service';
 import { CourseService } from '../../services/course.service';
@@ -29,14 +29,12 @@ interface CourseCard {
   styleUrl: './student.scss',
 })
 export class Student implements OnInit, OnDestroy {
-  pageTitle: string = 'กำลังโหลดข้อมูล...'; // 👈 เพิ่มตัวแปรเก็บชื่อหัวข้อ H1
+  pageTitle: string = 'กำลังโหลดข้อมูล...'; // ตัวแปรสำหรับเก็บชื่อหัวข้อหลักของหน้า
   selectedAssessment: string = '';
   currentBatchId: number | null = null;
   currentCourseName: string = '';
   currentBatchName: string = '';
-  currentCourseId: number | null = null;
   isLoggedIn: boolean = false;
-  isRegistrationOpen: boolean = false;
   studentData: any = null;
   private evaluationSub: Subscription | null = null;
 
@@ -53,7 +51,7 @@ export class Student implements OnInit, OnDestroy {
     private authService: AuthService,
     private courseService: CourseService,
     private route: ActivatedRoute, 
-    private router: Router, // 👈 เพิ่ม Router
+    private router: Router, // บริการนำทางเส้นทางหน้าเว็บ
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -83,7 +81,7 @@ export class Student implements OnInit, OnDestroy {
       }
     }
 
-    // 👈 ใช้ subscribe เพื่อดักจับการเปลี่ยนแปลงของ URL Parameters
+    // ติดตามการเปลี่ยนแปลงของพารามิเตอร์บน URL
     this.route.queryParams.subscribe((params) => {
       const batchId = params['batchId'];
       const title = params['title'];
@@ -111,34 +109,18 @@ export class Student implements OnInit, OnDestroy {
         this.studentData = this.authService.getStudentData();
         if (this.studentData) {
           this.currentBatchId = this.studentData.batch_id;
-          this.currentCourseName = this.studentData.course_name || '';
-          this.currentBatchName = this.studentData.batch_name || '';
-          if (this.currentCourseName && this.currentBatchName) {
+          this.currentCourseName = this.studentData.course_name || courseName || '';
+          this.currentBatchName = this.studentData.batch_name || batchName || '';
+          if (title) {
+            this.pageTitle = title;
+          } else if (this.currentCourseName && this.currentBatchName) {
             this.pageTitle = `${this.currentCourseName} ${this.currentBatchName}`;
           }
-        }
-      }
-
-      // ตรวจสอบว่ารุ่นนี้เปิดรับสมัครหรือไม่
-      if (this.currentBatchId && !this.isLoggedIn) {
-        this.checkRegistrationStatus(this.currentBatchId);
-      }
-    });
-  }
-
-  checkRegistrationStatus(batchId: number): void {
-    this.courseService.getAllBatches().subscribe({
-      next: (res) => {
-        if (res.success && res.data) {
-          const batch = res.data.find((b: any) => Number(b.id) === Number(batchId));
-          if (batch) {
-            this.isRegistrationOpen = !!batch.is_registration_open;
-            this.currentCourseId = batch.course_id;
-            this.cdr.detectChanges(); // บังคับให้ UI อัปเดตเมื่อรีเฟรชหน้า
+          if (this.currentBatchId && this.allCourses.length === 0) {
+            this.fetchSubjects(this.currentBatchId);
           }
         }
-      },
-      error: (err) => console.error('Error fetching batches:', err)
+      }
     });
   }
 
@@ -203,7 +185,7 @@ export class Student implements OnInit, OnDestroy {
               status: 'pending',
               formUrl: url,
             }];
-            this.cdr.detectChanges(); // 👈 บังคับ Angular อัปเดต UI ทันที
+            this.cdr.detectChanges(); // อัปเดตการแสดงผลหน้าจอทันที
           },
           error: (err) => {
             console.error('เกิดข้อผิดพลาดในการดึงข้อมูลแบบประเมิน:', err);
@@ -214,7 +196,7 @@ export class Student implements OnInit, OnDestroy {
               status: 'pending',
               formUrl: '',
             }];
-            this.cdr.detectChanges(); // 👈 บังคับ Angular อัปเดต UI ทันที
+            this.cdr.detectChanges(); // อัปเดตการแสดงผลหน้าจอทันที
           }
         });
       }
@@ -261,7 +243,7 @@ export class Student implements OnInit, OnDestroy {
         subjectId: course.id,
         type: typeStr,
         courseTitle: course.text,
-        batchName: this.currentBatchName // 👈 ส่งชื่อรุ่นที่ถูกต้องไปด้วย
+        batchName: this.currentBatchName // ส่งชื่อรุ่นปัจจุบันไปด้วย
       }
     });
   }
@@ -290,19 +272,6 @@ export class Student implements OnInit, OnDestroy {
   }
 
   goToEditProfile(): void {
-    this.router.navigate(['/edit-profile']);
-  }
-
-  navigateToRegister(): void {
-    if (this.currentBatchId && this.currentCourseId) {
-      this.router.navigate(['/register'], {
-        queryParams: {
-          courseId: this.currentCourseId,
-          courseName: this.currentCourseName,
-          batchId: this.currentBatchId,
-          batchName: this.currentBatchName
-        }
-      });
-    }
+    this.router.navigate(['/student/edit-profile']);
   }
 }

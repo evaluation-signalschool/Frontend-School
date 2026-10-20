@@ -57,7 +57,7 @@
             </label>
           </div>
 
-          <!-- ✅ แบบดรอปดาวน์ที่แอดมินพิมพ์ตัวเลือกเอง (Dropdown Custom) -->
+          <!-- ตัวเลือกลงรายการที่ผู้ดูแลระบบกำหนดเอง (Dropdown Custom) -->
           <div class="dropdown-group" *ngIf="q.question_type === 'dropdown'" style="margin-top: 10px;">
             <select class="custom-input" [(ngModel)]="q.answer_comment" 
               style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1.5px solid #d1d5db; font-size: 15px; outline: none; appearance: auto; cursor: pointer; background: #fff;">
@@ -66,7 +66,7 @@
             </select>
           </div>
 
-          <!-- ✅ แบบดรอปดาวน์เลือกรายวิชาอัตโนมัติ (Dropdown Subject) -->
+          <!-- ตัวเลือกลงรายการดึงรายวิชาอัตโนมัติ (Dropdown Subject) -->
           <div class="dropdown-group" *ngIf="q.question_type === 'dropdown_subject'" style="margin-top: 10px;">
             <select class="custom-input" [(ngModel)]="q.answer_comment" 
               style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1.5px solid #d1d5db; font-size: 15px; outline: none; appearance: auto; cursor: pointer; background: #fff;">
@@ -80,6 +80,7 @@
             <textarea class="custom-textarea" 
                       placeholder="แสดงความคิดเห็นเพิ่มเติม (ถ้ามี)..." 
                       [(ngModel)]="q.answer_comment" 
+                      (input)="onCommentInput(q)"
                       rows="4"></textarea>
           </div>
         </div>
