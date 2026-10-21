@@ -7,7 +7,7 @@
       <span>กำลังแสดงตัวอย่างหน้าเว็บจริง (Public Preview Mode) สำหรับหลักสูตร <strong>{{ courseTitle }}</strong></span>
     </div>
     <button class="btn-exit-preview" (click)="togglePreview()">
-      ✏️ กลับสู่โหมดแก้ไข & AI
+      ✏️ กลับสู่โหมดแก้ไขบทสรุป
     </button>
   </div>
 
@@ -25,7 +25,7 @@
         </div>
         <h1>
           <ng-container *ngIf="!isAdmin">สรุปผลและสถิติการจัดการฝึกอบรม</ng-container>
-          <ng-container *ngIf="isAdmin">จัดการบทสรุปผลการฝึกอบรม (AI Summary & Editor)</ng-container>
+          <ng-container *ngIf="isAdmin">จัดการบทสรุปผลการฝึกอบรม (Summary & Editor)</ng-container>
         </h1>
         <p class="subtitle" *ngIf="courseTitle">
           {{ courseTitle }}
@@ -41,7 +41,7 @@
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
           <circle cx="12" cy="12" r="3"></circle>
         </svg>
-        <span>{{ isPreviewMode ? '✏️ โหมดแก้ไข & AI' : '👁️ ดูตัวอย่างหน้าเว็บจริง (Preview)' }}</span>
+        <span>{{ isPreviewMode ? '✏️ โหมดแก้ไขบทสรุป' : '👁️ ดูตัวอย่างหน้าเว็บจริง (Preview)' }}</span>
       </button>
 
       <!-- คะแนนเฉลี่ยรวมระดับหลักสูตร -->
@@ -133,47 +133,36 @@
     <!-- กรณีมีข้อมูลครบถ้วน -->
     <ng-container *ngIf="subjects.length > 0">
 
-      <!-- ================= Admin AI & Editor Panel (โหมดแก้ไขสำหรับ Admin) ================= -->
+      <!-- ================= Admin Summary Editor Panel (โหมดจัดการบทสรุปสำหรับ Admin) ================= -->
       <section class="card admin-editor-panel" *ngIf="isAdmin && !isPreviewMode">
         <div class="admin-panel-title">
           <div class="title-with-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7e22ce" stroke-width="2">
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
             </svg>
-            <h3>แผงจัดการบทสรุปและ AI อัจฉริยะ (สำหรับ {{ currentCohortDisplayLabel }})</h3>
+            <h3>แผงจัดการและประมวลผลบทสรุปผลการฝึกอบรม (สำหรับ {{ currentCohortDisplayLabel }})</h3>
           </div>
           <div class="title-right-actions">
-            <button type="button" class="btn-api-key-toggle" (click)="showApiKeyInput = !showApiKeyInput" title="ใส่ Gemini API Key เพื่อให้ AI ประมวลผลแบบสด">
-              🔑 {{ geminiApiKey ? 'API Key: มีการเชื่อมต่อแล้ว' : 'ตั้งค่า Gemini API Key' }}
-            </button>
             <span class="badge-status-tag" [ngClass]="{'published': hasSavedSummary}">
               {{ hasSavedSummary ? '✓ เผยแพร่แล้ว' : '⚠️ ใช้บทวิเคราะห์เริ่มต้น' }}
             </span>
           </div>
         </div>
 
-        <!-- API Key Input Section (เมื่อกดเปิด) -->
-        <div class="api-key-config-box" *ngIf="showApiKeyInput">
-          <div class="api-key-input-row">
-            <label>Google Gemini API Key:</label>
-            <input type="password" [(ngModel)]="geminiApiKey" placeholder="วาง API Key เช่น AIzaSy..." class="key-input" />
-            <button class="btn-save-key" (click)="saveApiKey()">บันทึก Key</button>
-            <button class="btn-cancel-key" (click)="showApiKeyInput = false">ปิด</button>
-          </div>
-          <p class="key-hint">💡 หากระบุ Key ระบบจะส่งคำขอไปยัง Gemini 2.0 / 2.5 Flash ทันที หากเว้นว่างไว้จะใช้ Intelligent Fallback Engine ในระบบครับ</p>
-        </div>
-
-        <!-- AI Trigger Banner with Style Selector -->
+        <!-- Statistical Processing Banner with Style Selector -->
         <div class="ai-banner">
           <div class="ai-banner-main">
             <div class="ai-banner-info">
-              <h4>✨ ให้ AI ช่วยวิเคราะห์สถิติจริงและร่างบทสรุปอัตโนมัติ</h4>
-              <p>ระบบจะส่งตัวเลขสถิติจริงทั้งหมด คะแนนรายวิชา และค่าผลต่างของ <strong>{{ courseTitle }}</strong> ให้ AI ประมวลผลเชิงวิชาการ</p>
+              <h4>📊 ประมวลผลตัวเลขสถิติจริงและร่างบทสรุปอัตโนมัติ</h4>
+              <p>ระบบจะนำตัวเลขสถิติจริงทั้งหมด คะแนนรายวิชา และค่าผลต่างของ <strong>{{ courseTitle }}</strong> มาประมวลผลเชิงวิชาการตามเกณฑ์มาตรฐาน (ประมวลผลภายในระบบ ไม่มีค่าใช้จ่าย)</p>
             </div>
 
             <!-- Style Selector -->
             <div class="ai-style-selector">
-              <span class="style-label">สไตล์การวิเคราะห์:</span>
+              <span class="style-label">รูปแบบรายงานสรุป:</span>
               <div class="style-pills">
                 <button type="button" class="style-pill-btn" [class.active]="selectedAiStyle === 'comprehensive'" (click)="onSelectStyle('comprehensive')">
                   🎓 รายงานประกันคุณภาพ (ละเอียด)
@@ -182,30 +171,30 @@
                   ⚡ สรุปเชิงผู้บริหาร (กระชับ)
                 </button>
                 <button type="button" class="style-pill-btn" [class.active]="selectedAiStyle === 'action'" (click)="onSelectStyle('action')">
-                  🎯 เน้นแผนแก้ปัญหา (เชิงรุก)
+                  🎯 เน้นแผนพัฒนา (เชิงรุก)
                 </button>
               </div>
             </div>
           </div>
 
           <button class="generate-btn" [disabled]="isAiGenerating" (click)="generateWithAi('generate')">
-            <span *ngIf="!isAiGenerating">✨ ให้ AI วิเคราะห์อัตโนมัติ</span>
-            <span *ngIf="isAiGenerating">⏳ กำลังประมวลผลด้วย AI...</span>
+            <span *ngIf="!isAiGenerating">📊 ประมวลผลจากสถิติจริง</span>
+            <span *ngIf="isAiGenerating">⏳ กำลังประมวลผลข้อมูล...</span>
           </button>
         </div>
 
-        <!-- AI Assistant Quick Tools -->
+        <!-- Quick Formatting Tools -->
         <div class="ai-quick-tools" *ngIf="adminExecutiveSummary">
-          <span class="tools-label">เครื่องมือช่วยขัดเกลาข้อความ AI:</span>
+          <span class="tools-label">เครื่องมือช่วยปรับแต่งข้อความ:</span>
           <div class="tools-btn-group">
-            <button type="button" class="btn-ai-tool" [disabled]="isAiGenerating" (click)="generateWithAi('refine_formal')" title="ปรับสำนวนให้เป็นภาษาราชการทหารระดับสูง">
-              ✨ ปรับสำนวนให้ทางการขึ้น
+            <button type="button" class="btn-ai-tool" [disabled]="isAiGenerating" (click)="generateWithAi('refine_formal')" title="ปรับสำนวนให้เป็นภาษาราชการระดับทางการ">
+              📝 ปรับสำนวนให้ทางการขึ้น
             </button>
             <button type="button" class="btn-ai-tool" [disabled]="isAiGenerating" (click)="generateWithAi('summarize_short')" title="สรุปย่อให้กระชับสำหรับผู้บริหาร">
               ⚡ สรุปย่อให้กระชับลง
             </button>
-            <button type="button" class="btn-ai-tool" [disabled]="isAiGenerating" (click)="generateWithAi('generate')" title="วิเคราะห์ใหม่ตามสไตล์ที่เลือก">
-              🔄 สร้างบทวิเคราะห์ใหม่
+            <button type="button" class="btn-ai-tool" [disabled]="isAiGenerating" (click)="generateWithAi('generate')" title="ประมวลผลใหม่ตามรูปแบบที่เลือก">
+              🔄 ประมวลผลสรุปใหม่
             </button>
           </div>
         </div>

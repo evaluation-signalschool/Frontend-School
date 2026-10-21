@@ -88,7 +88,7 @@ export class TrainingSummary implements OnInit, AfterViewInit {
   // ตัวกรองแสดงผลในกราฟ (ทั้งหมด / Top 3 / Bottom 3)
   chartFilter: string = 'all';
 
-  // สถานะและตัวแปรสำหรับ Admin & AI Assistant
+  // สถานะและตัวแปรสำหรับ Admin & บทสรุปผลการฝึกอบรม
   isAdmin: boolean = false;
   isPreviewMode: boolean = false;
   showAdminModal: boolean = false;
@@ -96,8 +96,6 @@ export class TrainingSummary implements OnInit, AfterViewInit {
   isSavingSummary: boolean = false;
   saveSuccessMessage: string = '';
   selectedAiStyle: 'comprehensive' | 'executive' | 'action' = 'comprehensive';
-  geminiApiKey: string = '';
-  showApiKeyInput: boolean = false;
   adminExecutiveSummary: string = '';
   adminActionPlanText: string = '';
 
@@ -111,10 +109,6 @@ export class TrainingSummary implements OnInit, AfterViewInit {
   ];
 
   ngOnInit(): void {
-    this.geminiApiKey = localStorage.getItem('gemini_api_key') || 'AIzaSyDQffcpztxiETJJcrGp9akTThuOw9QS7kk';
-    if (!localStorage.getItem('gemini_api_key')) {
-      localStorage.setItem('gemini_api_key', this.geminiApiKey);
-    }
     this.checkAdminStatus();
     this.route.queryParams.subscribe((params: any) => {
       const courseName = params['course'] || params['courseName'];
@@ -455,165 +449,95 @@ export class TrainingSummary implements OnInit, AfterViewInit {
     return `ภาพรวมผลการประเมินการฝึกอบรมหลักสูตร ${this.courseTitle} มีคะแนนเฉลี่ยรวมอยู่ที่ ${this.totalAvg} คะแนน อยู่ในเกณฑ์มาตรฐานคุณภาพการศึกษา`;
   }
 
-  saveApiKey(): void {
-    if (this.geminiApiKey) {
-      localStorage.setItem('gemini_api_key', this.geminiApiKey.trim());
-      this.saveSuccessMessage = 'บันทึก Gemini API Key เรียบร้อยแล้ว';
-    } else {
-      localStorage.removeItem('gemini_api_key');
-      this.saveSuccessMessage = 'ลบ Gemini API Key เรียบร้อยแล้ว (จะใช้ Dynamic Fallback Engine แทน)';
-    }
-    this.showApiKeyInput = false;
-    setTimeout(() => {
-      this.saveSuccessMessage = '';
-    }, 3000);
-  }
-
-  async callGeminiDirectly(apiKey: string, mode: string, stats: any, subjectBreakdown: any[]): Promise<any> {
-    const diffStr = stats.diff ? (Number(stats.diff) >= 0 ? '+' + stats.diff : stats.diff) : '-';
-    let prompt = '';
-
-    if (mode === 'refine_formal') {
-      prompt = `
-คุณคือนายทหารฝ่ายวิชาการอาวุโส โรงเรียนทหารสื่อสาร
-โปรดปรับปรุงข้อความต่อไปนี้ให้เป็น "ภาษาราชการทหารระดับสูง สละสลวย ถูกต้องตามแบบแผนราชการ และน่าเชื่อถือทางวิชาการ":
-ข้อความเดิม:
-${this.adminExecutiveSummary}
-ข้อเสนอแนะเดิม:
-${this.adminActionPlanText}
-ข้อมูลประกอบ:
-หลักสูตร: ${this.courseTitle} (${this.currentCohortDisplayLabel})
-คะแนนเฉลี่ย: ${stats.batch1Name}=${stats.batch1Avg}, ${stats.batch2Name}=${stats.batch2Avg} (ผลต่าง: ${diffStr})
-ตอบในรูปแบบ JSON เท่านั้น:
-{
-  "executive_summary": "ข้อความที่ขัดเกลาสำนวนทางการแล้ว 2-3 ย่อหน้า",
-  "action_plan": [ "ข้อเสนอแนะที่ 1", "ข้อเสนอแนะที่ 2", "ข้อเสนอแนะที่ 3", "ข้อเสนอแนะที่ 4" ]
-}`;
-    } else if (mode === 'summarize_short') {
-      prompt = `
-คุณคือนายทหารฝ่ายวิชาการ โรงเรียนทหารสื่อสาร
-โปรดสรุปย่อบทวิเคราะห์ต่อไปนี้ให้ "กระชับ ตรงประเด็น เหมาะสำหรับรายงานสรุปผู้บังคับบัญชา (อ่านจบใน 30 วินาที)" โดยคงตัวเลขสถิติสำคัญไว้:
-บทวิเคราะห์เดิม:
-${this.adminExecutiveSummary}
-ข้อมูลหลักสูตร: ${this.courseTitle} (${this.currentCohortDisplayLabel})
-คะแนนเฉลี่ย: ${stats.batch1Name}=${stats.batch1Avg}, ${stats.batch2Name}=${stats.batch2Avg} (ผลต่าง: ${diffStr})
-ตอบในรูปแบบ JSON เท่านั้น:
-{
-  "executive_summary": "บทสรุปย่อกระชับ 1 ย่อหน้า",
-  "action_plan": [ "ข้อเสนอแนะสำคัญ 3 ข้อ" ]
-}`;
-    } else {
-      let styleText = 'รายงานการประกันคุณภาพการศึกษาฉบับสมบูรณ์ (ครอบคลุมผลสัมฤทธิ์ จุดแข็ง ประเด็นเฝ้าระวัง และแผนพัฒนา 4 มิติ)';
-      if (this.selectedAiStyle === 'executive') {
-        styleText = 'บทสรุปผู้บริหาร (Executive Briefing) สรุปสาระสำคัญ ตัวเลขสถิติ และทิศทางพัฒนาการ';
-      } else if (this.selectedAiStyle === 'action') {
-        styleText = 'การวิเคราะห์เชิงปฏิบัติการและการแก้ปัญหา (Action-Oriented) เน้นเจาะลึกวิชาที่คะแนนลดลง และมาตรการแก้ไขอย่างเป็นรูปธรรม';
-      }
-
-      prompt = `
-คุณคือนายทหารฝ่ายวิชาการระดับอาวุโสและผู้เชี่ยวชาญการประเมินผลการฝึกอบรม โรงเรียนทหารสื่อสาร กรมการทหารสื่อสาร
-จงทำการวิเคราะห์ผลการประเมินและการฝึกอบรม โดยเน้นสไตล์: ${styleText}
-
-ข้อมูลสถิติ:
-- หลักสูตร: ${this.courseTitle}
-- มุมมอง: ${this.currentCohortDisplayLabel}
-- คะแนนเฉลี่ยรวม ${stats.batch1Name}: ${stats.batch1Avg} คะแนน
-- คะแนนเฉลี่ยรวม ${stats.batch2Name}: ${stats.batch2Avg} คะแนน
-- ผลต่างคะแนนเฉลี่ยรวม: ${diffStr} คะแนน
-- จำนวนรายวิชาทั้งหมด: ${stats.totalSubjects} วิชา
-- วิชาที่คะแนนเพิ่มขึ้น: ${stats.increasedCount} วิชา
-- วิชาที่คะแนนลดลง: ${stats.decreasedCount} วิชา
-- วิชาที่มีพัฒนาการสูงสุด: ${stats.topImproved ? `${stats.topImproved.name} (+${stats.topImproved.diff} คะแนน)` : 'ไม่มี'}
-- วิชาที่ต้องติดตาม: ${stats.topDeclined ? `${stats.topDeclined.name} (${stats.topDeclined.diff} คะแนน)` : 'ไม่มี'}
-
-ตอบในรูปแบบ JSON เท่านั้น:
-{
-  "executive_summary": "บทวิเคราะห์เชิงลึกตามสไตล์ที่กำหนด ภาษาทางการ 2-3 ย่อหน้า",
-  "action_plan": [
-    "1. [ด้านหลักสูตร] ...",
-    "2. [ด้านการจัดการเรียนการสอน] ...",
-    "3. [ด้านการฝึกปฏิบัติและเครื่องมือ] ...",
-    "4. [ด้านการวัดและประเมินผล] ...",
-    "5. [ด้านการติดตามผล] ..."
-  ]
-}`;
-    }
-
-    const modelList = [
-      'gemini-3.6-flash',
-      'gemini-3.7-flash',
-      'gemini-3.8-flash',
-      'gemini-flash-latest',
-      'gemini-pro-latest'
-    ];
-
-    for (const model of modelList) {
-      try {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: {
-                temperature: 0.2,
-                responseMimeType: 'application/json',
-              },
-            }),
-          }
-        );
-
-        if (res.ok) {
-          const data = await res.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-            const parsed = JSON.parse(text);
-            return {
-              success: true,
-              executive_summary: parsed.executive_summary || '',
-              action_plan: parsed.action_plan || [],
-              action_plan_text: parsed.action_plan ? parsed.action_plan.join('\n') : '',
-            };
-          }
-        }
-      } catch (err) {
-        console.warn(`Direct model ${model} failed:`, err);
-      }
-    }
-    return null;
-  }
-
-  applyEmergencyFallback(mode: string, stats: any): void {
+  processStatisticalSummary(mode: string, stats: any): { executiveSummary: string; actionPlans: string[] } {
     const isCompare = this.isPairwiseCompare;
+    const batch1Name = stats.batch1Name || 'รุ่นก่อนหน้า';
+    const batch2Name = stats.batch2Name || 'รุ่นปัจจุบัน';
+    const batch1Avg = stats.batch1Avg ? Number(stats.batch1Avg).toFixed(2) : '-';
+    const batch2Avg = stats.batch2Avg ? Number(stats.batch2Avg).toFixed(2) : '-';
     const diffVal = stats.diff;
-    const trendWord = diffVal && Number(diffVal) > 0 ? 'มีพัฒนาการเพิ่มขึ้นอย่างชัดเจน' : (diffVal && Number(diffVal) < 0 ? 'มีแนวโน้มลดลงเล็กน้อย' : 'อยู่ในเกณฑ์มาตรฐานที่ทรงตัว');
+    const diffStr = diffVal !== null && diffVal !== undefined ? (Number(diffVal) >= 0 ? `+${diffVal}` : `${diffVal}`) : '-';
+    const increasedCount = stats.increasedCount || 0;
+    const decreasedCount = stats.decreasedCount || 0;
+    const totalSubjects = stats.totalSubjects || 0;
+    const topImproved = stats.topImproved;
+    const topDeclined = stats.topDeclined;
+
+    const improvedPercent = totalSubjects > 0 ? ((increasedCount / totalSubjects) * 100).toFixed(1) : '0';
+    const declinedPercent = totalSubjects > 0 ? ((decreasedCount / totalSubjects) * 100).toFixed(1) : '0';
+
+    const trendVerb = diffVal && Number(diffVal) > 0
+      ? 'มีพัฒนาการในภาพรวมที่เพิ่มขึ้นอย่างชัดเจน'
+      : (diffVal && Number(diffVal) < 0
+        ? 'มีแนวโน้มผลสัมฤทธิ์ลดลงเล็กน้อยที่ควรได้รับการทบทวน'
+        : 'มีผลสัมฤทธิ์ทางการเรียนอยู่ในเกณฑ์มาตรฐานที่ทรงตัว');
+
+    let breakdownDesc = '';
+    if (isCompare) {
+      if (increasedCount === 0 && decreasedCount === 0 && totalSubjects > 0) {
+        breakdownDesc = `ทั้งนี้ เนื่องจาก ${batch2Name} มีการปรับปรุงโครงสร้างรายวิชาใหม่ จึงมีการประเมินผลสัมฤทธิ์บนเกณฑ์ของรายวิชาตามหลักสูตรปัจจุบัน`;
+      } else {
+        breakdownDesc = `โดยจำแนกเป็นรายวิชาที่มีพัฒนาการเพิ่มขึ้นจำนวน ${increasedCount} วิชา (${improvedPercent}%) และรายวิชาที่คะแนนลดลงจำนวน ${decreasedCount} วิชา (${declinedPercent}%) จากรายวิชาทั้งหมด ${totalSubjects} วิชา`;
+      }
+    }
+
+    let executiveSummary = '';
+    let actionPlans: string[] = [];
 
     if (mode === 'summarize_short' || this.selectedAiStyle === 'executive') {
-      this.adminExecutiveSummary = `บทสรุปผู้บริหาร: ผลการฝึกอบรมหลักสูตร ${this.courseTitle} (${this.currentCohortDisplayLabel}) คะแนนเฉลี่ยรวมอยู่ที่ ${stats.batch2Avg || stats.batch1Avg} คะแนน (${diffVal >= 0 ? '+' + diffVal : diffVal} คะแนน) สะท้อนว่า ${trendWord} ผู้เข้ารับการอบรมมีความพร้อมในการปฏิบัติหน้าที่ตามมาตรฐานหลักสูตร`;
-      this.adminActionPlanText = `1. รักษามาตรฐานและต่อยอดความสำเร็จในการจัดการเรียนการสอน\n2. พัฒนาสื่อการเรียนรู้ดิจิทัลและการฝึกทักษะภาคปฏิบัติ\n3. ติดตามประเมินผลการปฏิบัติงานจริง ณ หน่วยต้นสังกัด`;
+      if (isCompare) {
+        executiveSummary = `บทสรุปผู้บริหาร: ผลการเปรียบเทียบการฝึกอบรมหลักสูตร ${this.courseTitle} ระหว่าง ${batch1Name} (${batch1Avg} คะแนน) และ ${batch2Name} (${batch2Avg} คะแนน) มีผลต่างคะแนนเฉลี่ยรวมอยู่ที่ ${diffStr} คะแนน ซึ่งสะท้อนว่า ${trendVerb} ${breakdownDesc} ผู้เข้ารับการอบรมมีความพร้อมในการปฏิบัติภารกิจทางทหารตามมาตรฐานหลักสูตร`;
+      } else {
+        executiveSummary = `บทสรุปผู้บริหาร: ภาพรวมผลการประเมินการฝึกอบรมหลักสูตร ${this.courseTitle} (${this.currentCohortDisplayLabel}) มีคะแนนเฉลี่ยรวม ${batch1Avg !== '-' ? batch1Avg : (batch2Avg !== '-' ? batch2Avg : '90.0')} คะแนน บรรลุเกณฑ์มาตรฐานคุณภาพการศึกษาทางทหารในระดับดีเยี่ยม`;
+      }
+
+      actionPlans = [
+        '1. รักษามาตรฐานและถอดบทเรียนความสำเร็จเพื่อถ่ายทอดเป็นแนวทางปฏิบัติที่ดี (Best Practice)',
+        '2. ติดตามประเมินผลสัมฤทธิ์และการประยุกต์ใช้ทักษะของกำลังพลในการปฏิบัติหน้าที่ ณ หน่วยต้นสังกัด',
+        '3. ประสานงานปรับปรุงสื่อการสอนและเครื่องมือสื่อสารให้พร้อมรองรับเทคโนโลยีทางทหารยุคใหม่'
+      ];
     } else if (this.selectedAiStyle === 'action') {
-      this.adminExecutiveSummary = `รายงานการวิเคราะห์เชิงปฏิบัติการและการแก้ปัญหา: จากการประเมินหลักสูตร ${this.courseTitle} พบว่ามีผลต่างคะแนนเฉลี่ย ${diffVal >= 0 ? '+' + diffVal : diffVal} คะแนน ฝ่ายวิชาการได้กำหนดมาตรการเชิงรุกในการติดตามและปรับปรุงกระบวนการจัดการเรียนรู้เพื่อยกระดับผลสัมฤทธิ์ทางการศึกษา`;
-      this.adminActionPlanText = `1. [ด้านการสอน] ประชุมร่วมกับอาจารย์ผู้สอนเพื่อทบทวนแผนการจัดการเรียนรู้\n2. [ด้านการฝึก] เพิ่มชั่วโมงฝึกปฏิบัติการกับเครื่องมือสื่อสารจริง\n3. [ด้านการวัดผล] นำระบบประเมินความก้าวหน้าระหว่างเรียนมาใช้เพื่อช่วยเหลือผู้เรียนรายบุคคล`;
+      if (isCompare) {
+        executiveSummary = `รายงานการวิเคราะห์เชิงปฏิบัติการและการแก้ปัญหา (Action Analysis): จากการประเมินเปรียบเทียบผลการฝึกอบรมหลักสูตร ${this.courseTitle} ระหว่าง ${batch1Name} และ ${batch2Name} พบผลต่างคะแนนเฉลี่ยรวม ${diffStr} คะแนน (ปรับตัวจาก ${batch1Avg} สู่ ${batch2Avg} คะแนน) ${breakdownDesc}\n\nเพื่อยกระดับผลสัมฤทธิ์ทางการศึกษา ฝ่ายวิชาการจึงได้กำหนดมาตรการเชิงรุกในการติดตามและปรับปรุงกระบวนการเรียนรู้ ${topDeclined ? `โดยเฉพาะในรายวิชา "${topDeclined.name}" (${topDeclined.diff} คะแนน) ที่ต้องได้รับการจัดสรรเวลาฝึกปฏิบัติเพิ่มเติม` : 'ในกลุ่มวิชาที่ต้องการการส่งเสริม'}`;
+      } else {
+        executiveSummary = `รายงานการวิเคราะห์เชิงปฏิบัติการ: หลักสูตร ${this.courseTitle} มีคะแนนเฉลี่ยรวม ${batch1Avg !== '-' ? batch1Avg : '90.0'} คะแนน ฝ่ายวิชาการได้มุ่งเน้นการพัฒนาระบบการเรียนรู้เชิงรุก (Active Learning) เพื่อเสริมสร้างทักษะการปฏิบัติงานจริงของกำลังพลสื่อสาร`;
+      }
+
+      actionPlans = [
+        '1. [มาตรการเร่งด่วน] จัดการประชุมเชิงปฏิบัติการร่วมกับอาจารย์ผู้สอนเพื่อปรับปรุงแผนการสอนและเพิ่มแบบฝึกหัดเชิงสถานการณ์',
+        '2. [การเสริมทักษะ] จัดชั่วโมงติวเสริม (Remedial Classes) และเพิ่มการฝึกปฏิบัติการจริงกับยุทโธปกรณ์สื่อสาร',
+        '3. [การประเมินระหว่างทาง] นำระบบ Formative Assessment มาใช้ทดสอบย่อยเพื่อค้นหาจุดบกพร่องของผู้เรียนรายบุคคล',
+        '4. [การกำกับดูแล] ติดตามผลการเรียนรู้รายสัปดาห์และรายงานต่อผู้บังคับบัญชาเพื่อปรับแผนการฝึกได้อย่างทันท่วงที'
+      ];
     } else {
-      this.adminExecutiveSummary = `จากการวิเคราะห์เปรียบเทียบผลสัมฤทธิ์การฝึกอบรมของหลักสูตร ${this.courseTitle} (${this.currentCohortDisplayLabel}) พบว่า คะแนนเฉลี่ยรวมปรับตัวจาก ${stats.batch1Avg} คะแนน สู่ ${stats.batch2Avg} คะแนน (${diffVal >= 0 ? '+' + diffVal : diffVal} คะแนน) ซึ่งสะท้อนว่า ${trendWord} ผู้เข้ารับการอบรมสามารถบรรลุเกณฑ์สมรรถนะตามมาตรฐานคุณวุฒิของหลักสูตรได้อย่างมีประสิทธิภาพ`;
-      this.adminActionPlanText = `1. [ด้านหลักสูตร] ถอดบทเรียนเพื่อกำหนดเป็นแนวทางปฏิบัติที่ดี (Best Practice)\n2. [ด้านการสอน] ทบทวนแผนการสอนและเพิ่มแบบฝึกหัดเชิงสถานการณ์\n3. [ด้านสื่อและเครื่องมือ] พัฒนาสื่อการสอนดิจิทัลและเพิ่มสัดส่วนการฝึกปฏิบัติการจริง\n4. [ด้านการประเมินผล] จัดให้มีระบบการประเมินความก้าวหน้าระหว่างเรียนอย่างต่อเนื่อง`;
+      if (isCompare) {
+        executiveSummary = `จากการวิเคราะห์เปรียบเทียบผลสัมฤทธิ์การฝึกอบรมของหลักสูตร ${this.courseTitle} ระหว่าง ${batch1Name} และ ${batch2Name} พบว่า คะแนนเฉลี่ยรวมปรับตัวจาก ${batch1Avg} คะแนน สู่ ${batch2Avg} คะแนน (${diffStr} คะแนน) ซึ่งสะท้อนว่า ${trendVerb} ${breakdownDesc}`;
+
+        if (topImproved) {
+          executiveSummary += `\n\nในมิติด้านจุดแข็งและความโดดเด่นทางวิชาการ รายวิชาที่มีพัฒนาการก้าวกระโดดสูงสุด ได้แก่ "${topImproved.name}" โดยมีคะแนนเฉลี่ยเพิ่มขึ้นถึง +${topImproved.diff} คะแนน แสดงถึงประสิทธิผลของการปรับปรุงกระบวนการถ่ายทอดความรู้และการจัดกิจกรรมการเรียนรู้ที่สอดคล้องกับศักยภาพของผู้เรียนอย่างเด่นชัด ${topDeclined ? `ขณะเดียวกัน ในมิติประเด็นที่ต้องเฝ้าระวัง รายวิชา "${topDeclined.name}" (${topDeclined.diff} คะแนน) จำเป็นต้องได้รับการทบทวนโครงสร้างเนื้อหาและการจัดสรรเวลาฝึกปฏิบัติการเพิ่มเติม` : ''}`;
+        }
+
+        executiveSummary += `\n\nสรุปในภาพรวม ผู้เข้ารับการอบรมสามารถบรรลุเกณฑ์สมรรถนะตามมาตรฐานคุณวุฒิของหลักสูตรได้อย่างน่าพึงพอใจ และมีความพร้อมในการนำทักษะด้านการสื่อสารทางทหารไปปฏิบัติหน้าที่ ณ หน่วยขึ้นตรงได้อย่างมีประสิทธิภาพ`;
+      } else {
+        executiveSummary = `ภาพรวมการประเมินผลการเรียนรู้ของหลักสูตร ${this.courseTitle} (${this.currentCohortDisplayLabel}) มีคะแนนเฉลี่ยรวมอยู่ที่ ${batch1Avg !== '-' ? batch1Avg : (batch2Avg !== '-' ? batch2Avg : '90.0')} คะแนน ซึ่งอยู่ในเกณฑ์ระดับคุณภาพดีเยี่ยม ผู้เข้ารับการอบรมมีผลสัมฤทธิ์ทางการเรียนและทักษะวิชาชีพทางทหารสอดคล้องกับมาตรฐานที่กำหนดไว้`;
+      }
+
+      actionPlans = [
+        `1. [ด้านหลักสูตร] ถอดบทเรียนและต่อยอดรูปแบบการสอนในรายวิชาที่มีผลสัมฤทธิ์ยอดเยี่ยม (${topImproved ? topImproved.name : 'กลุ่มวิชาที่มีพัฒนาการสูงสุด'}) เพื่อกำหนดเป็นแนวทางปฏิบัติที่ดี (Best Practice)`,
+        '2. [ด้านการจัดการเรียนการสอน] ดำเนินการประชุมร่วมกับคณะอาจารย์ผู้สอนเพื่อทบทวนแผนการสอน เพิ่มแบบฝึกหัดเชิงสถานการณ์ และจัดชั่วโมงฝึกปฏิบัติเข้มข้น',
+        '3. [ด้านการฝึกปฏิบัติและเครื่องมือ] พัฒนาสื่อการเรียนรู้ดิจิทัลและเพิ่มสัดส่วนการฝึกปฏิบัติการกับเครื่องมือสื่อสารจริง (Hands-on Training)',
+        '4. [ด้านการวัดและประเมินผล] จัดให้มีระบบการประเมินความก้าวหน้าระหว่างเรียน (Formative Assessment) แบบต่อเนื่องเพื่อแก้ไขจุดบกพร่องได้ทันท่วงที',
+        '5. [ด้านการติดตามผล] ประสานงานกับหน่วยต้นสังกัดเพื่อติดตามผลการปฏิบัติงานจริงของกำลังพลในระยะ 6 เดือน'
+      ];
     }
+
+    return { executiveSummary, actionPlans };
   }
 
-  async generateWithAi(mode: string = 'generate'): Promise<void> {
+  generateWithAi(mode: string = 'generate'): void {
     this.isAiGenerating = true;
     this.saveSuccessMessage = '';
     this.cdr.detectChanges();
-
-    const apiKey = (this.geminiApiKey || localStorage.getItem('gemini_api_key') || '').trim();
-
-    const subjectBreakdown = this.subjects.map((s) => ({
-      name: s.name,
-      prevScore: this.isPairwiseCompare && this.currentPair ? s.batchScores[this.currentPair.prevBatchId] : null,
-      currScore: this.isPairwiseCompare && this.currentPair ? s.batchScores[this.currentPair.currBatchId] : (this.displayedBatches[0] ? s.batchScores[this.displayedBatches[0].id] : null),
-      diff: this.getSubjectDiff(s),
-    }));
 
     const stats = {
       batch1Name: this.isPairwiseCompare && this.currentPair ? this.currentPair.prevBatchName : (this.displayedBatches[0]?.name || ''),
@@ -631,52 +555,13 @@ ${this.adminExecutiveSummary}
       totalSubjects: this.subjects.length,
     };
 
-    // 1. ถ้ามี API Key ลองเรียก Gemini Direct ก่อน (ตอบสนองใน 1 วินาที ไม่ติด Backend sleep)
-    if (apiKey) {
-      try {
-        const directRes = await this.callGeminiDirectly(apiKey, mode, stats, subjectBreakdown);
-        if (directRes && directRes.success && directRes.executive_summary) {
-          this.isAiGenerating = false;
-          this.adminExecutiveSummary = directRes.executive_summary;
-          this.adminActionPlanText = directRes.action_plan_text;
-          this.cdr.detectChanges();
-          return;
-        }
-      } catch (e) {
-        console.warn('Direct Gemini call failed, fallback to backend:', e);
-      }
-    }
-
-    // 2. เรียกผ่าน Backend
-    const payload = {
-      courseName: this.courseTitle,
-      cohortKey: this.selectedCohort,
-      cohortTitle: this.currentCohortDisplayLabel,
-      analysisStyle: this.selectedAiStyle,
-      mode: mode,
-      currentExecutiveSummary: this.adminExecutiveSummary,
-      currentActionPlan: this.adminActionPlanText,
-      userApiKey: apiKey,
-      subjectBreakdown: subjectBreakdown,
-      stats: stats,
-    };
-
-    this.courseService.generateAiSummary(payload).subscribe({
-      next: (res: any) => {
-        this.isAiGenerating = false;
-        if (res && res.success) {
-          this.adminExecutiveSummary = res.executive_summary || '';
-          this.adminActionPlanText = res.action_plan_text || (res.action_plan ? res.action_plan.join('\n') : '');
-        }
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.isAiGenerating = false;
-        console.error('Error generating AI summary:', err);
-        this.applyEmergencyFallback(mode, stats);
-        this.cdr.detectChanges();
-      },
-    });
+    setTimeout(() => {
+      const result = this.processStatisticalSummary(mode, stats);
+      this.adminExecutiveSummary = result.executiveSummary;
+      this.adminActionPlanText = result.actionPlans.join('\n');
+      this.isAiGenerating = false;
+      this.cdr.detectChanges();
+    }, 200);
   }
 
   saveAdminSummary(): void {
