@@ -343,31 +343,36 @@ $white: #ffffff;
   align-items: center;
   background-color: $pastel-purple-light;
   color: $text-dark;
-  border: 1px solid $border-purple;
-  border-radius: 12px;
-  padding: 14px 20px;
-  margin-bottom: 20px;
+  border: 1.5px solid $border-purple;
+  border-radius: 16px;
+  padding: 16px 28px;
+  margin-bottom: 24px;
 }
 .subject-strip .name {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
   color: $primary-purple;
+  margin-bottom: 4px;
 }
 .subject-strip .meta {
-  font-size: 13px;
+  font-size: 18px;
+  font-weight: 600;
   color: $text-muted;
-  margin-top: 2px;
 }
 .subject-strip .max {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 22px;
+  font-size: 48px; // ใหญ่เท่าฟอนต์คะแนนเต็ม (48px)
   font-weight: 700;
   color: $primary-purple;
+  line-height: 1;
+  text-align: right;
 }
 .max-label {
-  font-size: 11px;
+  font-size: 13px;
+  font-weight: 600;
   color: $text-muted;
   text-align: right;
+  margin-top: 4px;
 }
 
 // ── ตาราง ──
@@ -377,17 +382,17 @@ table {
 }
 thead th {
   text-align: left;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   color: $text-dark;
-  padding: 14px 12px;
+  padding: 16px 14px;
   border-bottom: 2px solid $border-purple;
   background-color: $pastel-purple-light;
 }
 tbody td {
-  padding: 14px 12px;
+  padding: 14px 14px;
   border-bottom: 1px solid $border-purple;
-  font-size: 14px;
+  font-size: 15px;
   vertical-align: middle;
   color: $text-dark;
 }
@@ -395,9 +400,31 @@ tbody tr:last-child td {
   border-bottom: none;
 }
 tbody tr {
-  transition: background 0.15s ease;
+  transition: all 0.15s ease;
+
   &:hover td {
     background-color: rgba($pastel-purple-light, 0.25);
+  }
+
+  // ไฮไลต์ทั้งแถวเมื่อกำลังโฟกัสกรอกคะแนนของนักเรียนคนนั้น
+  &:focus-within {
+    background-color: #f3e8ff !important;
+    box-shadow: inset 4px 0 0 #7c3aed; // แถบสีม่วงสดชัดเจนทางซ้ายสุด
+
+    td {
+      background-color: #f3e8ff !important;
+      color: #1e1b4b;
+    }
+
+    td.col-idx {
+      color: #6d28d9;
+      font-weight: 700;
+    }
+
+    td.col-name {
+      color: #4c1d95;
+      font-weight: 700;
+    }
   }
 }
 tbody tr.failing-row td {
@@ -414,25 +441,28 @@ tbody tr.failing-row td.col-code {
 }
 
 .col-idx {
-  width: 44px;
+  width: 52px;
   color: $text-muted;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 13px;
+  font-size: 16px;
   text-align: center;
 }
 .col-code {
   width: 90px;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 13px;
+  font-size: 14px;
   color: $text-muted;
   text-align: center;
   font-weight: 600;
 }
 .col-name {
-  font-weight: 500;
+  font-size: 18px;
+  font-weight: 600;
+  color: $text-dark;
+  line-height: 1.4;
 }
 .col-score {
-  width: 260px;
+  width: 300px;
 }
 
 .score-cell {
@@ -441,18 +471,19 @@ tbody tr.failing-row td.col-code {
   gap: 12px;
 }
 .score-input {
-  width: 68px;
-  height: 38px;
-  border-radius: 8px;
+  width: 88px;
+  height: 48px;
+  border-radius: 10px;
   border: 1.5px solid $border-purple;
   text-align: center;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 24px; // ขนาดตัวเลข 24px
+  font-weight: 700;
+  letter-spacing: 0.5px;
   color: $text-dark;
   background: $white;
   flex-shrink: 0;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   -moz-appearance: textfield;
 
   &::-webkit-outer-spin-button,
@@ -460,16 +491,39 @@ tbody tr.failing-row td.col-code {
     -webkit-appearance: none;
     margin: 0;
   }
+
+  &:hover:not(:disabled):not(:focus) {
+    border-color: #a78bfa;
+    background-color: #faf5ff;
+  }
 }
+
+// ไฮไลต์ชัดเจนเมื่อกำลังกรอกช่องนี้
 .score-input:focus {
   outline: none;
-  border-color: $primary-purple;
-  box-shadow: 0 0 0 3px rgba(142, 68, 173, 0.15);
+  border: 2px solid #7c3aed;
+  background-color: #ffffff !important;
+  color: #4c1d95;
+  box-shadow:
+    0 0 0 4px rgba(124, 58, 237, 0.28),
+    0 4px 14px rgba(124, 58, 237, 0.2);
+  transform: scale(1.08);
+  position: relative;
+  z-index: 5;
 }
+
+.score-input:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
+}
+
 .score-input.over {
-  border-color: #c0392b;
-  color: #c0392b;
-  background: #fdedec;
+  border-color: #dc2626;
+  color: #dc2626;
+  background: #fef2f2 !important;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.25) !important;
 }
 
 .maxscore-input {
@@ -483,16 +537,30 @@ tbody tr.failing-row td.col-code {
 }
 
 .score-input-su {
-  width: 130px;
+  width: 140px;
+  height: 48px;
+  font-size: 18px;
+  font-weight: 700;
   text-align: left;
-  padding-left: 12px;
-  padding-right: 28px;
+  padding-left: 16px;
+  padding-right: 30px;
+  border-radius: 10px;
   font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
   appearance: none;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%238e44ad' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
   background-repeat: no-repeat;
   background-position: right 12px center;
   cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:focus {
+    outline: none;
+    border: 2px solid #7c3aed;
+    box-shadow:
+      0 0 0 4px rgba(124, 58, 237, 0.28),
+      0 4px 14px rgba(124, 58, 237, 0.2);
+    transform: scale(1.04);
+  }
 }
 
 .score-input-su.su-pass {
@@ -502,7 +570,10 @@ tbody tr.failing-row td.col-code {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%2327ae60' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 .score-input-su.su-pass:focus {
-  box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.15);
+  box-shadow:
+    0 0 0 4px rgba(39, 174, 96, 0.28),
+    0 4px 14px rgba(39, 174, 96, 0.2);
+  border-color: #27ae60;
 }
 
 .score-input-su.su-fail {
@@ -512,7 +583,10 @@ tbody tr.failing-row td.col-code {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%23c0392b' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 .score-input-su.su-fail:focus {
-  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.15);
+  box-shadow:
+    0 0 0 4px rgba(192, 57, 43, 0.28),
+    0 4px 14px rgba(192, 57, 43, 0.2);
+  border-color: #c0392b;
 }
 
 .ratio-track {
@@ -533,12 +607,12 @@ tbody tr.failing-row td.col-code {
   background: #c0392b;
 }
 .ratio-pct {
-  width: 46px;
+  width: 56px;
   text-align: right;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 13px;
+  font-size: 16px; // ขนาดตัวเลข % ชัดเจนขึ้น
   color: $primary-purple;
-  font-weight: 600;
+  font-weight: 700;
   flex-shrink: 0;
 }
 
@@ -1079,6 +1153,7 @@ tbody tr.failing-row td.col-code {
   gap: 2px;
 
   .student-name {
+    font-size: 16px;
     font-weight: 600;
     color: #1e293b;
   }
@@ -1301,12 +1376,21 @@ tbody tr.failing-row td.col-code {
 }
 
 @keyframes modalFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes modalSlideUp {
-  from { opacity: 0; transform: translateY(16px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
-
