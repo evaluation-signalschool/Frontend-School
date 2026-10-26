@@ -516,6 +516,13 @@ $text-color: #4a607a;
   padding: 6px 14px;
   border-radius: 30px;
   border: 1px solid #d8b4fe;
+  flex-wrap: wrap;
+
+  .filter-item-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
 
   .selector-label {
     font-size: 14px;
@@ -531,9 +538,14 @@ $text-color: #4a607a;
     color: #581c87;
     font-weight: 600;
     font-size: 14px;
-    min-width: 170px;
+    min-width: 160px;
     cursor: pointer;
     transition: all 0.2s ease;
+
+    &.course-dropdown {
+      min-width: 170px;
+      max-width: 240px;
+    }
 
     &:hover {
       background-color: #d8b4fe;
@@ -728,34 +740,73 @@ $text-color: #4a607a;
 }
 
 /* Table Section */
-.table-title {
-  font-size: 15px;
-  font-weight: 600;
-  margin-top: 0;
-  margin-bottom: 16px;
-}
+.table-responsive {
+  max-height: 440px;
+  overflow-y: auto;
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #e9d5ff;
+  background-color: #ffffff;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02);
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 14px;
-
-  th {
-    background-color: #ebd5ff;
-    padding: 12px 16px;
-    color: #4c1d95;
-    font-weight: 600;
+  /* บาร์เลื่อนสไตล์โมเดิร์นสีม่วงพาสเทล */
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #fdf4ff;
+    border-radius: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #c084fc;
+    border-radius: 6px;
+    &:hover {
+      background: #a855f7;
+    }
   }
 
-  td {
-    padding: 12px 16px;
-    border-bottom: 1px solid #e9d5ff;
-  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 14px;
 
-  .bold { font-weight: 600; }
-  .trend.up { color: #16a34a; font-weight: 600; }
-  .trend.down { color: #dc2626; font-weight: 600; }
+    thead {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background-color: #ebd5ff;
+      padding: 12px 16px;
+      color: #4c1d95;
+      font-weight: 600;
+      box-shadow: 0 1px 0 #d8b4fe;
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      transition: background-color 0.15s ease;
+      &:hover {
+        background-color: #faf5ff;
+      }
+    }
+
+    td {
+      padding: 11px 16px;
+      border-bottom: 1px solid #f3e8ff;
+      white-space: nowrap;
+    }
+
+    .bold { font-weight: 600; }
+    .trend.up { color: #16a34a; font-weight: 600; }
+    .trend.down { color: #dc2626; font-weight: 600; }
+  }
 }
 
 /* Recommendation Box */
@@ -779,6 +830,123 @@ table {
 
     li {
       margin-bottom: 6px;
+    }
+  }
+}
+
+/* Loading & Empty State Cards */
+.loading-state-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 36px 20px;
+  background-color: #faf5ff;
+  border: 1.5px dashed #d8b4fe;
+  border-radius: 14px;
+  color: #7c3aed;
+  font-size: 15px;
+  font-weight: 500;
+
+  .spin-icon {
+    animation: spinDashboard 1.2s linear infinite;
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+  }
+}
+
+@keyframes spinDashboard {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.empty-stats-card {
+  text-align: center;
+  padding: 48px 20px;
+  background-color: #ffffff;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 14px;
+
+  mat-icon {
+    font-size: 44px;
+    width: 44px;
+    height: 44px;
+    color: #94a3b8;
+    margin-bottom: 8px;
+  }
+
+  h4 {
+    margin: 0 0 4px 0;
+    color: #334155;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0;
+    color: #64748b;
+    font-size: 13.5px;
+  }
+}
+
+/* Table Header Row with Badge */
+.table-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  .table-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  .table-badge {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #6b21a8;
+    background-color: #f3e8ff;
+    border: 1px solid #d8b4fe;
+    padding: 3px 12px;
+    border-radius: 20px;
+  }
+}
+
+/* CTA Link to Full Training Summary */
+.cta-more-stats {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 6px 0;
+
+  .btn-more-stats {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.25);
+    transition: all 0.2s ease;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(124, 58, 237, 0.35);
+      background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%);
     }
   }
 }

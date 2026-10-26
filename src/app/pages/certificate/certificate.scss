@@ -90,6 +90,192 @@
   }
 }
 
+.dev-warning-banner {
+  background: #fef2f2;
+  border: 1.5px solid #fca5a5;
+  border-left: 5px solid #dc2626;
+  border-radius: 8px;
+  padding: 12px 18px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.08);
+
+  .warning-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  .warning-text {
+    font-size: 0.95rem;
+    color: #b91c1c;
+    font-weight: 500;
+
+    strong {
+      color: #dc2626;
+      font-weight: 700;
+    }
+  }
+}
+
+.staff-helper-banner {
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+  border: 1px solid #e9d5ff;
+  border-left: 4px solid #7e22ce;
+  border-radius: 8px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+
+  .banner-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+    margin-top: 2px;
+  }
+
+  .banner-content {
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: #475569;
+
+    strong {
+      color: #6b21a8;
+    }
+  }
+}
+
+.students-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 16px;
+
+  .title-with-count {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .batch-badge {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+  }
+
+  .header-action-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .search-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+
+      .search-icon {
+        position: absolute;
+        left: 10px;
+        font-size: 0.85rem;
+        pointer-events: none;
+      }
+
+      .student-search-input {
+        padding: 7px 28px 7px 30px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 0.88rem;
+        font-family: 'Sarabun', sans-serif;
+        width: 190px;
+        transition: all 0.2s;
+
+        &:focus {
+          outline: none;
+          border-color: #7e22ce;
+          width: 230px;
+          box-shadow: 0 0 0 3px rgba(126, 34, 206, 0.1);
+        }
+      }
+
+      .btn-clear-search {
+        position: absolute;
+        right: 8px;
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        font-size: 0.8rem;
+      }
+    }
+
+    .btn-tool {
+      border: none;
+      border-radius: 6px;
+      padding: 7px 14px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      font-family: 'Sarabun', sans-serif;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+
+      &.btn-copy {
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+
+        &:hover {
+          background: #f1f5f9;
+          color: #7e22ce;
+          border-color: #d8b4fe;
+        }
+      }
+
+      &.btn-excel {
+        background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+        color: #ffffff;
+        box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);
+
+        &:hover {
+          background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+          transform: translateY(-1px);
+          box-shadow: 0 3px 8px rgba(22, 163, 74, 0.3);
+        }
+      }
+    }
+  }
+}
+
+.code-pill {
+  background: #f1f5f9;
+  color: #475569;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.86rem;
+}
+
+.status-pass-badge {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .students-table {
   width: 100%;
   border-collapse: collapse;

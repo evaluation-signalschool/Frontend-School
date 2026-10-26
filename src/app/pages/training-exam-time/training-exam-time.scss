@@ -581,13 +581,32 @@ $accent-purple: #8e44ad;
               }
 
               &.btn-tool-exam {
+                background-color: #fdf4ff;
+                color: #c026d3;
+                border: 1px solid #f5d0fe;
+
+                &:hover {
+                  background-color: #c026d3;
+                  color: #ffffff;
+                }
+              }
+
+              &.btn-tool-behavior {
                 background-color: #faf5ff;
                 color: #7e22ce;
                 border: 1px solid #e9d5ff;
 
+                mat-icon {
+                  color: #8e44ad;
+                }
+
                 &:hover {
                   background-color: #7e22ce;
                   color: #ffffff;
+
+                  mat-icon {
+                    color: #ffffff;
+                  }
                 }
               }
             }

@@ -1,4 +1,10 @@
 <div class="transcript-wrapper">
+    <!-- แถบแจ้งเตือนสถานะการพัฒนา -->
+    <div class="dev-warning-banner no-print">
+        <span class="warning-icon">⚠️</span>
+        <span class="warning-text"><strong>แจ้งเตือน:</strong> ส่วนงานนี้ยังอยู่ระหว่างการพัฒนา</span>
+    </div>
+
     <!-- ================================================================= -->
     <!-- แถบเครื่องมือจัดการเอกสารสไตล์ริบบอน (Ribbon Toolbar) -->
     <!-- ================================================================= -->
@@ -53,8 +59,14 @@
 
             <div class="ribbon-spacer"></div>
 
-            <!-- ปุ่มสั่งพิมพ์ -->
+            <!-- ปุ่มส่งออก Excel & ปุ่มสั่งพิมพ์ -->
             <div class="ribbon-actions">
+                <button (click)="exportTranscriptAnnexAExcel()" class="btn-ribbon btn-export-excel-annex" title="ส่งออกระเบียนแสดงผลการฝึกอบรม (ผนวก ก.) ของคนนี้เป็นไฟล์ Excel">
+                    📥 ส่งออก ผนวก ก. (Excel)
+                </button>
+                <button (click)="exportBatchGradesExcel()" class="btn-ribbon btn-export-excel-batch" title="ส่งออกสรุปเกรดเฉลี่ยทุกคนในรุ่นเป็นไฟล์ Excel">
+                    📊 ส่งออกเกรดทั้งรุ่น (Excel)
+                </button>
                 <button (click)="printTranscript()" class="btn-ribbon btn-print-single" title="พิมพ์เฉพาะใบทรานสคริปต์ของคนนี้">
                     🖨️ พิมพ์หน้านี้
                 </button>
@@ -140,7 +152,14 @@
                 <button class="btn-sync btn-reset" (click)="resetCurrentStudent()" title="รีเซ็ตกลับเป็นข้อมูลจริง">
                     🔄 รีเซ็ตค่าเดิม
                 </button>
-            </div>
+        </div>
+    </div>
+
+    <!-- แบนเนอร์คำแนะนำสำหรับเจ้าหน้าที่ -->
+    <div class="staff-helper-banner-transcript no-print" *ngIf="selectedBatchId && students.length > 0">
+        <div class="banner-icon">💡</div>
+        <div class="banner-text">
+            <strong>คำแนะนำสำหรับเจ้าหน้าที่:</strong> ระบบได้ประมวลผลเกรดและผลการเรียนที่ถูกต้องของ <strong>{{ selectedCourseName }} {{ selectedBatch?.batch_name || '' }}</strong> เรียบร้อยแล้ว ท่านสามารถตรวจสอบข้อมูลในหน้านี้ หรือกดปุ่ม <strong>"📥 ส่งออก ผนวก ก. (Excel)"</strong> เพื่อดาวน์โหลดไฟล์ Excel ไปเปิดพิมพ์ตามแบบฟอร์มเดิม หรือกด <strong>"📊 ส่งออกเกรดทั้งรุ่น (Excel)"</strong> เพื่อนำตารางสรุปเกรดเฉลี่ยไปใช้งานต่อได้ทันที
         </div>
     </div>
 

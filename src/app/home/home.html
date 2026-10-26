@@ -107,132 +107,138 @@
 
     <section id="sec-dashboard" class="dashboard-container">
 
-      <!-- Section บน: Area Chart (Visits) -->
-      <div class="dashboard-container">
+      <!-- Header Section -->
+      <header class="page-header">
+        <div class="header-title-group">
+          <h1>📊 สถิติการฝึกอบรม (Training Statistics)</h1>
+          <p class="subtitle" *ngIf="courseTitle">{{ courseTitle }}</p>
+          <p class="subtitle" *ngIf="!courseTitle && !isLoadingTrainingStats">ภาพรวมสถิติและคะแนนผลการฝึกอบรมรายวิชา</p>
+        </div>
 
-        <!-- Header Section -->
-        <header class="page-header">
-          <div class="header-title-group">
-            <h1>📊 สถิติการฝึกอบรม (Training Statistics)</h1>
-            <p class="subtitle">หลักสูตรนายสิบชั้นต้น เหล่าทหารสื่อสาร (E-learning) เร่งรัด รุ่นที่ 8</p>
+        <!-- ส่วน Dropdown เลือกหลักสูตร / เลือกรุ่น และแสดงคะแนนเฉลี่ย -->
+        <div class="cohort-selector-card">
+          <!-- เลือกหลักสูตร (กรณีมีหลายหลักสูตร) -->
+          <div class="filter-item-inline" *ngIf="availableCourses.length > 1">
+            <label class="selector-label">หลักสูตร:</label>
+            <mat-select class="cohort-dropdown course-dropdown" panelClass="purple-pastel-panel"
+              [(ngModel)]="selectedCourseName" (selectionChange)="onCourseChange()">
+              <mat-option *ngFor="let c of availableCourses" [value]="c.course_name">
+                {{ c.course_name }}
+              </mat-option>
+            </mat-select>
           </div>
-          <!-- ส่วน Dropdown เลือกรุ่นและแสดงคะแนนเฉลี่ย -->
-          <div class="cohort-selector-card">
-            <label for="cohortSelect" class="selector-label">เลือกดูรุ่น:</label>
+
+          <!-- เลือกรุ่น / คู่รุ่น -->
+          <div class="filter-item-inline" *ngIf="batches.length > 0">
+            <label for="cohortSelect" class="selector-label">เลือกรุ่น:</label>
             <mat-select id="cohortSelect" class="cohort-dropdown" panelClass="purple-pastel-panel"
               [(ngModel)]="selectedCohort" (selectionChange)="onCohortChange()">
-              <mat-option value="all">🌟 แสดงรวมทุกรุ่น (3 รุ่น)</mat-option>
-              <mat-option value="1">รุ่นที่ 1</mat-option>
-              <mat-option value="2">รุ่นที่ 2</mat-option>
-              <mat-option value="3">รุ่นที่ 3</mat-option>
+              <mat-option value="all" *ngIf="batches.length > 1">🌟 แสดงรวมทุกรุ่น ({{ batches.length }} รุ่น)</mat-option>
+              <mat-optgroup label="เปรียบเทียบคู่รุ่น" *ngIf="pairwiseComparisons.length > 0">
+                <mat-option *ngFor="let p of pairwiseComparisons" [value]="p.key">{{ p.label }}</mat-option>
+              </mat-optgroup>
+              <mat-optgroup label="ผลการเรียนเฉพาะรุ่น">
+                <mat-option *ngFor="let b of batches" [value]="'single:' + b.id">{{ b.name }}</mat-option>
+              </mat-optgroup>
             </mat-select>
-
-            <!-- Display คะแนนเฉลี่ยที่จะเปลี่ยนตามรุ่นที่เลือก -->
-            <div class="badge-avg">
-              เฉลี่ย: <strong>{{ currentAverageScore }}%</strong>
-            </div>
-          </div>
-        </header>
-
-        <!-- Section 1: Main Chart Card -->
-        <section class="card chart-card">
-          <div class="chart-header">
-            <h2 class="chart-title">📊 กราฟวิเคราะห์และเปรียบเทียบคะแนนรายวิชา</h2>
-            <div class="chart-toggle-buttons">
-              <button class="toggle-btn" [class.active]="chartType === 'bar'" (click)="switchChartType('bar')">
-                📊 กราฟแท่ง (Bar)
-              </button>
-
-              <button class="toggle-btn" [class.active]="chartType === 'line'" (click)="switchChartType('line')">
-                📈 กราฟเส้น (Line)
-              </button>
-            </div>
           </div>
 
-          <div class="chart-body">
-            <!-- ใช้ canvas ธรรมดาที่มี id="mainChart" -->
-            <canvas id="mainChart"></canvas>
+          <!-- Display คะแนนเฉลี่ยที่จะเปลี่ยนตามรุ่นที่เลือก -->
+          <div class="badge-avg" *ngIf="subjects.length > 0">
+            เฉลี่ย: <strong>{{ currentAverageScore | number:'1.1-1' }}%</strong>
           </div>
+        </div>
+      </header>
 
-          <!-- Legend -->
-          <div class="chart-legend">
-            <span class="legend-item light-blue"><span class="square"></span> รุ่นที่ 1</span>
-            <span class="legend-item blue"><span class="square"></span> รุ่นที่ 2</span>
-            <span class="legend-item dark-blue"><span class="square"></span> รุ่นที่ 3</span>
+      <!-- Loading State -->
+      <div class="loading-state-card" *ngIf="isLoadingTrainingStats">
+        <mat-icon class="spin-icon">sync</mat-icon>
+        <span>กำลังโหลดข้อมูลสถิติการฝึกอบรมจากระบบ...</span>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-stats-card" *ngIf="!isLoadingTrainingStats && subjects.length === 0">
+        <mat-icon>assessment</mat-icon>
+        <h4>ยังไม่มีข้อมูลผลการเรียนสำหรับหลักสูตรนี้</h4>
+        <p>สามารถดูข้อมูลหลักสูตรอื่นได้จากตัวเลือกด้านบน</p>
+      </div>
+
+      <!-- Section 1: Main Chart Card -->
+      <section class="card chart-card" *ngIf="subjects.length > 0">
+        <div class="chart-header">
+          <h2 class="chart-title">📊 กราฟวิเคราะห์และเปรียบเทียบคะแนนรายวิชา</h2>
+          <div class="chart-toggle-buttons">
+            <button class="toggle-btn" [class.active]="chartType === 'bar'" (click)="switchChartType('bar')">
+              📊 กราฟแท่ง (Bar)
+            </button>
+
+            <button class="toggle-btn" [class.active]="chartType === 'line'" (click)="switchChartType('line')">
+              📈 กราฟเส้น (Line)
+            </button>
           </div>
-        </section>
+        </div>
 
+        <div class="chart-body">
+          <canvas id="mainChart"></canvas>
+        </div>
 
+        <!-- Dynamic Legend -->
+        <div class="chart-legend" *ngIf="displayedBatches.length > 0">
+          <span class="legend-item" *ngFor="let b of displayedBatches; let idx = index">
+            <span class="square" [style.backgroundColor]="getBatchColor(idx)"></span> {{ b.name }}
+          </span>
+        </div>
+      </section>
 
-        <!-- Section 3: Data Table Card -->
-        <section class="card table-card">
+      <!-- Section 3: Data Table Card -->
+      <section class="card table-card" *ngIf="subjects.length > 0">
+        <div class="table-header-row">
           <h3 class="table-title">📋 ตารางข้อมูลการเรียนทั้งหมด (ดึงข้อมูลตรงจาก Database)</h3>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>ลำดับ</th>
-                  <th>รายวิชา</th>
-                  <th>รุ่นที่ 1</th>
-                  <th>รุ่นที่ 2</th>
-                  <th>รุ่นที่ 3</th>
-                  <th>เฉลี่ยรวม</th>
-                  <th>แนวโน้ม</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>1</td>
-                  <td class="bold">การยิงปืนประจำกาย</td>
-                  <td>88</td>
-                  <td>91</td>
-                  <td>98.5</td>
-                  <td class="bold">92.5</td>
-                  <td class="trend up">▲ เพิ่มขึ้น (+10.5)</td>
-                </tr>
-                <tr>
-                  <td>2</td>
-                  <td class="bold">ยุทธวิธีระดับหมวด</td>
-                  <td>82</td>
-                  <td>87</td>
-                  <td>95</td>
-                  <td class="bold">88</td>
-                  <td class="trend up">▲ เพิ่มขึ้น (+13)</td>
-                </tr>
-                <tr>
-                  <td>3</td>
-                  <td class="bold">วิชาสื่อสารและเรดาร์</td>
-                  <td>72</td>
-                  <td>65</td>
-                  <td>56</td>
-                  <td class="bold">64.3</td>
-                  <td class="trend down">▼ ลดลง (-16)</td>
-                </tr>
-                <tr>
-                  <td>4</td>
-                  <td class="bold">วิชาการต้นแบบอาวุธ</td>
-                  <td>68</td>
-                  <td>65</td>
-                  <td>59.6</td>
-                  <td class="bold">64.2</td>
-                  <td class="trend down">▼ ลดลง (-8.4)</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+          <span class="table-badge">รวม {{ subjects.length }} รายวิชา</span>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 60px; text-align: center;">ลำดับ</th>
+                <th>รายวิชา</th>
+                <th *ngFor="let b of displayedBatches" style="text-align: center;">{{ b.name }}</th>
+                <th style="text-align: center;">เฉลี่ยรวม</th>
+                <th style="text-align: center;">แนวโน้ม</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let sub of subjects; let idx = index">
+                <td style="text-align: center;">{{ idx + 1 }}</td>
+                <td class="bold">{{ sub.name }}</td>
+                <td *ngFor="let b of displayedBatches" style="text-align: center;">
+                  {{ sub.batchScores[b.id] !== null && sub.batchScores[b.id] !== undefined ? sub.batchScores[b.id] : '-' }}
+                </td>
+                <td class="bold" style="text-align: center;">{{ sub.avgScore | number:'1.1-1' }}</td>
+                <td style="text-align: center;" [ngClass]="getTrendClass(sub)">{{ getTrendText(sub) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-        <!-- Section 4: Recommendation Banner -->
-        <section class="recommendation-box">
-          <h3>💡 โครงการ / กิจกรรมที่แนะนำเพื่อส่งเสริมทักษะ</h3>
-          <ul>
-            <li><strong>โครงการ Boot Camp เสริมวิชาสื่อสาร:</strong> เพิ่มชั่วโมงฝึกปฏิบัติการใช้เรดาร์ภาคสนามสัปดาห์ละ
-              4 ชม.</li>
-            <li><strong>กิจกรรม Peer Tutoring:</strong> จัดประกวดครูฝึกดีเด่น นำกำลังพลที่ได้คะแนนยิงปืน Top 3
-              มาช่วยติวรุ่นถัดไป</li>
-          </ul>
-        </section>
+      <!-- Section 4: Recommendation Banner -->
+      <section class="recommendation-box" *ngIf="displayedActionPlans.length > 0">
+        <h3>💡 ข้อเสนอแนะ / กิจกรรมพัฒนาทักษะตามผลสถิติจริง</h3>
+        <ul>
+          <li *ngFor="let plan of displayedActionPlans">
+            {{ plan }}
+          </li>
+        </ul>
+      </section>
 
+      <!-- CTA Link to full summary page -->
+      <div class="cta-more-stats" *ngIf="courseTitle">
+        <a class="btn-more-stats" routerLink="/training-results/training-summary" [queryParams]="{ course: courseTitle }">
+          <mat-icon>analytics</mat-icon>
+          <span>ดูบทสรุปและผลวิเคราะห์สถิติฉบับเต็ม</span>
+          <mat-icon>arrow_forward</mat-icon>
+        </a>
       </div>
 
     </section>

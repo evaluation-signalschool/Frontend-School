@@ -10,6 +10,35 @@ import { Chart, registerables, ChartType, ChartDataset } from 'chart.js';
 import { FormsModule } from '@angular/forms';
 import { MatSelectModule } from '@angular/material/select';
 import { environment } from '../../environments/environment';
+import { CourseService } from '../services/course.service';
+
+Chart.register(...registerables);
+
+export interface BatchItem {
+  id: number;
+  name: string;
+  startDate?: string;
+  endDate?: string;
+  isActive?: boolean;
+}
+
+export interface SubjectItem {
+  id: number;
+  name: string;
+  is_su: boolean;
+  batchScores: Record<number, number | null>;
+  avgScore: number;
+  diff: number | null;
+}
+
+export interface PairwiseComparisonItem {
+  key: string;
+  prevBatchId: number;
+  prevBatchName: string;
+  currBatchId: number;
+  currBatchName: string;
+  label: string;
+}
 
 @Component({
   selector: 'app-home',
@@ -105,67 +134,317 @@ export class Home {
     this.activeSection = current;
   }
 
-  // 1. ประกาศตัวแปรสำหรับกราฟ
+  // ── Training Statistics ─────────────────────────────────────
+  private courseService = inject(CourseService);
+
+  public isLoadingTrainingStats = false;
+  public availableCourses: any[] = [];
+  public selectedCourseName: string = '';
+  public courseTitle: string = '';
+  public batches: BatchItem[] = [];
+  public subjects: SubjectItem[] = [];
+  public pairwiseComparisons: PairwiseComparisonItem[] = [];
+  public totalAvg: number = 0;
+  public topImproved: { name: string; diff: number } | null = null;
+  public topDeclined: { name: string; diff: number } | null = null;
+  public actionPlans: string[] = [];
+  public savedActionPlans: string[] = [];
+  public hasSavedSummary: boolean = false;
+
+  public selectedCohort: string = 'all';
+  public currentAverageScore: number = 0;
   public chart: Chart | null = null;
   public chartType: ChartType = 'bar';
 
-  public chartLabels: string[] = [];
-  public chartDatasets: ChartDataset[] = [];
+  private chartPalette = [
+    { bg: '#3b82f6', border: '#2563eb' }, // Blue
+    { bg: '#8b5cf6', border: '#7c3aed' }, // Purple
+    { bg: '#10b981', border: '#059669' }, // Green
+    { bg: '#f59e0b', border: '#d97706' }, // Amber
+    { bg: '#ec4899', border: '#db2777' }, // Pink
+    { bg: '#06b6d4', border: '#0891b2' }, // Cyan
+  ];
 
-  // กำหนดตัวแปรสำหรับแสดงผลในหน้าจอ
-  public selectedCohort: string = 'all'; 
-  public currentAverageScore: number = 77.5; // ตัวแปรเก็บคะแนนเฉลี่ยที่ใช้แสดงใน HTML
+  get displayedBatches(): BatchItem[] {
+    if (!this.selectedCohort || this.selectedCohort === 'all') {
+      return this.batches;
+    }
+    if (this.selectedCohort.startsWith('compare:')) {
+      const parts = this.selectedCohort.split(':');
+      const prevId = Number(parts[1]);
+      const currId = Number(parts[2]);
+      const b1 = this.batches.find((b) => b.id === prevId);
+      const b2 = this.batches.find((b) => b.id === currId);
+      return [b1, b2].filter(Boolean) as BatchItem[];
+    }
+    if (this.selectedCohort.startsWith('single:')) {
+      const id = Number(this.selectedCohort.split(':')[1]);
+      const found = this.batches.find((b) => b.id === id);
+      return found ? [found] : this.batches;
+    }
+    return this.batches;
+  }
 
-  // ข้อมูลคะแนนเฉลี่ยจำลองของแต่ละรุ่น
-  private cohortScores: { [key: string]: number } = {
-    'all': 77.5,
-    '1': 77.5,
-    '2': 77.0,
-    '3': 77.3
-  };
+  loadTrainingSummary(courseId?: number, courseName?: string): void {
+    this.isLoadingTrainingStats = true;
+    this.courseService.getTrainingSummary(courseId, courseName).subscribe({
+      next: (res: any) => {
+        this.isLoadingTrainingStats = false;
+        if (res && res.success && res.course) {
+          this.availableCourses = res.availableCourses || [];
+          this.courseTitle = res.course.name || '';
+          this.selectedCourseName = res.course.name || '';
+          this.batches = (res.batches || []).map((b: any) => ({
+            id: b.id || b.batch_id,
+            name: b.name || b.batch_name,
+            startDate: b.startDate || b.start_date,
+            endDate: b.endDate || b.end_date,
+            isActive: Boolean(b.isActive || b.is_active)
+          }));
+          this.subjects = res.subjects || [];
+          this.pairwiseComparisons = res.pairwiseComparisons || [];
+          this.totalAvg = res.totalAvg || 0;
+          this.topImproved = res.topImproved || null;
+          this.topDeclined = res.topDeclined || null;
+          this.actionPlans = res.actionPlans || [];
 
-  ngAfterViewInit(): void {
+          if (this.batches.length > 1) {
+            this.selectedCohort = 'all';
+          } else if (this.batches.length === 1) {
+            this.selectedCohort = 'single:' + this.batches[0].id;
+          } else {
+            this.selectedCohort = 'all';
+          }
+
+          this.updateAverageScore();
+          this.loadSavedSummary();
+          this.cdr.detectChanges();
+          setTimeout(() => {
+            this.createChart();
+          }, 150);
+        }
+      },
+      error: (err) => {
+        this.isLoadingTrainingStats = false;
+        console.error('Error loading training statistics for dashboard:', err);
+      }
+    });
+  }
+
+  loadSavedSummary(): void {
+    if (!this.courseTitle || !this.selectedCohort) return;
+    this.courseService.getSavedTrainingSummary(this.courseTitle, this.selectedCohort).subscribe({
+      next: (res: any) => {
+        if (res && res.success && res.hasData && res.data) {
+          this.hasSavedSummary = true;
+          this.savedActionPlans = res.data.action_plan || [];
+        } else {
+          this.hasSavedSummary = false;
+          this.savedActionPlans = [];
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+  }
+
+  public onCourseChange(): void {
+    if (this.selectedCourseName) {
+      this.loadTrainingSummary(undefined, this.selectedCourseName);
+    }
+  }
+
+  public onCohortChange(): void {
+    this.updateAverageScore();
+    this.loadSavedSummary();
     this.createChart();
   }
 
-  // 3. ฟังก์ชันนี้ต้องเป็น public และชื่อตรงกับใน HTML
-  public onCohortChange(): void {
-    this.currentAverageScore = this.cohortScores[this.selectedCohort] || 0;
+  updateAverageScore(): void {
+    if (!this.selectedCohort || this.selectedCohort === 'all') {
+      this.currentAverageScore = this.totalAvg;
+      return;
+    }
+    if (this.selectedCohort.startsWith('single:')) {
+      const bId = Number(this.selectedCohort.split(':')[1]);
+      const scores = this.subjects
+        .map(s => s.batchScores[bId])
+        .filter((v): v is number => v !== null && v !== undefined && v > 0);
+      this.currentAverageScore = scores.length > 0
+        ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1))
+        : 0;
+      return;
+    }
+    if (this.selectedCohort.startsWith('compare:')) {
+      const parts = this.selectedCohort.split(':');
+      const currId = Number(parts[2]);
+      const scores = this.subjects
+        .map(s => s.batchScores[currId])
+        .filter((v): v is number => v !== null && v !== undefined && v > 0);
+      this.currentAverageScore = scores.length > 0
+        ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1))
+        : this.totalAvg;
+      return;
+    }
+    this.currentAverageScore = this.totalAvg;
   }
 
   public createChart(): void {
-  const ctx = document.getElementById('mainChart') as HTMLCanvasElement;
-  if (!ctx) return;
+    const ctx = document.getElementById('mainChart') as HTMLCanvasElement;
+    if (!ctx) return;
 
-  // เคลียร์กราฟเดิมออกจาก Canvas ก่อนสร้างใหม่ เพื่อป้องกันข้อผิดพลาด Canvas is already in use
-  if (this.chart) {
-    this.chart.destroy();
-  }
-  // หรือใช้บรรทัดนี้ชัวร์ที่สุด: Chart.getChart(ctx)?.destroy();
-
-  this.chart = new Chart(ctx, {
-    type: this.chartType,
-    data: {
-      // ดึงข้อมูลจากตัวแปร เพื่อป้องกันข้อมูลสูญหายเมื่อสลับกราฟหรือเรียก API
-      labels: this.chartLabels || [], 
-      datasets: this.chartDatasets || []
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false
+    if (this.chart) {
+      this.chart.destroy();
+      this.chart = null;
     }
-  });
-}
 
-  // 3. ฟังก์ชันสลับประเภทกราฟ
+    if (this.subjects.length === 0 || this.displayedBatches.length === 0) {
+      return;
+    }
+
+    const labels = this.subjects.map(s => s.name);
+    const datasets: any[] = [];
+    const activeBatches = this.displayedBatches;
+
+    activeBatches.forEach((batch, idx) => {
+      const color = this.chartPalette[idx % this.chartPalette.length];
+      datasets.push({
+        label: batch.name,
+        data: this.subjects.map(s => {
+          const val = s.batchScores[batch.id];
+          return val !== null && val !== undefined ? val : 0;
+        }),
+        backgroundColor: this.chartType === 'line' ? 'transparent' : color.bg,
+        borderColor: color.border,
+        borderWidth: 2,
+        borderRadius: 6,
+        fill: false,
+        tension: 0.35,
+        pointBackgroundColor: color.border,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      });
+    });
+
+    this.chart = new Chart(ctx, {
+      type: this.chartType,
+      data: {
+        labels,
+        datasets
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: '#1e293b',
+            padding: 10,
+            cornerRadius: 8,
+            titleFont: { family: 'Sarabun' },
+            bodyFont: { family: 'Sarabun' },
+            callbacks: {
+              label: (item: any) => `${item.dataset.label}: ${item.parsed.y} คะแนน`
+            }
+          }
+        },
+        scales: {
+          y: {
+            min: 0,
+            max: 100,
+            grid: {
+              color: '#f1f5f9'
+            },
+            ticks: {
+              stepSize: 20,
+              font: { family: 'Sarabun' }
+            }
+          },
+          x: {
+            grid: {
+              display: false
+            },
+            ticks: {
+              font: { family: 'Sarabun', size: 12 },
+              maxRotation: 45,
+              minRotation: 0
+            }
+          }
+        }
+      }
+    });
+  }
+
   public switchChartType(type: 'bar' | 'line'): void {
     if (this.chartType === type) return;
     this.chartType = type as ChartType;
 
     if (this.chart) {
       this.chart.destroy();
+      this.chart = null;
       this.createChart();
     }
+  }
+
+  getBatchColor(idx: number): string {
+    return this.chartPalette[idx % this.chartPalette.length].bg;
+  }
+
+  getSubjectDiff(subject: SubjectItem): number | null {
+    if (this.selectedCohort.startsWith('compare:')) {
+      const parts = this.selectedCohort.split(':');
+      const prevId = Number(parts[1]);
+      const currId = Number(parts[2]);
+      const prevScore = subject.batchScores[prevId];
+      const currScore = subject.batchScores[currId];
+      if (prevScore !== null && prevScore !== undefined && currScore !== null && currScore !== undefined) {
+        return Number((currScore - prevScore).toFixed(1));
+      }
+      return null;
+    }
+    return subject.diff;
+  }
+
+  getTrendClass(subject: SubjectItem): string {
+    const diff = this.getSubjectDiff(subject);
+    if (diff === null || diff === undefined) return '';
+    return diff > 0 ? 'trend up' : diff < 0 ? 'trend down' : '';
+  }
+
+  getTrendText(subject: SubjectItem): string {
+    const diff = this.getSubjectDiff(subject);
+    if (diff === null || diff === undefined) return '-';
+    if (diff > 0) return `▲ เพิ่มขึ้น (+${diff})`;
+    if (diff < 0) return `▼ ลดลง (${diff})`;
+    return '- เท่าเดิม';
+  }
+
+  get displayedActionPlans(): string[] {
+    if (this.savedActionPlans && this.savedActionPlans.length > 0) {
+      return this.savedActionPlans;
+    }
+    if (this.actionPlans && this.actionPlans.length > 0) {
+      return this.actionPlans;
+    }
+    const plans: string[] = [];
+    if (this.topDeclined) {
+      plans.push(`โครงการส่งเสริมทักษะวิชา ${this.topDeclined.name}: เพิ่มชั่วโมงฝึกปฏิบัติการและทบทวนเนื้อหาเนื่องจากมีแนวโน้มคะแนนลดลง (${this.topDeclined.diff} คะแนน)`);
+    }
+    if (this.topImproved) {
+      plans.push(`กิจกรรมขยายผลความสำเร็จวิชา ${this.topImproved.name}: จัดกิจกรรมนำแนวการเรียนรู้ที่คะแนนเพิ่มขึ้น (+${this.topImproved.diff} คะแนน) มาเป็นต้นแบบ`);
+    }
+    if (plans.length === 0) {
+      plans.push('ส่งเสริมการเรียนรู้ผ่านสื่อดิจิทัลและแบบฝึกหัดทบทวนรายวิชาเพื่อรักษามาตรฐานผลการเรียนอย่างต่อเนื่อง');
+    }
+    return plans;
+  }
+
+  ngAfterViewInit(): void {
+    setTimeout(() => {
+      this.createChart();
+    }, 200);
   }
 
 
@@ -192,6 +471,7 @@ export class Home {
 
     this.startAutoPlay();
     this.fetchNews();
+    this.loadTrainingSummary();
   }
 
   // ดึงข้อมูลรายชื่อเจ้าหน้าที่แบบแบ่งหน้า

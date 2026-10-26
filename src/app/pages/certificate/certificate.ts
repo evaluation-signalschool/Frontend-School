@@ -5,6 +5,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { CourseService, CourseGroup, BatchItem } from '../../services/course.service';
 import { StudentService } from '../../services/student.service';
+import * as ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
+import Swal from 'sweetalert2';
 
 // ========================================== //
 // ส่วนใหม่: โครงสร้างข้อมูลตำแหน่ง/สไตล์ของแต่ละกล่องข้อความ
@@ -120,6 +123,15 @@ export class Certificate implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'warning',
+      title: 'หน้านี้ยังอยู่ระหว่างการพัฒนา',
+      showConfirmButton: false,
+      timer: 3500,
+      timerProgressBar: true,
+    });
     this.fetchCourses();
   }
 
@@ -261,6 +273,192 @@ export class Certificate implements OnInit {
     setTimeout(() => {
       window.print();
     }, 100);
+  }
+
+  // --- Search & Filter ---
+  searchTerm: string = '';
+
+  get filteredStudents(): any[] {
+    if (!this.searchTerm || !this.searchTerm.trim()) {
+      return this.students;
+    }
+    const q = this.searchTerm.trim().toLowerCase();
+    return this.students.filter((s) => {
+      const code = (s.student_code || '').toLowerCase();
+      const rank = (s.rank_name || '').toLowerCase();
+      const first = (s.first_name || '').toLowerCase();
+      const last = (s.last_name || '').toLowerCase();
+      const full = `${rank} ${first} ${last}`.toLowerCase();
+      const aff = (s.affiliation || '').toLowerCase();
+      return code.includes(q) || full.includes(q) || aff.includes(q);
+    });
+  }
+
+  // --- Export & Copy for Staff ---
+  exportCertificateMailMerge(): void {
+    if (!this.students || this.students.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ไม่มีข้อมูลนักเรียน',
+        text: 'กรุณาเลือกหลักสูตรและรุ่นที่มีข้อมูลนักเรียนก่อนทำการส่งออก',
+        confirmButtonColor: '#7e22ce'
+      });
+      return;
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('รายชื่อออกใบประกาศ');
+    worksheet.properties.defaultRowHeight = 24;
+
+    // Header title row
+    worksheet.mergeCells('A1:L1');
+    const titleCell = worksheet.getCell('A1');
+    const bName = this.selectedBatch ? this.selectedBatch.batch_name : '';
+    const yr = this.selectedBatch?.curriculum_year ? `ประจำปีการศึกษา ${this.selectedBatch.curriculum_year}` : '';
+    titleCell.value = `รายชื่อผู้สำเร็จการศึกษาสำหรับออกใบประกาศนียบัตร - ${this.selectedCourseName} ${bName} ${yr}`;
+    titleCell.font = { name: 'Sarabun', size: 14, bold: true, color: { argb: 'FF4A148C' } };
+    titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3E8FF' } };
+    worksheet.getRow(1).height = 32;
+
+    // Subtitle instruction
+    worksheet.mergeCells('A2:L2');
+    const subCell = worksheet.getCell('A2');
+    subCell.value = 'ไฟล์นี้จัดเตรียมข้อมูลคอลัมน์มาตรฐานสำหรับนำไปเชื่อมต่อทำจดหมายเวียน (Mail Merge) ใน Microsoft Word ได้ทันที';
+    subCell.font = { name: 'Sarabun', size: 10, italic: true, color: { argb: 'FF6B21A8' } };
+    subCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    worksheet.getRow(2).height = 20;
+
+    // Table Column Headers for Word Mail Merge
+    const headers = [
+      'ลำดับ',
+      'รหัสประจำตัว',
+      'ยศ',
+      'ชื่อ',
+      'นามสกุล',
+      'ยศ_ชื่อ_นามสกุล',
+      'สังกัด',
+      'หลักสูตร',
+      'รุ่น',
+      'วันที่ออกใบประกาศ',
+      'ผู้ลงนาม_1',
+      'ผู้ลงนาม_2'
+    ];
+
+    const headerRow = worksheet.addRow(headers);
+    headerRow.height = 28;
+    headerRow.eachCell((cell) => {
+      cell.font = { name: 'Sarabun', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF7E22CE' } };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'medium' },
+        right: { style: 'thin' }
+      };
+    });
+
+    const printIssueDateText = this.getPrintIssueDate() || '-';
+    const sig1Text = `${this.commanderRank} ${this.commanderName} (${this.commanderTitle})`;
+    const sig2Text = `${this.deputyRank} ${this.deputyName} (${this.deputyTitle})`;
+
+    this.students.forEach((s, idx) => {
+      const rank = (s.rank_name || '').trim();
+      const first = (s.first_name || '').trim();
+      const last = (s.last_name || '').trim();
+      const fullNameWithRank = `${rank} ${first} ${last}`.trim();
+
+      const row = worksheet.addRow([
+        idx + 1,
+        s.student_code || '-',
+        rank || '-',
+        first,
+        last,
+        fullNameWithRank,
+        s.affiliation || '-',
+        this.selectedCourseName || '-',
+        bName || '-',
+        printIssueDateText,
+        sig1Text,
+        sig2Text
+      ]);
+
+      row.height = 22;
+      row.eachCell((cell, colNumber) => {
+        cell.font = { name: 'Sarabun', size: 10 };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+        };
+        if ([1, 2, 3, 9, 10].includes(colNumber)) {
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        } else {
+          cell.alignment = { vertical: 'middle', horizontal: 'left' };
+        }
+      });
+    });
+
+    // Auto-fit column widths
+    worksheet.columns.forEach((col: any) => {
+      let maxLen = 12;
+      col.eachCell({ includeEmpty: false }, (cell: any) => {
+        const len = cell.value ? String(cell.value).length : 0;
+        if (len > maxLen) maxLen = len;
+      });
+      col.width = Math.min(maxLen + 4, 38);
+    });
+
+    workbook.xlsx.writeBuffer().then((buffer) => {
+      const fileName = `รายชื่อออกใบประกาศ_${this.selectedCourseName}_${bName || 'รุ่น'}.xlsx`;
+      saveAs(new Blob([buffer]), fileName);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'ส่งออกไฟล์ Excel เรียบร้อยแล้ว',
+        html: `ไฟล์ <b>${fileName}</b> พร้อมใช้งาน<br><small style="color: #6b21a8;">ท่านสามารถนำไฟล์นี้ไปเชื่อมต่อ Mail Merge ใน Word เพื่อพิมพ์ใบประกาศได้ทันที</small>`,
+        confirmButtonColor: '#7e22ce'
+      });
+    });
+  }
+
+  copyAllStudentsText(): void {
+    if (!this.students || this.students.length === 0) return;
+    const lines = this.students.map((s, idx) => {
+      const fullName = `${s.rank_name ? s.rank_name + ' ' : ''}${s.first_name || ''} ${s.last_name || ''}`.trim();
+      const code = s.student_code ? `(${s.student_code})` : '';
+      const aff = s.affiliation ? `สังกัด ${s.affiliation}` : '';
+      return `${idx + 1}. ${fullName} ${code} ${aff}`.trim();
+    });
+
+    const text = lines.join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      Swal.fire({
+        icon: 'success',
+        title: 'คัดลอกรายชื่อทั้งหมดแล้ว',
+        text: `คัดลอกรายชื่อนักเรียน ${this.students.length} นาย ลงคลิปบอร์ดแล้ว สามารถนำไปวาง (Ctrl+V) ใน Word ได้ทันที`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+    });
+  }
+
+  copySingleStudent(s: any): void {
+    const fullName = `${s.rank_name ? s.rank_name + ' ' : ''}${s.first_name || ''} ${s.last_name || ''}`.trim();
+    const aff = s.affiliation ? `สังกัด ${s.affiliation}` : '';
+    const text = `${fullName} ${aff}`.trim();
+    navigator.clipboard.writeText(text).then(() => {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `คัดลอก: ${fullName}`,
+        showConfirmButton: false,
+        timer: 1500
+      });
+    });
   }
 
   // ========================================== //

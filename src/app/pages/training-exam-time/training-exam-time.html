@@ -6,8 +6,8 @@
         <mat-icon>chevron_left</mat-icon>
       </button>
       <div class="title-wrap">
-        <h1 class="page-title">บันทึกเวลาการฝึกอบรมและเวลาสอบ</h1>
-        <p class="page-subtitle">จัดการเวลาคิดเป็นร้อยละ (เวลาในการฝึกอบรม และ เวลาในการสอบ) ของนักเรียนทั้งรุ่น</p>
+        <h1 class="page-title">บันทึกเวลาการฝึกอบรม เวลาสอบ และคะแนนความประพฤติ</h1>
+        <p class="page-subtitle">จัดการเวลาคิดเป็นร้อยละ (เวลาในการฝึกอบรม และ เวลาในการสอบ) พร้อมคะแนนความประพฤติของนักเรียนทั้งรุ่น</p>
       </div>
     </div>
 
@@ -28,7 +28,7 @@
     <div class="filter-card">
       <div class="filter-card-header">
         <mat-icon class="icon-filter">tune</mat-icon>
-        <span class="filter-title">เลือกรุ่นที่ต้องการบันทึกเวลา</span>
+        <span class="filter-title">เลือกรุ่นที่ต้องการบันทึกเวลาและคะแนน</span>
       </div>
 
       <div class="filter-grid">
@@ -234,6 +234,16 @@
               อันดับ
               <mat-icon class="sort-icon" *ngIf="sortBy === 'rank'">{{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
             </button>
+            <button
+              type="button"
+              class="btn-sort"
+              [class.active]="sortBy === 'behavior'"
+              (click)="sortStudents('behavior')"
+              title="เรียงตามคะแนนความประพฤติ"
+            >
+              ความประพฤติ
+              <mat-icon class="sort-icon" *ngIf="sortBy === 'behavior'">{{ sortDirection === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</mat-icon>
+            </button>
           </div>
 
           <!-- Quick Fill Tools -->
@@ -255,6 +265,15 @@
             >
               <mat-icon>flash_on</mat-icon>
               เวลาสอบ 100%
+            </button>
+            <button
+              type="button"
+              class="btn-tool btn-tool-behavior"
+              (click)="quickFillBehavior200()"
+              title="ใส่คะแนนความประพฤติเต็ม 200 ให้ทุกคน"
+            >
+              <mat-icon>verified</mat-icon>
+              ความประพฤติ 200
             </button>
           </div>
 
@@ -282,6 +301,7 @@
                 <th rowspan="2" class="text-left col-name">ยศ - ชื่อ - นามสกุล</th>
                 <th rowspan="2" class="text-center col-affil">สังกัด</th>
                 <th colspan="2" class="text-center col-time-group">เวลาคิดเป็นร้อยละ</th>
+                <th class="text-center col-time-group">คะแนนความประพฤติ</th>
                 <th rowspan="2" class="text-center col-gpa clickable" (click)="sortStudents('gpa')">
                   <div class="th-content-center">
                     <span>คะแนนเฉลี่ยสะสม</span>
@@ -308,6 +328,13 @@
                   <div class="th-content">
                     <mat-icon>assignment_turned_in</mat-icon>
                     <span>เวลาในการสอบ (%)</span>
+                  </div>
+                </th>
+                <th class="text-center col-sub-time clickable" (click)="sortStudents('behavior')" title="คลิกเพื่อเรียงตามคะแนนความประพฤติ">
+                  <div class="th-content">
+                    <mat-icon>military_tech</mat-icon>
+                    <span>คะแนนความประพฤติ (เต็ม 200)</span>
+                    <mat-icon class="th-sort-icon" *ngIf="sortBy === 'behavior'">{{ sortDirection === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</mat-icon>
                   </div>
                 </th>
               </tr>
@@ -379,6 +406,26 @@
                     </div>
                   </td>
 
+                  <!-- คะแนนความประพฤติ (เต็ม 200) -->
+                  <td class="text-center col-time-input">
+                    <div class="input-wrap">
+                      <input
+                        type="text"
+                        inputmode="decimal"
+                        class="time-input"
+                        [class.error-input]="isScoreInvalid(st.behaviorScore, 200)"
+                        [class.empty-input]="isScoreEmpty(st.behaviorScore)"
+                        [value]="st.behaviorScore !== null && st.behaviorScore !== undefined ? st.behaviorScore : ''"
+                        (input)="validateScore(st, 'behaviorScore', $event)"
+                        (blur)="onScoreBlur(st, 'behaviorScore', $event)"
+                        (wheel)="onWheel($event)"
+                        placeholder="200"
+                        autocomplete="off"
+                      />
+                      <span class="unit-label">/ 200</span>
+                    </div>
+                  </td>
+
                   <!-- คะแนนเฉลี่ยสะสม (GPA) -->
                   <td class="text-center col-gpa">
                     <span class="gpa-badge" [class.high-gpa]="st.gpa !== '-' && +st.gpa >= 3.5">
@@ -404,7 +451,7 @@
 
               @if (filteredStudents.length === 0) {
                 <tr>
-                  <td colspan="9" class="empty-table-row">
+                  <td colspan="10" class="empty-table-row">
                     <mat-icon>search_off</mat-icon>
                     <p>ไม่พบข้อมูลนักเรียนที่ตรงกับเงื่อนไข</p>
                   </td>
@@ -434,7 +481,7 @@
               [disabled]="isSaving || students.length === 0"
             >
               <mat-icon>{{ isSaved && !hasUnsavedChanges ? 'check_circle' : 'save' }}</mat-icon>
-              <span>{{ isSaved && !hasUnsavedChanges ? 'บันทึกแล้ว' : 'บันทึกเวลาฝึกอบรมและเวลาสอบ' }}</span>
+              <span>{{ isSaved && !hasUnsavedChanges ? 'บันทึกแล้ว' : 'บันทึกเวลาและคะแนนความประพฤติ' }}</span>
             </button>
           </div>
         </div>

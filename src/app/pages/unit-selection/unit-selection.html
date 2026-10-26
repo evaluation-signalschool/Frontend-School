@@ -121,61 +121,7 @@
         </div>
       } @else {
 
-        <!-- แถบแนะนำขั้นตอนการปฏิบัติงาน -->
-        <div class="workflow-guide-banner no-print">
-          <div class="guide-header">
-            <div class="guide-title">
-              <mat-icon>alt_route</mat-icon>
-              <span>กระบวนการเลือกลงหน่วย (4 ขั้นตอน)</span>
-            </div>
-            <div class="guide-progress">
-              <span class="progress-pill" [class.done]="unassignedCount === 0 && students.length > 0">
-                <mat-icon>{{ unassignedCount === 0 && students.length > 0 ? 'task_alt' : 'edit_note' }}</mat-icon>
-                @if (selectionQuotaCount && selectionQuotaCount < students.length) {
-                  ความคืบหน้ากลุ่มเลือกหน่วย: <strong>{{ selectionQuotaAssignedCount }} / {{ selectionQuotaCount }} นาย</strong> (รอเลือกอีก {{ selectionQuotaUnassignedCount }} นาย | บรรจุสังกัดเดิม {{ preAssignedStudents.length }} นาย)
-                } @else {
-                  ความคืบหน้าการกรอกข้อมูล: <strong>{{ getTotalAssignedCount() }} / {{ students.length }} นาย</strong> (เหลือรอใส่ข้อมูลอีก {{ unassignedCount }} นาย)
-                }
-              </span>
-            </div>
-          </div>
-          <div class="guide-steps-grid">
-            <div class="guide-step-item">
-              <div class="step-num">1</div>
-              <div class="step-text">
-                <strong>เรียงลำดับ 1 ถึง N</strong>
-                <span>
-                  @if (selectionQuotaCount && selectionQuotaCount < students.length) {
-                    ลำดับที่ 1-{{ selectionQuotaCount }} มีสิทธิ์เลือกหน่วย / ลำดับที่ {{ selectionQuotaCount + 1 }}-{{ students.length }} บรรจุสังกัดเดิม
-                  } @else {
-                    ระบบเรียงลำดับตามผลการเรียน ลำดับที่ 1 มีสิทธิ์เลือกหน่วยก่อน
-                  }
-                </span>
-              </div>
-            </div>
-            <div class="guide-step-item step-highlight">
-              <div class="step-num">2</div>
-              <div class="step-text">
-                <strong>พิมพ์ใบประสานงาน</strong>
-                <span>กดปุ่มพิมพ์ใบประสานงาน ส่งให้อีกฝ่ายไปให้นักเรียนเลือกลงชื่อ</span>
-              </div>
-            </div>
-            <div class="guide-step-item">
-              <div class="step-num">3</div>
-              <div class="step-text">
-                <strong>รับผลกลับมากรอก</strong>
-                <span>เมื่ออีกฝ่ายส่งรายชื่อกลับมา ให้นำหน่วยที่เลือกมากรอกในช่องตารางด้านล่าง</span>
-              </div>
-            </div>
-            <div class="guide-step-item">
-              <div class="step-num">4</div>
-              <div class="step-text">
-                <strong>บันทึกข้อมูล & พิมพ์สรุป</strong>
-                <span>กดปุ่มบันทึกข้อมูลเพื่ออัปเดตระบบ หรือพิมพ์ใบสรุปผลการบรรจุฉบับสมบูรณ์</span>
-              </div>
-            </div>
-          </div>
-        </div>
+
 
         <!-- แผงกำหนดสิทธิ์เลือกลงหน่วย (รองรับ นนส.ทบ. และ ช่างอิเล็กทรอนิกส์) -->
         <div class="quota-allocation-panel no-print">

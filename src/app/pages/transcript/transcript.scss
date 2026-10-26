@@ -13,6 +13,40 @@ $border-color: #000000;
     font-weight: normal;
 
     // ==========================================
+    // แถบแจ้งเตือนสถานะการพัฒนา (Under Development)
+    // ==========================================
+    .dev-warning-banner {
+        width: 100%;
+        max-width: 1060px;
+        background: #fef2f2;
+        border: 1.5px solid #fca5a5;
+        border-left: 5px solid #dc2626;
+        border-radius: 8px;
+        padding: 12px 18px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 2px 8px rgba(220, 38, 38, 0.08);
+
+        .warning-icon {
+            font-size: 1.25rem;
+            line-height: 1;
+        }
+
+        .warning-text {
+            font-size: 0.95rem;
+            color: #b91c1c;
+            font-weight: 500;
+
+            strong {
+                color: #dc2626;
+                font-weight: 700;
+            }
+        }
+    }
+
+    // ==========================================
     // แถบเครื่องมือจัดการเอกสาร (Ribbon Toolbar)
     // ==========================================
     .word-ribbon-toolbar {
@@ -161,6 +195,30 @@ $border-color: #000000;
                 }
             }
 
+            &.btn-export-excel-annex {
+                background: linear-gradient(135deg, #16a34a, #15803d);
+                color: #ffffff;
+                box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);
+
+                &:hover {
+                    background: linear-gradient(135deg, #15803d, #166534);
+                    transform: translateY(-1px);
+                    box-shadow: 0 3px 8px rgba(22, 163, 74, 0.35);
+                }
+            }
+
+            &.btn-export-excel-batch {
+                background: linear-gradient(135deg, #0284c7, #0369a1);
+                color: #ffffff;
+                box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+
+                &:hover {
+                    background: linear-gradient(135deg, #0369a1, #075985);
+                    transform: translateY(-1px);
+                    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.35);
+                }
+            }
+
             &.btn-print-single {
                 background-color: #2563eb;
                 color: #ffffff;
@@ -293,6 +351,38 @@ $border-color: #000000;
                         background-color: #fee2e2;
                     }
                 }
+            }
+        }
+    }
+
+    // แบนเนอร์คำแนะนำสำหรับเจ้าหน้าที่
+    .staff-helper-banner-transcript {
+        width: 210mm;
+        margin: 14px auto 0 auto;
+        background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+        border: 1px solid #e9d5ff;
+        border-left: 4px solid #7e22ce;
+        border-radius: 8px;
+        padding: 12px 18px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        box-sizing: border-box;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+        .banner-icon {
+            font-size: 1.25rem;
+            line-height: 1;
+            margin-top: 2px;
+        }
+
+        .banner-text {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #475569;
+
+            strong {
+                color: #6b21a8;
             }
         }
     }

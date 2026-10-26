@@ -143,59 +143,23 @@
               <line x1="16" y1="13" x2="8" y2="13"></line>
               <line x1="16" y1="17" x2="8" y2="17"></line>
             </svg>
-            <h3>แผงจัดการและประมวลผลบทสรุปผลการฝึกอบรม (สำหรับ {{ currentCohortDisplayLabel }})</h3>
+            <h3>แผงบันทึกบทวิเคราะห์และข้อเสนอแนะ (สำหรับ {{ currentCohortDisplayLabel }})</h3>
           </div>
           <div class="title-right-actions">
             <span class="badge-status-tag" [ngClass]="{'published': hasSavedSummary}">
-              {{ hasSavedSummary ? '✓ เผยแพร่แล้ว' : '⚠️ ใช้บทวิเคราะห์เริ่มต้น' }}
+              {{ hasSavedSummary ? '✓ เผยแพร่แล้ว' : '⚠️ ยังไม่ได้บันทึก (แสดงร่างแนะนำ)' }}
             </span>
           </div>
         </div>
 
-        <!-- Statistical Processing Banner with Style Selector -->
-        <div class="ai-banner">
-          <div class="ai-banner-main">
-            <div class="ai-banner-info">
-              <h4>📊 ประมวลผลตัวเลขสถิติจริงและร่างบทสรุปอัตโนมัติ</h4>
-              <p>ระบบจะนำตัวเลขสถิติจริงทั้งหมด คะแนนรายวิชา และค่าผลต่างของ <strong>{{ courseTitle }}</strong> มาประมวลผลเชิงวิชาการตามเกณฑ์มาตรฐาน (ประมวลผลภายในระบบ ไม่มีค่าใช้จ่าย)</p>
-            </div>
-
-            <!-- Style Selector -->
-            <div class="ai-style-selector">
-              <span class="style-label">รูปแบบรายงานสรุป:</span>
-              <div class="style-pills">
-                <button type="button" class="style-pill-btn" [class.active]="selectedAiStyle === 'comprehensive'" (click)="onSelectStyle('comprehensive')">
-                  🎓 รายงานประกันคุณภาพ (ละเอียด)
-                </button>
-                <button type="button" class="style-pill-btn" [class.active]="selectedAiStyle === 'executive'" (click)="onSelectStyle('executive')">
-                  ⚡ สรุปเชิงผู้บริหาร (กระชับ)
-                </button>
-                <button type="button" class="style-pill-btn" [class.active]="selectedAiStyle === 'action'" (click)="onSelectStyle('action')">
-                  🎯 เน้นแผนพัฒนา (เชิงรุก)
-                </button>
-              </div>
-            </div>
+        <!-- Friendly instruction banner with trend highlight -->
+        <div class="admin-editor-hint-banner">
+          <div class="hint-text">
+            <strong>💡 คำแนะนำ:</strong> แอดมินสามารถพิมพ์กรอกข้อมูลวิเคราะห์ผลและแนวทางการพัฒนาได้โดยตรง ข้อมูลที่พิมพ์จะถูกนำไปแสดงในหน้ารายงานสรุปด้านล่างทันที
           </div>
-
-          <button class="generate-btn" [disabled]="isAiGenerating" (click)="generateWithAi('generate')">
-            <span *ngIf="!isAiGenerating">📊 ประมวลผลจากสถิติจริง</span>
-            <span *ngIf="isAiGenerating">⏳ กำลังประมวลผลข้อมูล...</span>
-          </button>
-        </div>
-
-        <!-- Quick Formatting Tools -->
-        <div class="ai-quick-tools" *ngIf="adminExecutiveSummary">
-          <span class="tools-label">เครื่องมือช่วยปรับแต่งข้อความ:</span>
-          <div class="tools-btn-group">
-            <button type="button" class="btn-ai-tool" [disabled]="isAiGenerating" (click)="generateWithAi('refine_formal')" title="ปรับสำนวนให้เป็นภาษาราชการระดับทางการ">
-              📝 ปรับสำนวนให้ทางการขึ้น
-            </button>
-            <button type="button" class="btn-ai-tool" [disabled]="isAiGenerating" (click)="generateWithAi('summarize_short')" title="สรุปย่อให้กระชับสำหรับผู้บริหาร">
-              ⚡ สรุปย่อให้กระชับลง
-            </button>
-            <button type="button" class="btn-ai-tool" [disabled]="isAiGenerating" (click)="generateWithAi('generate')" title="ประมวลผลใหม่ตามรูปแบบที่เลือก">
-              🔄 ประมวลผลสรุปใหม่
-            </button>
+          <div class="hint-trend-badge" [ngClass]="currentTrendBadge.class" *ngIf="currentTrendBadge">
+            <span class="badge-icon">{{ currentTrendBadge.icon }}</span>
+            <span class="badge-text">{{ currentTrendBadge.text }}</span>
           </div>
         </div>
 
@@ -205,31 +169,40 @@
         </div>
 
         <!-- Editor 1: Executive Summary -->
-        <div class="form-group">
-          <label class="form-label">
-            บทวิเคราะห์เชิงลึก (Executive Summary):
-            <span class="label-hint">แอดมินสามารถพิมพ์ ปรับแก้ หรือเพิ่มเติมข้อความได้อิสระ</span>
+        <div class="form-group" id="editorSection1">
+          <label class="form-label" for="adminExecutiveSummaryInput">
+            <span class="step-num-badge">1</span>
+            บทวิเคราะห์แนวโน้มและผลการประเมินภาพรวม:
+            <span class="label-hint">พิมพ์วิเคราะห์คะแนน สรุปผลสัมฤทธิ์ หรือข้อสังเกตของรุ่นนี้ (จะแสดงในกล่องการวิเคราะห์แนวโน้มด้านล่าง)</span>
           </label>
-          <textarea class="form-textarea" rows="5" [(ngModel)]="adminExecutiveSummary" placeholder="ระบุบทวิเคราะห์สรุปผลการประเมิน..."></textarea>
+          <textarea id="adminExecutiveSummaryInput" class="form-textarea" rows="4" [(ngModel)]="adminExecutiveSummary" placeholder="ระบุบทวิเคราะห์สรุปผลการประเมินภาพรวม..."></textarea>
         </div>
 
         <!-- Editor 2: Action Plan -->
-        <div class="form-group">
-          <label class="form-label">
-            แนวทางการส่งเสริมและพัฒนาการจัดการเรียนการสอน (Action Plan):
-            <span class="label-hint">ระบุข้อเสนอแนะ 1 ข้อ ต่อ 1 บรรทัด</span>
+        <div class="form-group" id="editorSection2">
+          <label class="form-label" for="adminActionPlanInput">
+            <span class="step-num-badge">2</span>
+            แนวทางการส่งเสริมและพัฒนาการจัดการเรียนการสอน (ข้อเสนอแนะ):
+            <span class="label-hint">พิมพ์ 1 ข้อ ต่อ 1 บรรทัด (จะแสดงเป็นรายการข้อเสนอแนะด้านล่างสุดของรายงาน)</span>
           </label>
-          <textarea class="form-textarea" rows="5" [(ngModel)]="adminActionPlanText" placeholder="1. [ด้านหลักสูตร] ...&#10;2. [ด้านการจัดการเรียนการสอน] ...&#10;3. [ด้านการฝึกปฏิบัติและเครื่องมือ] ...&#10;4. [ด้านการวัดและประเมินผล] ..."></textarea>
+          <textarea id="adminActionPlanInput" class="form-textarea" rows="4" [(ngModel)]="adminActionPlanText" placeholder="1. จัดกิจกรรมส่งเสริมการเรียนรู้อย่างต่อเนื่อง...&#10;2. เพิ่มการฝึกปฏิบัติการจริงกับยุทโธปกรณ์สื่อสาร...&#10;3. ประสานงานทบทวนแผนการจัดการเรียนรู้ร่วมกับอาจารย์ผู้สอน..."></textarea>
         </div>
 
         <div class="editor-actions">
-          <button class="btn-preview-secondary" (click)="togglePreview()">
-            👁️ ดูตัวอย่างหน้าเว็บจริง (Preview)
-          </button>
-          <button class="btn-save" [disabled]="isSavingSummary" (click)="saveAdminSummary()">
-            <span *ngIf="!isSavingSummary">💾 บันทึกและเผยแพร่สู่หน้ารายงาน</span>
-            <span *ngIf="isSavingSummary">⏳ กำลังบันทึก...</span>
-          </button>
+          <div class="actions-left">
+            <button type="button" class="btn-reset-draft" (click)="resetToDefaultDraft()" title="ดึงข้อความแนะนำเริ่มต้นของระบบมาใส่ในช่อง">
+              🔄 ดึงข้อความแนะนำเริ่มต้น
+            </button>
+          </div>
+          <div class="actions-right">
+            <button type="button" class="btn-preview-secondary" (click)="togglePreview()">
+              👁️ ดูตัวอย่างหน้าเว็บจริง (Preview)
+            </button>
+            <button type="button" class="btn-save" [disabled]="isSavingSummary" (click)="saveAdminSummary()">
+              <span *ngIf="!isSavingSummary">💾 บันทึกและเผยแพร่สู่หน้ารายงาน</span>
+              <span *ngIf="isSavingSummary">⏳ กำลังบันทึก...</span>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -449,18 +422,74 @@
             <h3 class="summary-title">การวิเคราะห์แนวโน้มและข้อเสนอแนะเชิงลึก</h3>
           </div>
 
-          <span class="badge-approved" *ngIf="hasSavedSummary">
-            ✓ ได้รับการอนุมัติและเผยแพร่แล้ว
-          </span>
-        </div>
-        
-        <!-- กรณีมีบทวิเคราะห์ที่แอดมินหรือ AI บันทึกไว้แล้ว -->
-        <div class="executive-summary-content" *ngIf="hasSavedSummary && savedExecutiveSummary">
-          <p class="summary-paragraph">{{ savedExecutiveSummary }}</p>
+          <div class="summary-header-actions">
+            <span class="badge-approved" *ngIf="hasSavedSummary">
+              ✓ บันทึกและเผยแพร่แล้ว
+            </span>
+            <span class="badge-draft" *ngIf="!hasSavedSummary">
+              📝 ร่างตามสถิติจริง
+            </span>
+            <button type="button" class="btn-quick-edit" *ngIf="isAdmin && !isPreviewMode" (click)="scrollToInput('adminExecutiveSummaryInput')" title="เลื่อนไปพิมพ์แก้ไขบทวิเคราะห์ด้านบน">
+              ✏️ พิมพ์แก้ไข
+            </button>
+          </div>
         </div>
 
-        <!-- กรณียังไม่มีบทวิเคราะห์ที่บันทึกไว้ ให้แสดงข้อมูลสรุปจากสถิติจริง -->
-        <div class="summary-grid" *ngIf="!hasSavedSummary && (currentTopImproved || currentTopDeclined)">
+        <!-- แถบสรุปแนวโน้มสถิติย่อ (Trend Insights Bar) -->
+        <div class="trend-insights-bar">
+          <div class="insight-item">
+            <span class="insight-label">🎯 ขอบเขตข้อมูล:</span>
+            <span class="insight-value">{{ currentCohortDisplayLabel }}</span>
+          </div>
+
+          <!-- กรณีเปรียบเทียบ -->
+          <ng-container *ngIf="isPairwiseCompare && currentPair">
+            <div class="insight-item">
+              <span class="insight-label">📊 ผลต่างคะแนน:</span>
+              <span class="insight-value diff-highlight" [ngClass]="{'diff-up': pairAvgDiff > 0, 'diff-down': pairAvgDiff < 0}">
+                {{ pairAvgDiff > 0 ? '+' + pairAvgDiff : pairAvgDiff }} คะแนน
+              </span>
+            </div>
+            <div class="insight-item" *ngIf="currentTopImproved">
+              <span class="insight-label">🌟 พัฒนาการสูงสุด:</span>
+              <span class="insight-value text-purple">{{ currentTopImproved.name }} (+{{ currentTopImproved.diff }})</span>
+            </div>
+          </ng-container>
+
+          <!-- กรณีดูรุ่นเดี่ยว -->
+          <ng-container *ngIf="isSingleView">
+            <div class="insight-item">
+              <span class="insight-label">📊 คะแนนเฉลี่ยรวม:</span>
+              <span class="insight-value text-purple">{{ singleBatchAvg | number:'1.2-2' }} คะแนน</span>
+            </div>
+            <div class="insight-item" *ngIf="singleTopSubject">
+              <span class="insight-label">🌟 วิชาคะแนนสูงสุด:</span>
+              <span class="insight-value text-purple">{{ singleTopSubject.name }} ({{ singleTopSubject.score }} คะแนน)</span>
+            </div>
+          </ng-container>
+
+          <div class="insight-item trend-status-item" *ngIf="currentTrendBadge">
+            <span class="insight-label">📈 ภาพรวม:</span>
+            <span class="insight-trend-badge" [ngClass]="currentTrendBadge.class">
+              {{ currentTrendBadge.icon }} {{ currentTrendBadge.text }}
+            </span>
+          </div>
+        </div>
+        
+        <!-- กล่องข้อความบทวิเคราะห์ (มีข้อความแสดงเสมอ ไม่ว่างเปล่า) -->
+        <div class="executive-summary-content">
+          <div class="quote-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7e22ce" stroke-width="2">
+              <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path>
+              <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path>
+            </svg>
+            <span class="quote-title">บทวิเคราะห์ผลการประเมิน:</span>
+          </div>
+          <p class="summary-paragraph">{{ displayedExecutiveSummary }}</p>
+        </div>
+
+        <!-- รายวิชาที่มีพัฒนาการสูงสุด / ควรติดตาม (กรณีเปรียบเทียบ) -->
+        <div class="summary-grid" *ngIf="currentTopImproved || currentTopDeclined">
           <div class="summary-box highlight-purple" *ngIf="currentTopImproved">
             <div class="box-title">รายวิชาที่มีพัฒนาการสูงสุด (คะแนนเพิ่มขึ้น)</div>
             <p>
@@ -603,24 +632,27 @@
       </section>
 
       <!-- ================= 5. Action Plan / Recommendations ================= -->
-      <section class="card action-plan-card" *ngIf="(hasSavedSummary && savedActionPlans.length > 0) || actionPlans.length > 0">
-        <div class="title-with-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6b21a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
-          </svg>
-          <h3 class="action-title">แนวทางการส่งเสริมและพัฒนาการจัดการเรียนการสอน</h3>
+      <section class="card action-plan-card" *ngIf="displayedActionPlans.length > 0">
+        <div class="action-card-header">
+          <div class="title-with-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6b21a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+            </svg>
+            <h3 class="action-title">แนวทางการส่งเสริมและพัฒนาการจัดการเรียนการสอน (ข้อเสนอแนะ)</h3>
+          </div>
+
+          <div class="action-header-actions">
+            <button type="button" class="btn-quick-edit" *ngIf="isAdmin && !isPreviewMode" (click)="scrollToInput('adminActionPlanInput')" title="เลื่อนไปพิมพ์แก้ไขข้อเสนอแนะด้านบน">
+              ✏️ พิมพ์แก้ไข
+            </button>
+          </div>
         </div>
+
         <ul class="action-list">
-          <ng-container *ngIf="hasSavedSummary && savedActionPlans.length > 0">
-            <li *ngFor="let plan of savedActionPlans">
-              {{ plan }}
-            </li>
-          </ng-container>
-          <ng-container *ngIf="!hasSavedSummary">
-            <li *ngFor="let plan of actionPlans">
-              {{ plan }}
-            </li>
-          </ng-container>
+          <li *ngFor="let plan of displayedActionPlans; let idx = index" class="action-list-item">
+            <span class="action-bullet-badge">{{ idx + 1 }}</span>
+            <span class="action-text">{{ plan }}</span>
+          </li>
         </ul>
       </section>
 

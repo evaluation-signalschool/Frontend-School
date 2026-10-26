@@ -145,16 +145,16 @@
           <span class="card-cta">จัดลำดับผลการเรียน <mat-icon>arrow_forward</mat-icon></span>
         </a>
 
-        <!-- บันทึกเวลาการฝึกอบรมและเวลาสอบ (Training & Exam Time Attendance) -->
+        <!-- บันทึกเวลาการฝึกอบรม เวลาสอบ และคะแนนความประพฤติ (Training, Exam Time Attendance & Behavior Scores) -->
         <a class="action-card" id="menu-training-exam-time" routerLink="/admin/training-exam-time">
           <div class="card-head">
             <span class="card-icon"><mat-icon>timer</mat-icon></span>
             <div class="card-details">
-              <h4 class="card-title">บันทึกเวลาการฝึกอบรมและเวลาสอบ (คิดเป็นร้อยละ)</h4>
-              <p class="card-subtitle">บันทึกและจัดการเวลาในการฝึกอบรม และเวลาในการสอบ (ร้อยละ 0 - 100%) เพื่อใช้ประมวลผลการสำเร็จการศึกษา</p>
+              <h4 class="card-title">บันทึกเวลาการฝึกอบรม เวลาสอบ และคะแนนความประพฤติ</h4>
+              <p class="card-subtitle">บันทึกและจัดการเวลาในการฝึกอบรม และเวลาในการสอบ (ร้อยละ 0 - 100%) พร้อมคะแนนความประพฤติ (เต็ม 200) เพื่อใช้ประมวลผลการสำเร็จการศึกษา</p>
             </div>
           </div>
-          <span class="card-cta">บันทึกเวลาฝึกอบรม/สอบ <mat-icon>arrow_forward</mat-icon></span>
+          <span class="card-cta">บันทึกเวลาและคะแนนความประพฤติ <mat-icon>arrow_forward</mat-icon></span>
         </a>
 
         <!-- เลือกลงหน่วย (สำหรับรุ่นที่ต้องเลือกหน่วย / Unit Selection) -->
@@ -184,7 +184,7 @@
         <span class="group-icon"><mat-icon>assignment</mat-icon></span>
         <div>
           <h3 class="group-title">แบบประเมินและสรุปผล</h3>
-          <p class="group-desc">สร้างแบบประเมิน ดูผลการตอบ และวิเคราะห์สรุปผลด้วย AI</p>
+          <p class="group-desc">สร้างแบบประเมิน ดูผลการตอบ และวิเคราะห์สรุปผลการฝึกอบรม</p>
         </div>
       </header>
 
@@ -233,7 +233,7 @@
         <span class="group-icon"><mat-icon>workspace_premium</mat-icon></span>
         <div>
           <h3 class="group-title">เอกสารและประกาศนียบัตร</h3>
-          <p class="group-desc">ออกใบประกาศนียบัตรและใบแสดงผลการฝึกอบรม</p>
+          <p class="group-desc">เตรียมข้อมูลที่ถูกต้องสำหรับออกใบประกาศและระเบียนแสดงผลการฝึกอบรม</p>
         </div>
       </header>
 
@@ -243,11 +243,14 @@
           <div class="card-head">
             <span class="card-icon"><mat-icon>card_membership</mat-icon></span>
             <div class="card-details">
-              <h4 class="card-title">ออกใบประกาศนียบัตร</h4>
-              <p class="card-subtitle">จัดการและออกใบประกาศนียบัตรสำหรับผู้สำเร็จการศึกษา</p>
+              <h4 class="card-title">
+                ข้อมูลออกใบประกาศนียบัตร
+                <span style="color: #dc2626; font-size: 0.78rem; font-weight: 600; margin-left: 6px;">(ยังอยู่ในการพัฒนา)</span>
+              </h4>
+              <p class="card-subtitle">ตรวจสอบรายชื่อที่ถูกต้อง ส่งออก Excel ทำ Mail Merge ใน Word หรือสั่งพิมพ์</p>
             </div>
           </div>
-          <span class="card-cta">ไปยังหน้าออกใบประกาศฯ <mat-icon>arrow_forward</mat-icon></span>
+          <span class="card-cta">ไปยังหน้ารายชื่อและส่งออก <mat-icon>arrow_forward</mat-icon></span>
         </a>
 
         <!-- ออกใบทรานสคริปต์ (Transcript) -->
@@ -255,11 +258,14 @@
           <div class="card-head">
             <span class="card-icon"><mat-icon>description</mat-icon></span>
             <div class="card-details">
-              <h4 class="card-title">ออกใบทรานสคริปต์ (Transcript)</h4>
-              <p class="card-subtitle">พิมพ์และออกใบแสดงผลการฝึกอบรม (ระเบียบแสดงผลการฝึกอบรม) สำหรับผู้เรียน</p>
+              <h4 class="card-title">
+                ข้อมูลระเบียนผลการเรียน (ผนวก ก.)
+                <span style="color: #dc2626; font-size: 0.78rem; font-weight: 600; margin-left: 6px;">(ยังอยู่ในการพัฒนา)</span>
+              </h4>
+              <p class="card-subtitle">ตรวจเกรดที่ถูกต้อง ส่งออก Excel ตามแบบ ผนวก ก. สำหรับปริ้นใน Excel หรือสั่งพิมพ์</p>
             </div>
           </div>
-          <span class="card-cta">ไปยังหน้าออกใบทรานสคริปต์ <mat-icon>arrow_forward</mat-icon></span>
+          <span class="card-cta">ไปยังหน้าระเบียนผลการเรียน <mat-icon>arrow_forward</mat-icon></span>
         </a>
       </div>
     </section>

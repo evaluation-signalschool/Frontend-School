@@ -78,23 +78,23 @@ export class AdminLayout implements OnInit, OnDestroy {
         { title: 'ตรวจสอบการส่งคะแนน', route: '/admin/score-submission', icon: 'fact_check' },
         { title: 'ผลการเรียนทั้งหมด (ทั้งรุ่น)', route: '/admin/classoverview', icon: 'assessment' },
         { title: 'จัดลำดับผลการเรียน (Ranking)', route: '/admin/ranking', icon: 'military_tech' },
-        { title: 'บันทึกเวลาฝึกอบรม/สอบ', route: '/admin/training-exam-time', icon: 'timer' },
+        { title: 'บันทึกเวลาและคะแนนความประพฤติ', route: '/admin/training-exam-time', icon: 'timer' },
         { title: 'เลือกลงหน่วย', route: '/admin/unit-selection', icon: 'account_tree', badge: 'นนส./ช่าง', badgeClass: 'badge-teal' }
       ]
     },
     {
-      name: 'แบบประเมิน & AI',
+      name: 'แบบประเมิน',
       items: [
         { title: 'จัดการและสร้างแบบประเมิน', route: '/admin/form', icon: 'assignment' },
         { title: 'แสดงข้อมูลแบบประเมิน', route: '/admin/form-view', icon: 'visibility' },
-        { title: 'บทสรุปฝึกอบรม & AI', route: '/admin/training-summary', icon: 'auto_awesome' }
+        { title: 'บทสรุปฝึกอบรม', route: '/admin/training-summary', icon: 'auto_awesome' }
       ]
     },
     {
       name: 'เอกสารและใบรับรอง',
       items: [
-        { title: 'ออกใบประกาศนียบัตร', route: '/admin/certificate', icon: 'card_membership' },
-        { title: 'ออกใบทรานสคริปต์ (Transcript)', route: '/admin/transcript', icon: 'description' }
+        { title: 'ข้อมูลออกใบประกาศนียบัตร', route: '/admin/certificate', icon: 'card_membership' },
+        { title: 'ข้อมูลระเบียนผลการเรียน (ผนวก ก.)', route: '/admin/transcript', icon: 'description' }
       ]
     },
     {

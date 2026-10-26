@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import Swal from 'sweetalert2';
+import * as ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { CourseService, CourseGroup, BatchItem } from '../../services/course.service';
 import { ScoreService } from '../../services/score.service';
 
@@ -146,6 +148,15 @@ export class Transcript implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'warning',
+      title: 'หน้านี้ยังอยู่ระหว่างการพัฒนา',
+      showConfirmButton: false,
+      timer: 3500,
+      timerProgressBar: true,
+    });
     this.displayRows = this.getDefaultDisplayRows();
     this.fetchCourses();
   }
@@ -635,6 +646,295 @@ export class Transcript implements OnInit {
       this.isPrintingAll = false;
       this.cdr.detectChanges();
     }, 500);
+  }
+
+  // ==========================================
+  // ส่งออก Excel ตามแบบฟอร์ม ผนวก ก. (สำหรับพิมพ์ใน Excel เดิม)
+  // ==========================================
+  exportTranscriptAnnexAExcel(): void {
+    if (!this.students || this.students.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ไม่มีข้อมูลนักเรียน',
+        text: 'กรุณาเลือกหลักสูตรและรุ่นที่มีข้อมูลก่อนทำการส่งออก',
+        confirmButtonColor: '#7e22ce',
+      });
+      return;
+    }
+
+    const st = this.students[this.currentIndex] || this.students[0];
+    const workbook = new ExcelJS.Workbook();
+    const ws = workbook.addWorksheet('ผนวก ก.');
+
+    ws.properties.defaultRowHeight = 20;
+
+    // Header Rows 1 - 7
+    const headersMeta = [
+      { text: this.headerInfo.annex || 'ผนวก ก', bold: true, size: 14 },
+      { text: this.headerInfo.title || 'ระเบียนแสดงผลการฝึกอบรม', bold: true, size: 14 },
+      { text: this.headerInfo.school || 'โรงเรียนทหารสื่อสาร กรมการทหารสื่อสาร', bold: true, size: 13 },
+      { text: this.headerInfo.courseTitle, bold: false, size: 11 },
+      { text: this.headerInfo.orderInfo, bold: false, size: 11 },
+      { text: this.headerInfo.durationInfo, bold: false, size: 11 },
+      { text: this.headerInfo.studentName, bold: true, size: 12 },
+    ];
+
+    headersMeta.forEach((item, idx) => {
+      const rowNum = idx + 1;
+      ws.mergeCells(`A${rowNum}:H${rowNum}`);
+      const cell = ws.getCell(`A${rowNum}`);
+      cell.value = item.text;
+      cell.font = { name: 'Sarabun', size: item.size, bold: item.bold };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      ws.getRow(rowNum).height = idx < 3 ? 24 : 20;
+    });
+
+    // Blank row 8
+    ws.getRow(8).height = 10;
+
+    // Table Header at Row 9
+    const colTitles = [
+      'ลำดับ',
+      'วิชา / กิจกรรม',
+      'หน่วยกิต',
+      'ผลการฝึกอบรม',
+      'ลำดับ',
+      'วิชา / กิจกรรม',
+      'หน่วยกิต',
+      'ผลการฝึกอบรม',
+    ];
+    const thRow = ws.addRow(colTitles);
+    thRow.height = 28;
+    thRow.eachCell((cell) => {
+      cell.font = { name: 'Sarabun', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6B21A8' } };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'medium' },
+        right: { style: 'thin' },
+      };
+    });
+
+    // Subject Rows
+    const rows = this.getStudentDisplayRows(st);
+    rows.forEach((r) => {
+      const leftNo = r.left ? (r.left.isHeader ? '' : r.left.no || '') : '';
+      const leftName = r.left ? r.left.name || '' : '';
+      const leftCredit = r.left ? (r.left.isHeader ? '' : r.left.credit ?? '') : '';
+      const leftGrade = r.left ? (r.left.isHeader ? '' : r.left.grade ?? '') : '';
+
+      const rightNo = r.right ? (r.right.isHeader ? '' : r.right.no || '') : '';
+      const rightName = r.right ? r.right.name || '' : '';
+      const rightCredit = r.right ? (r.right.isHeader ? '' : r.right.credit ?? '') : '';
+      const rightGrade = r.right ? (r.right.isHeader ? '' : r.right.grade ?? '') : '';
+
+      const dataRow = ws.addRow([leftNo, leftName, leftCredit, leftGrade, rightNo, rightName, rightCredit, rightGrade]);
+      dataRow.height = 20;
+
+      dataRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        const isLeftHeader = r.left?.isHeader && colNumber <= 4;
+        const isRightHeader = r.right?.isHeader && colNumber >= 5;
+
+        cell.font = {
+          name: 'Sarabun',
+          size: 10,
+          bold: isLeftHeader || isRightHeader,
+          color: isLeftHeader || isRightHeader ? { argb: 'FF581C87' } : undefined,
+        };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+          left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+          bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+          right: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        };
+
+        if ([1, 3, 4, 5, 7, 8].includes(colNumber) || isLeftHeader || isRightHeader) {
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        } else {
+          cell.alignment = { vertical: 'middle', horizontal: 'left' };
+        }
+      });
+    });
+
+    // Summary block
+    const curRow = ws.rowCount + 2;
+    ws.mergeCells(`A${curRow}:D${curRow}`);
+    ws.getCell(`A${curRow}`).value = `เวลาการฝึกอบรม: ${this.summaryData.trainingTimePercent}%   เวลาการสอบ: ${this.summaryData.examTimePercent}%   คะแนนความประพฤติ: ${this.summaryData.conductScore}`;
+    ws.getCell(`A${curRow}`).font = { name: 'Sarabun', size: 10, bold: true };
+
+    ws.mergeCells(`E${curRow}:H${curRow}`);
+    ws.getCell(`E${curRow}`).value = `สอบได้ลำดับที่: ${this.summaryData.rank}   หน่วยกิตรวม: ${this.summaryData.totalCredits}   เกรดเฉลี่ย (GPA): ${this.summaryData.gpa}`;
+    ws.getCell(`E${curRow}`).font = { name: 'Sarabun', size: 10, bold: true };
+
+    const curRow2 = curRow + 1;
+    ws.mergeCells(`A${curRow2}:D${curRow2}`);
+    ws.getCell(`A${curRow2}`).value = `เกณฑ์ตัดสิน: ${this.summaryData.gradeCriteria}   ผลการฝึกอบรม: ${this.summaryData.result}`;
+    ws.getCell(`A${curRow2}`).font = { name: 'Sarabun', size: 10, bold: true, color: { argb: 'FF15803D' } };
+
+    // Column widths
+    ws.getColumn(1).width = 7;
+    ws.getColumn(2).width = 30;
+    ws.getColumn(3).width = 10;
+    ws.getColumn(4).width = 14;
+    ws.getColumn(5).width = 7;
+    ws.getColumn(6).width = 30;
+    ws.getColumn(7).width = 10;
+    ws.getColumn(8).width = 14;
+
+    const stName = st.name || `${st.rank_name || ''} ${st.first_name || ''} ${st.last_name || ''}`.trim();
+    workbook.xlsx.writeBuffer().then((buffer) => {
+      const fileName = `ระเบียนผลการฝึกอบรม_ผนวก_ก_${stName}.xlsx`;
+      saveAs(new Blob([buffer]), fileName);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'ส่งออกไฟล์ Excel ผนวก ก. สำเร็จ',
+        html: `ส่งออกไฟล์ <b>${fileName}</b> เรียบร้อยแล้ว<br><small style="color: #6b21a8;">ท่านสามารถเปิดใน Excel และสั่งพิมพ์ได้ทันทีตามแบบฟอร์มเดิม</small>`,
+        confirmButtonColor: '#7e22ce',
+      });
+    });
+  }
+
+  // ==========================================
+  // ส่งออกตารางสรุปเกรดเฉลี่ยทั้งรุ่น (Excel)
+  // ==========================================
+  exportBatchGradesExcel(): void {
+    if (!this.students || this.students.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ไม่มีข้อมูลนักเรียน',
+        text: 'กรุณาเลือกหลักสูตรและรุ่นที่มีข้อมูลก่อนทำการส่งออก',
+        confirmButtonColor: '#7e22ce',
+      });
+      return;
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const ws = workbook.addWorksheet('เกรดเฉลี่ยทั้งรุ่น');
+    ws.properties.defaultRowHeight = 22;
+
+    const bName = this.selectedBatch?.batch_name || '';
+    const yr = this.selectedBatch?.curriculum_year ? `ประจำปีการศึกษา ${this.selectedBatch.curriculum_year}` : '';
+
+    // Title Row
+    ws.mergeCells('A1:L1');
+    const titleCell = ws.getCell('A1');
+    titleCell.value = `ตารางสรุปผลการศึกษาและเกรดเฉลี่ย (ทั้งรุ่น) - ${this.selectedCourseName} ${bName} ${yr}`;
+    titleCell.font = { name: 'Sarabun', size: 14, bold: true, color: { argb: 'FF4A148C' } };
+    titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3E8FF' } };
+    ws.getRow(1).height = 32;
+
+    // Subtitle
+    ws.mergeCells('A2:L2');
+    const sub = ws.getCell('A2');
+    sub.value = `ข้อมูลผลการฝึกอบรมที่ประมวลผลถูกต้องตามมาตรฐานหลักสูตร | จำนวนผู้สำเร็จการศึกษา ${this.students.length} นาย`;
+    sub.font = { name: 'Sarabun', size: 10, italic: true, color: { argb: 'FF6B21A8' } };
+    sub.alignment = { vertical: 'middle', horizontal: 'center' };
+    ws.getRow(2).height = 20;
+
+    const headers = [
+      'ลำดับ',
+      'รหัสประจำตัว',
+      'ยศ',
+      'ชื่อ',
+      'นามสกุล',
+      'ยศ_ชื่อ_นามสกุล',
+      'สังกัด',
+      'หน่วยกิตรวม',
+      'เกรดเฉลี่ย (GPA)',
+      'เกณฑ์ตัดสิน',
+      'สอบได้ลำดับที่',
+      'ผลการฝึกอบรม',
+    ];
+
+    const thRow = ws.addRow(headers);
+    thRow.height = 28;
+    thRow.eachCell((cell) => {
+      cell.font = { name: 'Sarabun', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF7E22CE' } };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'medium' },
+        right: { style: 'thin' },
+      };
+    });
+
+    this.students.forEach((st, idx) => {
+      const rank = (st.rank_name || '').trim();
+      const first = (st.first_name || '').trim();
+      const last = (st.last_name || '').trim();
+      const full = `${rank} ${first} ${last}`.trim();
+      const gpa = st.gpa || '0.00';
+      const numGpa = parseFloat(gpa);
+
+      let criteria = 'ตก';
+      let result = 'ไม่สำเร็จการฝึกอบรม';
+      if (numGpa >= 3.5) { criteria = 'ดีเลิศ'; result = 'สำเร็จการฝึกอบรม'; }
+      else if (numGpa >= 3.0) { criteria = 'ดีมาก'; result = 'สำเร็จการฝึกอบรม'; }
+      else if (numGpa >= 2.5) { criteria = 'ดี'; result = 'สำเร็จการฝึกอบรม'; }
+      else if (numGpa >= 2.0) { criteria = 'พอใช้'; result = 'สำเร็จการฝึกอบรม'; }
+
+      const row = ws.addRow([
+        idx + 1,
+        st.student_code || '-',
+        rank || '-',
+        first,
+        last,
+        full,
+        st.affiliation || '-',
+        st.totalCredit || this.batchTotalCredits || '78',
+        gpa,
+        criteria,
+        st.ranking || st.rank || idx + 1,
+        result,
+      ]);
+
+      row.height = 22;
+      row.eachCell((cell, colNum) => {
+        cell.font = { name: 'Sarabun', size: 10 };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        };
+        if ([1, 2, 3, 8, 9, 10, 11, 12].includes(colNum)) {
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        } else {
+          cell.alignment = { vertical: 'middle', horizontal: 'left' };
+        }
+
+        if (colNum === 9) {
+          cell.font = { name: 'Sarabun', size: 10, bold: true, color: { argb: 'FF7E22CE' } };
+        }
+      });
+    });
+
+    ws.columns.forEach((col: any) => {
+      let maxLen = 12;
+      col.eachCell({ includeEmpty: false }, (cell: any) => {
+        const len = cell.value ? String(cell.value).length : 0;
+        if (len > maxLen) maxLen = len;
+      });
+      col.width = Math.min(maxLen + 4, 35);
+    });
+
+    workbook.xlsx.writeBuffer().then((buffer) => {
+      const fileName = `สรุปเกรดเฉลี่ยทั้งรุ่น_${this.selectedCourseName}_${bName || 'รุ่น'}.xlsx`;
+      saveAs(new Blob([buffer]), fileName);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'ส่งออกไฟล์สรุปเกรดเฉลี่ยสำเร็จ',
+        html: `ไฟล์ <b>${fileName}</b> พร้อมใช้งานใน Excel แล้ว<br><small style="color: #6b21a8;">มีรายชื่อและเกรดเฉลี่ยของทั้งรุ่นครบถ้วน</small>`,
+        confirmButtonColor: '#7e22ce',
+      });
+    });
   }
 
   formatThaiDate(dateStr: string): string {

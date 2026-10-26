@@ -22,6 +22,7 @@ export interface StudentTimeRecord {
   affiliation: string;
   trainingTimeScore: number | null;
   examTimeScore: number | null;
+  behaviorScore: number | null;
   gpa: string;
   gradeLevel: string;
   rank: number | null;
@@ -49,7 +50,7 @@ export class TrainingExamTime implements OnInit {
 
   searchQuery: string = '';
   filterMode: 'all' | 'excellent' | 'very-good' | 'good' | 'fair' | 'poor' = 'all';
-  sortBy: 'code' | 'rank' | 'gpa' = 'code';
+  sortBy: 'code' | 'rank' | 'gpa' | 'behavior' = 'code';
   sortDirection: 'asc' | 'desc' = 'asc';
 
   isLoadingCourses: boolean = false;
@@ -271,6 +272,15 @@ export class TrainingExamTime implements OnInit {
             ? Number(rankInfo.exam_time_score)
             : 100;
 
+      const behavScore =
+        sumInfo.behavior_score !== null && sumInfo.behavior_score !== undefined
+          ? Number(sumInfo.behavior_score)
+          : rankInfo.behavior_score !== null && rankInfo.behavior_score !== undefined
+            ? Number(rankInfo.behavior_score)
+            : bScoreInfo.behavior_score !== null && bScoreInfo.behavior_score !== undefined
+              ? Number(bScoreInfo.behavior_score)
+              : 200;
+
       // GPA: ดึงจาก rankingInfo ก่อน หากไม่มีให้ดึงจาก bScoreInfo
       let gpaVal: number | null = null;
       if (rankInfo.gpa !== undefined && rankInfo.gpa !== null && rankInfo.gpa !== '') {
@@ -294,6 +304,7 @@ export class TrainingExamTime implements OnInit {
         affiliation: sumInfo.affiliation || rankInfo.affiliation || bScoreInfo.affiliation || '',
         trainingTimeScore: trainScore,
         examTimeScore: examScore,
+        behaviorScore: behavScore,
         gpa: gpaStr,
         gradeLevel: gradeLvl,
         rank: rankVal,
@@ -331,6 +342,7 @@ export class TrainingExamTime implements OnInit {
             affiliation: st.affiliation || '',
             trainingTimeScore: 100,
             examTimeScore: 100,
+            behaviorScore: 200,
             gpa: '-',
             gradeLevel: '-',
             rank: null,
@@ -447,7 +459,17 @@ export class TrainingExamTime implements OnInit {
     this.cdr.detectChanges();
   }
 
-  cleanScoreValue(rawStr: string): { cleanedStr: string; numVal: number | null } {
+  quickFillBehavior200(): void {
+    this.students.forEach((s) => {
+      s.behaviorScore = 200;
+      s.isModified = true;
+    });
+    this.hasUnsavedChanges = true;
+    this.isSaved = false;
+    this.cdr.detectChanges();
+  }
+
+  cleanScoreValue(rawStr: string, maxVal: number = 100): { cleanedStr: string; numVal: number | null } {
     if (rawStr === null || rawStr === undefined || String(rawStr).trim() === '') {
       return { cleanedStr: '', numVal: null };
     }
@@ -504,10 +526,10 @@ export class TrainingExamTime implements OnInit {
     return { cleanedStr: cleaned, numVal };
   }
 
-  isScoreInvalid(val: number | null | undefined): boolean {
+  isScoreInvalid(val: number | null | undefined, max: number = 100): boolean {
     if (val === null || val === undefined || String(val).trim() === '') return false;
     const num = Number(val);
-    return isNaN(num) || num > 100 || num < 0;
+    return isNaN(num) || num > max || num < 0;
   }
 
   isScoreEmpty(val: number | null | undefined): boolean {
@@ -516,12 +538,13 @@ export class TrainingExamTime implements OnInit {
 
   validateScore(
     student: StudentTimeRecord,
-    field: 'trainingTimeScore' | 'examTimeScore',
+    field: 'trainingTimeScore' | 'examTimeScore' | 'behaviorScore',
     event: any,
   ): void {
     const input = event.target as HTMLInputElement;
     const rawVal = input.value;
-    const { cleanedStr, numVal } = this.cleanScoreValue(rawVal);
+    const maxVal = field === 'behaviorScore' ? 200 : 100;
+    const { cleanedStr, numVal } = this.cleanScoreValue(rawVal, maxVal);
 
     input.value = cleanedStr;
     // หากพิมพ์เฉพาะเครื่องหมาย '-' ชั่วคราว ให้เก็บเป็น NaN เพื่อรอตัวเลข
@@ -534,21 +557,27 @@ export class TrainingExamTime implements OnInit {
 
   onScoreBlur(
     student: StudentTimeRecord,
-    field: 'trainingTimeScore' | 'examTimeScore',
+    field: 'trainingTimeScore' | 'examTimeScore' | 'behaviorScore',
     event: any,
   ): void {
     const input = event.target as HTMLInputElement;
     const rawVal = input.value;
-    const { cleanedStr, numVal } = this.cleanScoreValue(rawVal);
+    const maxVal = field === 'behaviorScore' ? 200 : 100;
+    const { cleanedStr, numVal } = this.cleanScoreValue(rawVal, maxVal);
 
     if (cleanedStr === '' || numVal === null) {
-      // คงค่าว่างไว้ตามที่ผู้ใช้ตั้งใจลบ ไม่แอบใส่ 100 กลับไป เพื่อให้แจ้งเตือนตอนกดบันทึกได้
-      if (cleanedStr === '-') {
-        input.value = '-';
-        student[field] = NaN;
+      if (field === 'behaviorScore') {
+        // หากปล่อยว่างไว้ ให้รีเซ็ตเป็นค่าเริ่มต้นเต็ม 200 คะแนน
+        input.value = '200';
+        student.behaviorScore = 200;
       } else {
-        input.value = '';
-        student[field] = null;
+        if (cleanedStr === '-') {
+          input.value = '-';
+          student[field] = NaN;
+        } else {
+          input.value = '';
+          student[field] = null;
+        }
       }
     } else {
       input.value = cleanedStr;
@@ -584,12 +613,12 @@ export class TrainingExamTime implements OnInit {
   }
 
   // --- Sorting Tools ---
-  sortStudents(by: 'code' | 'rank' | 'gpa'): void {
+  sortStudents(by: 'code' | 'rank' | 'gpa' | 'behavior'): void {
     if (this.sortBy === by) {
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
     } else {
       this.sortBy = by;
-      this.sortDirection = by === 'gpa' ? 'desc' : 'asc';
+      this.sortDirection = by === 'gpa' || by === 'behavior' ? 'desc' : 'asc';
     }
 
     this.students.sort((a, b) => {
@@ -607,6 +636,10 @@ export class TrainingExamTime implements OnInit {
         const gpaA = a.gpa !== '-' ? Number(a.gpa) : -1;
         const gpaB = b.gpa !== '-' ? Number(b.gpa) : -1;
         res = gpaB - gpaA;
+      } else if (by === 'behavior') {
+        const behA = a.behaviorScore !== null && a.behaviorScore !== undefined ? Number(a.behaviorScore) : 200;
+        const behB = b.behaviorScore !== null && b.behaviorScore !== undefined ? Number(b.behaviorScore) : 200;
+        res = behB - behA;
       }
       return this.sortDirection === 'desc' ? -res : res;
     });
@@ -635,7 +668,7 @@ export class TrainingExamTime implements OnInit {
     const q = (this.searchQuery || '').trim().toLowerCase();
     if (q) {
       result = result.filter((st) => {
-        const combined = `${st.student_code} ${st.rank_name} ${st.first_name} ${st.last_name} ${st.affiliation} ${st.gpa} ${st.gradeLevel} ${st.rank}`.toLowerCase();
+        const combined = `${st.student_code} ${st.rank_name} ${st.first_name} ${st.last_name} ${st.affiliation} ${st.behaviorScore ?? ''} ${st.gpa} ${st.gradeLevel} ${st.rank}`.toLowerCase();
         return combined.includes(q);
       });
     }
@@ -709,6 +742,25 @@ export class TrainingExamTime implements OnInit {
       return;
     }
 
+    // 4. ตรวจสอบคะแนนความประพฤติ (0-200 คะแนน)
+    const hasInvalidBehavior = this.students.some((st) => {
+      const b = st.behaviorScore;
+      if (b === null || b === undefined || String(b).trim() === '') return false;
+      const num = Number(b);
+      return isNaN(num) || num > 200 || num < 0;
+    });
+
+    if (hasInvalidBehavior) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'คะแนนความประพฤติต้องอยู่ระหว่าง 0 ถึง 200',
+        text: 'กรุณาตรวจสอบคะแนนความประพฤติของนักเรียนให้อยู่ระหว่าง 0 - 200 คะแนน',
+        confirmButtonColor: '#8e44ad',
+        confirmButtonText: 'ตกลง',
+      });
+      return;
+    }
+
     this.isSaving = true;
     this.cdr.detectChanges();
     const batchId = Number(this.selectedBatch);
@@ -719,6 +771,12 @@ export class TrainingExamTime implements OnInit {
         student_id: st.student_id,
         training_time_score: Number(st.trainingTimeScore),
         exam_time_score: Number(st.examTimeScore),
+        behavior_score:
+          st.behaviorScore !== null &&
+          st.behaviorScore !== undefined &&
+          String(st.behaviorScore).trim() !== ''
+            ? Math.max(0, Math.min(200, Number(st.behaviorScore)))
+            : 200,
       })),
     };
 
@@ -740,7 +798,7 @@ export class TrainingExamTime implements OnInit {
           Swal.fire({
             icon: 'success',
             title: 'บันทึกสำเร็จ',
-            text: `บันทึกข้อมูลเวลาการฝึกอบรมและเวลาสอบนักเรียนจำนวน ${this.students.length} นาย เรียบร้อยแล้ว`,
+            text: `บันทึกข้อมูลเวลาการฝึกอบรม เวลาสอบ และคะแนนความประพฤตินักเรียนจำนวน ${this.students.length} นาย เรียบร้อยแล้ว`,
             confirmButtonText: 'ตกลง',
             confirmButtonColor: '#1e3a8a',
             timer: 2000,
@@ -781,14 +839,14 @@ export class TrainingExamTime implements OnInit {
     const batchName = this.getSelectedBatchName();
 
     // Title Row
-    worksheet.mergeCells('A1:I1');
+    worksheet.mergeCells('A1:J1');
     const titleCell = worksheet.getCell('A1');
-    titleCell.value = `ตารางสรุปเกรดเฉลี่ยและเวลาการฝึกอบรม - ${courseName} ${batchName}`;
+    titleCell.value = `ตารางสรุปเกรดเฉลี่ย เวลาการฝึกอบรม และคะแนนความประพฤติ - ${courseName} ${batchName}`;
     titleCell.font = { name: 'Sarabun', size: 14, bold: true };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
     // Subtitle Row
-    worksheet.mergeCells('A2:I2');
+    worksheet.mergeCells('A2:J2');
     const subCell = worksheet.getCell('A2');
     subCell.value = `พิมพ์เมื่อ: ${new Date().toLocaleDateString('th-TH')} | จำนวนนักเรียนทั้งหมด: ${this.students.length} นาย | เกรดเฉลี่ยรวมของรุ่น: ${this.averageGpa}`;
     subCell.font = { name: 'Sarabun', size: 10, italic: true };
@@ -804,6 +862,7 @@ export class TrainingExamTime implements OnInit {
       'สังกัด',
       'เวลาคิดเป็นร้อยละ',
       '',
+      'คะแนนความประพฤติ (เต็ม 200)',
       'คะแนนเฉลี่ยสะสม',
       'เกณฑ์ที่ได้',
       'ลำดับที่ได้',
@@ -821,6 +880,7 @@ export class TrainingExamTime implements OnInit {
       '',
       '',
       '',
+      '',
     ]);
     worksheet.mergeCells('A4:A5');
     worksheet.mergeCells('B4:B5');
@@ -829,6 +889,7 @@ export class TrainingExamTime implements OnInit {
     worksheet.mergeCells('G4:G5');
     worksheet.mergeCells('H4:H5');
     worksheet.mergeCells('I4:I5');
+    worksheet.mergeCells('J4:J5');
 
     // Style Headers
     [headerRow1, headerRow2].forEach((row) => {
@@ -837,10 +898,10 @@ export class TrainingExamTime implements OnInit {
         let textColor = 'FF1E3A8A';
 
         // คะแนนเฉลี่ยสะสม: สีส้มอมชมพูเหมือนเอ็กเซล
-        if (colNumber === 7) {
+        if (colNumber === 8) {
           bgColor = 'FFFADBD8';
           textColor = 'FF922B21';
-        } else if (colNumber === 8 || colNumber === 9) {
+        } else if (colNumber === 9 || colNumber === 10) {
           bgColor = 'FFFEF9E7';
           textColor = 'FF7D6608';
         }
@@ -870,6 +931,7 @@ export class TrainingExamTime implements OnInit {
         st.affiliation || '-',
         st.trainingTimeScore !== null ? Number(st.trainingTimeScore) : 100,
         st.examTimeScore !== null ? Number(st.examTimeScore) : 100,
+        st.behaviorScore !== null ? Number(st.behaviorScore) : 200,
         st.gpa !== '-' ? Number(st.gpa) : '-',
         st.gradeLevel,
         st.rank ? st.rank : '-',
@@ -884,14 +946,14 @@ export class TrainingExamTime implements OnInit {
           right: { style: 'thin', color: { argb: 'FFD1D5DB' } },
         };
 
-        if (colNumber === 1 || colNumber === 2 || colNumber === 4 || colNumber === 8 || colNumber === 9) {
+        if (colNumber === 1 || colNumber === 2 || colNumber === 4 || colNumber === 9 || colNumber === 10) {
           cell.alignment = { horizontal: 'center', vertical: 'middle' };
         } else if (colNumber === 3) {
           cell.alignment = { horizontal: 'left', vertical: 'middle' };
-        } else if (colNumber === 5 || colNumber === 6) {
+        } else if (colNumber === 5 || colNumber === 6 || colNumber === 7) {
           cell.alignment = { horizontal: 'center', vertical: 'middle' };
           cell.numFmt = '#,##0.00';
-        } else if (colNumber === 7) {
+        } else if (colNumber === 8) {
           cell.alignment = { horizontal: 'center', vertical: 'middle' };
           cell.font = { name: 'Sarabun', size: 10, bold: true };
           if (typeof cell.value === 'number') cell.numFmt = '0.00';
@@ -906,9 +968,10 @@ export class TrainingExamTime implements OnInit {
     worksheet.getColumn(4).width = 18;
     worksheet.getColumn(5).width = 22;
     worksheet.getColumn(6).width = 22;
-    worksheet.getColumn(7).width = 18;
-    worksheet.getColumn(8).width = 16;
-    worksheet.getColumn(9).width = 14;
+    worksheet.getColumn(7).width = 20;
+    worksheet.getColumn(8).width = 18;
+    worksheet.getColumn(9).width = 16;
+    worksheet.getColumn(10).width = 14;
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {

@@ -440,13 +440,83 @@ export class TrainingSummary implements OnInit, AfterViewInit {
     }, 150);
   }
 
-  /* ------------------- Admin & AI Summary Methods ------------------- */
+  /* ------------------- Admin Summary Getters & Methods ------------------- */
+  get currentTrendBadge(): { text: string; class: string; icon: string } {
+    if (this.isPairwiseCompare) {
+      if (this.pairAvgDiff > 0) return { text: `แนวโน้มพัฒนาขึ้น (+${this.pairAvgDiff} คะแนน)`, class: 'trend-up', icon: '📈' };
+      if (this.pairAvgDiff < 0) return { text: `แนวโน้มลดลง (${this.pairAvgDiff} คะแนน)`, class: 'trend-down', icon: '📉' };
+      return { text: 'คะแนนเฉลี่ยคงที่', class: 'trend-neutral', icon: '📊' };
+    }
+    const avg = this.isSingleView ? this.singleBatchAvg : this.totalAvg;
+    if (avg >= 90) return { text: `ผลสัมฤทธิ์ยอดเยี่ยม (${avg} คะแนน)`, class: 'trend-up', icon: '⭐' };
+    if (avg >= 70) return { text: `ผลสัมฤทธิ์ระดับดี (${avg} คะแนน)`, class: 'trend-neutral', icon: '✓' };
+    return { text: `ควรพัฒนาและติดตาม (${avg} คะแนน)`, class: 'trend-down', icon: '⚠️' };
+  }
+
+  get displayedExecutiveSummary(): string {
+    if (this.isAdmin) {
+      if (this.adminExecutiveSummary && this.adminExecutiveSummary.trim()) {
+        return this.adminExecutiveSummary;
+      }
+      if (this.savedExecutiveSummary && this.savedExecutiveSummary.trim()) {
+        return this.savedExecutiveSummary;
+      }
+      return this.buildDefaultExecutiveSummary();
+    }
+    if (this.savedExecutiveSummary && this.savedExecutiveSummary.trim()) {
+      return this.savedExecutiveSummary;
+    }
+    return this.buildDefaultExecutiveSummary();
+  }
+
+  get displayedActionPlans(): string[] {
+    if (this.isAdmin) {
+      if (this.adminActionPlanText && this.adminActionPlanText.trim()) {
+        const items = this.adminActionPlanText
+          .split('\n')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (items.length > 0) return items;
+      }
+      if (this.savedActionPlans && this.savedActionPlans.length > 0) {
+        return this.savedActionPlans;
+      }
+    } else {
+      if (this.savedActionPlans && this.savedActionPlans.length > 0) {
+        return this.savedActionPlans;
+      }
+    }
+    return this.actionPlans && this.actionPlans.length > 0
+      ? this.actionPlans
+      : [
+          'จัดกิจกรรมส่งเสริมการเรียนรู้อย่างต่อเนื่อง และติดตามผลการเรียนรู้รายวิชาเปรียบเทียบระหว่างรุ่นเป็นประจำ',
+          'เพิ่มการฝึกปฏิบัติการจริงกับยุทโธปกรณ์สื่อสารเพื่อเสริมสร้างทักษะความชำนาญ',
+          'ประสานงานทบทวนแผนการจัดการเรียนรู้ร่วมกับอาจารย์ผู้สอนเพื่อยกระดับผลสัมฤทธิ์',
+        ];
+  }
+
+  resetToDefaultDraft(): void {
+    this.adminExecutiveSummary = this.buildDefaultExecutiveSummary();
+    this.adminActionPlanText = this.actionPlans && this.actionPlans.length > 0
+      ? this.actionPlans.join('\n')
+      : 'จัดกิจกรรมส่งเสริมการเรียนรู้อย่างต่อเนื่อง และติดตามผลการเรียนรู้รายวิชาเปรียบเทียบระหว่างรุ่นเป็นประจำ\nเพิ่มการฝึกปฏิบัติการจริงกับยุทโธปกรณ์สื่อสารเพื่อเสริมสร้างทักษะความชำนาญ\nประสานงานทบทวนแผนการจัดการเรียนรู้ร่วมกับอาจารย์ผู้สอนเพื่อยกระดับผลสัมฤทธิ์';
+    this.cdr.detectChanges();
+  }
+
+  scrollToInput(inputId: string = 'adminExecutiveSummaryInput'): void {
+    const el = document.getElementById(inputId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.focus();
+    }
+  }
+
   buildDefaultExecutiveSummary(): string {
     if (this.isPairwiseCompare && this.currentPair) {
       const diffText = this.pairAvgDiff >= 0 ? `+${this.pairAvgDiff}` : `${this.pairAvgDiff}`;
       return `จากการวิเคราะห์เปรียบเทียบผลการฝึกอบรมหลักสูตร ${this.courseTitle} ระหว่าง ${this.currentPair.prevBatchName} (${this.prevBatchAvg} คะแนน) และ ${this.currentPair.currBatchName} (${this.currBatchAvg} คะแนน) มีผลต่างเฉลี่ยรวม ${diffText} คะแนน โดยมีวิชาที่คะแนนเพิ่มขึ้น ${this.increasedSubjectCount} วิชา และลดลง ${this.decreasedSubjectCount} วิชา จากจำนวนรายวิชาทั้งหมด ${this.subjects.length} วิชา`;
     }
-    return `ภาพรวมผลการประเมินการฝึกอบรมหลักสูตร ${this.courseTitle} มีคะแนนเฉลี่ยรวมอยู่ที่ ${this.totalAvg} คะแนน อยู่ในเกณฑ์มาตรฐานคุณภาพการศึกษา`;
+    return `ภาพรวมผลการประเมินการฝึกอบรมหลักสูตร ${this.courseTitle} (${this.currentCohortDisplayLabel}) มีคะแนนเฉลี่ยรวมอยู่ที่ ${this.totalAvg} คะแนน อยู่ในเกณฑ์มาตรฐานคุณภาพการศึกษา`;
   }
 
   processStatisticalSummary(mode: string, stats: any): { executiveSummary: string; actionPlans: string[] } {

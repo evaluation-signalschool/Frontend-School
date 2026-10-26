@@ -3,10 +3,24 @@
     <button mat-icon-button class="back-button" type="button" (click)="onCancel()" title="ย้อนกลับ">
       <mat-icon>chevron_left</mat-icon>
     </button>
-    <h1 class="course-title">ออกใบประกาศนีบัตร</h1>
+    <h1 class="course-title">ข้อมูลสำหรับออกใบประกาศนียบัตร (รายชื่อ & ส่งออกเอกสาร)</h1>
   </div>
 
   <div class="content-container">
+
+    <!-- แถบแจ้งเตือนสถานะการพัฒนา -->
+    <div class="dev-warning-banner no-print">
+      <span class="warning-icon">⚠️</span>
+      <span class="warning-text"><strong>แจ้งเตือน:</strong> ส่วนงานนี้ยังอยู่ระหว่างการพัฒนา</span>
+    </div>
+
+    <!-- แบนเนอร์คำแนะนำสำหรับเจ้าหน้าที่ -->
+    <div class="staff-helper-banner">
+      <div class="banner-icon">💡</div>
+      <div class="banner-content">
+        <strong>คำแนะนำสำหรับเจ้าหน้าที่:</strong> ท่านสามารถตรวจสอบรายชื่อที่ถูกต้องของนักเรียนในรุ่นนี้ และกดปุ่ม <strong>"📥 ส่งออก Excel สำหรับ Mail Merge ใน Word"</strong> เพื่อนำไฟล์รายชื่อไปเชื่อมต่อกับเทมเพลตใบประกาศใน Word ได้ทันทีโดยไม่ต้องพิมพ์ชื่อทีละคน หรือจะใช้ปุ่ม <strong>"📋 คัดลอกรายชื่อทั้งหมด"</strong> ไปวางในเอกสารอื่นก็ได้
+      </div>
+    </div>
     
     <!-- 1. ส่วนเลือกหลักสูตรและตั้งค่าใบประกาศ -->
     <div class="config-section">
@@ -68,14 +82,32 @@
 
     <!-- 2. ตารางรายชื่อนักเรียน -->
     <div class="students-section" *ngIf="selectedBatchId && students.length > 0" style="margin-top: 24px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h2 style="font-size: 1.2rem; color: #444; margin: 0;">รายชื่อนักเรียนในรุ่น ({{ students.length }} คน)</h2>
-        <div style="display: flex; gap: 10px;">
+      <div class="students-section-header">
+        <div class="title-with-count">
+          <h2 style="font-size: 1.2rem; color: #1e293b; margin: 0; font-weight: 700;">
+            รายชื่อผู้สำเร็จการศึกษาในรุ่น ({{ filteredStudents.length }} / {{ students.length }} คน)
+          </h2>
+          <span class="batch-badge" *ngIf="selectedBatch">{{ selectedCourseName }} - {{ selectedBatch.batch_name }}</span>
+        </div>
+
+        <div class="header-action-toolbar">
+          <div class="search-input-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" [(ngModel)]="searchTerm" placeholder="ค้นหายศ ชื่อ สังกัด หรือรหัส..." class="student-search-input">
+            <button *ngIf="searchTerm" (click)="searchTerm = ''" class="btn-clear-search">✕</button>
+          </div>
+
+          <button type="button" class="btn-tool btn-copy" (click)="copyAllStudentsText()" title="คัดลอกรายชื่อทั้งหมดลงคลิปบอร์ด">
+            📋 คัดลอกรายชื่อทั้งหมด
+          </button>
+          <button type="button" class="btn-tool btn-excel" (click)="exportCertificateMailMerge()" title="ส่งออกไฟล์ Excel สำหรับทำจดหมายเวียน (Mail Merge) ใน Word">
+            📥 ส่งออก Excel สำหรับ Mail Merge ใน Word
+          </button>
           <button mat-stroked-button type="button" (click)="designMode = true" style="border-color: #673ab7; color: #673ab7;">
-            <mat-icon>drag_indicator</mat-icon> จัดตำแหน่งข้อความ
+            <mat-icon>drag_indicator</mat-icon> จัดตำแหน่ง
           </button>
           <button mat-flat-button color="primary" (click)="printAllCertificates()" style="background-color: #673ab7;">
-            <mat-icon>print</mat-icon> พิมพ์ใบประกาศทั้งหมด
+            <mat-icon>print</mat-icon> พิมพ์จากเว็บ
           </button>
         </div>
       </div>
@@ -83,20 +115,27 @@
       <table class="students-table">
         <thead>
           <tr>
-            <th style="width: 60px;">ลำดับ</th>
+            <th style="width: 50px; text-align: center;">ลำดับ</th>
             <th style="width: 120px;">รหัสประจำตัว</th>
             <th>ยศ ชื่อ นามสกุล</th>
             <th>สังกัด</th>
-            <th style="width: 120px; text-align: center;">พิมพ์</th>
+            <th style="width: 140px; text-align: center;">สถานะ</th>
+            <th style="width: 130px; text-align: center;">การดำเนินการ</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let s of students; let i = index">
+          <tr *ngFor="let s of filteredStudents; let i = index">
             <td style="text-align: center;">{{ i + 1 }}</td>
-            <td>{{ s.student_code || '-' }}</td>
-            <td>{{ s.rank_name }} {{ s.first_name }} {{ s.last_name }}</td>
+            <td><span class="code-pill">{{ s.student_code || '-' }}</span></td>
+            <td><strong>{{ s.rank_name }}</strong> {{ s.first_name }} {{ s.last_name }}</td>
             <td>{{ s.affiliation || '-' }}</td>
             <td style="text-align: center;">
+              <span class="status-pass-badge">✓ ผ่านเกณฑ์</span>
+            </td>
+            <td style="text-align: center;">
+              <button mat-icon-button (click)="copySingleStudent(s)" title="คัดลอกชื่อคนนี้" style="color: #64748b;">
+                <mat-icon>content_copy</mat-icon>
+              </button>
               <button mat-icon-button color="primary" (click)="printCertificate(s)" title="พิมพ์ใบประกาศของคนนี้">
                 <mat-icon>print</mat-icon>
               </button>
