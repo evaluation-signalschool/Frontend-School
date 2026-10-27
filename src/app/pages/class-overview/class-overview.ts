@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -32,6 +32,12 @@ export interface SubjectGroupHeader {
   credit: number;
   subjects: SubjectHeader[];
   isSingle: boolean;
+  cleanSubjectName?: string;
+  is_su?: boolean;
+  code?: string;
+  type?: string;
+  typeLabel?: string;
+  creditsText?: string;
 }
 
 export interface StudentOverview {
@@ -107,15 +113,20 @@ export class ClassOverview implements OnInit {
 
   batches: { id: any; name: string }[] = [];
   selectedBatch: any = '';
+  selectedTabIndex: number = 0; // รักษาแท็บที่เลือกไว้เมื่อสลับรุ่น
 
   // Data States
   courseGroups: CourseGroup[] = [];
   students: StudentOverview[] = [];
   masterSubjects: SubjectHeader[] = [];
   subjectGroups: SubjectGroupHeader[] = [];
+  hasMultiSubjectGroups: boolean = false;
   
   lastProcessedTime: string = '';
   isLoading: boolean = false;
+
+  // Cache ข้อมูลแต่ละรุ่นเพื่อการสลับรุ่นที่เร็วระดับเสี้ยววินาที (0ms)
+  private batchCache = new Map<number, any>();
 
   constructor(
     private courseService: CourseService,
@@ -123,6 +134,7 @@ export class ClassOverview implements OnInit {
     private scoreService: ScoreService,
     private dialog: MatDialog,
     private cdr: ChangeDetectorRef,
+    private ngZone: NgZone,
     private location: Location,
     private router: Router
   ) {}
@@ -149,6 +161,11 @@ export class ClassOverview implements OnInit {
             id: cg.batches?.[0]?.course_id || cg.course_name,
             group_name: cg.course_name
           }));
+          // เลือกหลักสูตรแรกให้อัตโนมัติทันที
+          if (this.courses.length > 0 && !this.selectedCourse) {
+            this.selectedCourse = this.courses[0].id;
+            this.onCourseChange();
+          }
           this.cdr.detectChanges();
         }
       },
@@ -161,8 +178,6 @@ export class ClassOverview implements OnInit {
 
   onCourseChange(): void {
     this.selectedBatch = '';
-    this.students = [];
-    this.masterSubjects = [];
     this.batches = [];
 
     if (this.selectedCourse) {
@@ -175,6 +190,12 @@ export class ClassOverview implements OnInit {
           id: b.batch_id,
           name: b.batch_name || `รุ่นที่ ${b.batch_id}`
         }));
+        // เลือกรุ่นแรกโดยอัตโนมัติทันที
+        if (this.batches.length > 0) {
+          this.selectedBatch = this.batches[0].id;
+          this.onBatchChange();
+        }
+        this.cdr.detectChanges();
       } else {
         this.dropdownService.getBatches(this.selectedCourse).subscribe({
           next: (res) => {
@@ -183,6 +204,10 @@ export class ClassOverview implements OnInit {
                 id: b.id || b.batch_id,
                 name: b.name || b.batch_name || `รุ่นที่ ${b.id || b.batch_id}`
               }));
+              if (this.batches.length > 0) {
+                this.selectedBatch = this.batches[0].id;
+                this.onBatchChange();
+              }
               this.cdr.detectChanges();
             }
           },
@@ -199,136 +224,194 @@ export class ClassOverview implements OnInit {
     if (!this.selectedBatch) {
       this.students = [];
       this.masterSubjects = [];
+      this.subjectGroups = [];
       return;
     }
 
-    this.isLoading = true;
     const batchId = Number(this.selectedBatch);
-
     if (isNaN(batchId)) {
       console.error('Invalid batchId:', this.selectedBatch);
       this.isLoading = false;
       return;
     }
 
+    // 1. ถ้ามีข้อมูลใน Cache อยู่แล้ว โหลดทันที 0ms ไม่ต้องรออินเทอร์เน็ต
+    if (this.batchCache.has(batchId)) {
+      const cached = this.batchCache.get(batchId);
+      this.processBatchData(cached);
+      return;
+    }
+
+    this.isLoading = true;
+    this.cdr.detectChanges();
+
     this.scoreService.getBatchScoresSummary(batchId).subscribe({
       next: (res: any) => {
-        if (res?.success) {
-          // จัดเรียงกลุ่มวิชาและวิชาย่อยตามลำดับหลักสูตรที่แท้จริง
-          this.subjectGroups = (res.summary.subjectGroups || []).sort((a: any, b: any) => {
-            return compareGroupNames(a.groupCode || a.groupName, b.groupCode || b.groupName);
-          });
-          this.subjectGroups.forEach((grp: any) => {
-            if (grp.subjects && Array.isArray(grp.subjects)) {
-              grp.subjects.sort(compareSubjectsInGroup);
-            }
-          });
-
-          // สร้าง masterSubjects ตามลำดับ subjectGroups
-          const flatMaster: any[] = [];
-          this.subjectGroups.forEach((grp: any) => {
-            (grp.subjects || []).forEach((sub: any) => {
-              flatMaster.push({
-                ...sub,
-                credit: grp.credit || 0,
-                groupId: grp.groupId,
-                groupName: grp.groupCode || grp.groupName
-              });
-            });
-          });
-
-          this.masterSubjects = flatMaster.length > 0 ? flatMaster : (res.summary.masterSubjects || []).map((sub: any) => {
-            const group = this.subjectGroups.find(g => g.subjects.some((s: any) => s.id === sub.id));
-            return {
-              ...sub,
-              credit: group ? group.credit : 0,
-              groupId: group ? group.groupId : null,
-              groupName: group ? (group.groupCode || group.groupName) : ''
-            };
-          });
-          
-          const rawStudents = res.data || [];
-          
-          this.students = rawStudents.map((st: any) => {
-            const mappedSubjects = this.masterSubjects.map(sub => {
-              const rawScore = st.subject_scores ? st.subject_scores[sub.id] : null;
-              
-              // ดึงผลการเรียนรวมของกลุ่ม
-              let gradeDisplay = '-';
-              let indexValue: string | number = '0.00';
-              let originalLetterGrade = '-';
-
-              if (sub.groupId && st.group_results && st.group_results[sub.groupId]) {
-                 const gResult = st.group_results[sub.groupId];
-                 
-                 // คำนวณหาเกรดตัวเลขจาก index_value / credit (สำหรับแสดงใน Tab 2)
-                 if (sub.is_su || Number(sub.credit) === 0) {
-                   gradeDisplay = gResult.grade;
-                 } else {
-                   const gp = Number(gResult.index_value) / Number(sub.credit);
-                   const safeGp = !isNaN(gp) ? Math.min(4.0, Math.max(0, gp)) : null;
-                   gradeDisplay = safeGp !== null ? safeGp.toFixed(2) : gResult.grade;
-                 }
-                 indexValue = gResult.index_value;
-                 originalLetterGrade = gResult.grade;
-              }
-
-              return {
-                id: sub.id,
-                name: sub.name,
-                credit: sub.credit,
-                maxScore: sub.max_score,
-                rawScore: rawScore,
-                grade: gradeDisplay,
-                letterGrade: originalLetterGrade, // เก็บเกรดตัวอักษรไว้แสดงในหน้ารายงานเดี่ยว
-                indexValue: indexValue,
-                groupId: sub.groupId,
-                groupName: sub.groupName,
-                is_su: sub.is_su
-              };
-            });
-
-            const numGpa = Number(st.gpa);
-            const gpa = !isNaN(numGpa) ? Math.min(4.0, Math.max(0, numGpa)).toFixed(2) : "0.00";
-
-            return {
-              ...st,
-              id: st.student_id || st.id,
-              code: st.student_code || st.code,
-              name: st.full_name || st.name,
-              gpa: gpa,
-              isPassed: Number(gpa) >= 2.0,
-              subjects: mappedSubjects,
-              totalCredit: res.summary.total_credit || 0,
-              totalScore:
-                st.total_raw_score !== null && st.total_raw_score !== undefined
-                  ? Number(Number(st.total_raw_score).toFixed(4))
-                  : 0,
-              group_results: st.group_results || {},
-              trainingTimeScore: st.training_time_score ?? st.trainingTimeScore ?? null,
-              examTimeScore: st.exam_time_score ?? st.examTimeScore ?? null,
-              behaviorScore: st.behavior_score ?? st.behaviorScore ?? null
-            };
-          });
-          
-          this.updateProcessedTime();
-        } else {
+        this.ngZone.run(() => {
+          if (res?.success) {
+            this.batchCache.set(batchId, res);
+            this.processBatchData(res);
+          } else {
+            this.students = [];
+            this.masterSubjects = [];
+            this.subjectGroups = [];
+            this.isLoading = false;
+            this.cdr.markForCheck();
+            this.cdr.detectChanges();
+          }
+        });
+      },
+      error: (err: any) => {
+        this.ngZone.run(() => {
+          console.error('Error fetching batch scores summary from service:', err);
           this.students = [];
           this.masterSubjects = [];
           this.subjectGroups = [];
-        }
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      },
-      error: (err: any) => {
-        console.error('Error fetching batch scores summary from service:', err);
-        this.students = [];
-        this.masterSubjects = [];
-        this.subjectGroups = [];
-        this.isLoading = false;
-        this.cdr.detectChanges();
+          this.isLoading = false;
+          this.cdr.markForCheck();
+          this.cdr.detectChanges();
+        });
       }
     });
+  }
+
+  processBatchData(res: any): void {
+    // จัดเรียงกลุ่มวิชาและวิชาย่อยตามลำดับหลักสูตรที่แท้จริง
+    this.subjectGroups = (res.summary.subjectGroups || []).sort((a: any, b: any) => {
+      return compareGroupNames(a.groupCode || a.groupName, b.groupCode || b.groupName);
+    });
+
+    this.subjectGroups.forEach((grp: any) => {
+      if (grp.subjects && Array.isArray(grp.subjects)) {
+        grp.subjects.sort(compareSubjectsInGroup);
+      }
+      grp.isSingle = !grp.subjects || grp.subjects.length <= 1;
+      grp.groupCode = (grp.groupCode || grp.group_name || grp.groupName || '').trim();
+      if (grp.isSingle) {
+        const raw = grp.subjects?.[0]?.name || grp.groupName || '';
+        grp.cleanSubjectName = raw.replace(/\s+\d+(\.\d+)?\s*นก\.?$/i, '').trim();
+      } else {
+        const raw = grp.groupCode || grp.groupName || '';
+        grp.cleanSubjectName = raw.replace(/\s+\d+(\.\d+)?\s*นก\.?$/i, '').trim() || `กลุ่มวิชา (${grp.subjects?.length} วิชา)`;
+      }
+
+      // Pre-compute ข้อมูลของกลุ่มวิชาสำหรับ Template เพื่อความรวดเร็วระดับ 60 FPS
+      grp.code = this.getGroupCode(grp);
+      grp.type = this.getGroupType(grp.code);
+      grp.creditsText = this.getGroupCreditsText(grp);
+      grp.typeLabel = this.getGroupTypeLabel(grp.code);
+    });
+
+    this.hasMultiSubjectGroups = this.subjectGroups.some(g => g.subjects && g.subjects.length > 1);
+
+    // สร้าง masterSubjects ตามลำดับ subjectGroups
+    const flatMaster: any[] = [];
+    this.subjectGroups.forEach((grp: any) => {
+      (grp.subjects || []).forEach((sub: any) => {
+        flatMaster.push({
+          ...sub,
+          credit: grp.credit || 0,
+          groupId: grp.groupId,
+          groupName: grp.groupCode || grp.groupName
+        });
+      });
+    });
+
+    this.masterSubjects = flatMaster.length > 0 ? flatMaster : (res.summary.masterSubjects || []).map((sub: any) => {
+      const group = this.subjectGroups.find(g => g.subjects.some((s: any) => s.id === sub.id));
+      return {
+        ...sub,
+        credit: group ? group.credit : 0,
+        groupId: group ? group.groupId : null,
+        groupName: group ? (group.groupCode || group.groupName) : ''
+      };
+    });
+    
+    const rawStudents = res.data || [];
+    
+    this.students = rawStudents.map((st: any) => {
+      const mappedSubjects = this.masterSubjects.map(sub => {
+        const rawScore = st.subject_scores ? st.subject_scores[sub.id] : null;
+        let gradeDisplay = '-';
+        let indexValue: string | number = '0.00';
+        let originalLetterGrade = '-';
+
+        if (sub.groupId && st.group_results && st.group_results[sub.groupId]) {
+           const gResult = st.group_results[sub.groupId];
+           if (sub.is_su || Number(sub.credit) === 0) {
+             gradeDisplay = gResult.grade;
+           } else {
+             const gp = Number(gResult.index_value) / Number(sub.credit);
+             const safeGp = !isNaN(gp) ? Math.min(4.0, Math.max(0, gp)) : null;
+             gradeDisplay = safeGp !== null ? safeGp.toFixed(2) : gResult.grade;
+           }
+           indexValue = gResult.index_value;
+           originalLetterGrade = gResult.grade;
+        }
+
+        return {
+          id: sub.id,
+          name: sub.name,
+          credit: sub.credit,
+          maxScore: sub.max_score,
+          rawScore: rawScore,
+          grade: gradeDisplay,
+          letterGrade: originalLetterGrade,
+          indexValue: indexValue,
+          groupId: sub.groupId,
+          groupName: sub.groupName,
+          is_su: sub.is_su
+        };
+      });
+
+      // Pre-compute group_results ไว้ล่วงหน้า
+      const processedGroupResults: { [key: string]: any } = {};
+      if (st.group_results) {
+        Object.keys(st.group_results).forEach((gId) => {
+          const gResult = st.group_results[gId];
+          const grp = this.subjectGroups.find(g => String(g.groupId) === String(gId));
+          const cr = grp?.credit || 0;
+          const numDisplay = this.getNumericGradeDisplay(gResult.grade, gResult.index_value, cr);
+          const title = (grp?.isSingle && grp?.subjects?.[0]?.name)
+            ? grp.subjects[0].name
+            : `${grp?.code || ''} ${grp?.cleanSubjectName || ''}`;
+
+          processedGroupResults[gId] = {
+            ...gResult,
+            numericDisplay: numDisplay,
+            badgeClass: this.getGradeBadgeClass(gResult.grade, gResult.index_value, cr),
+            tooltip: this.getGradeTooltip(gResult.grade, gResult.index_value, cr, title)
+          };
+        });
+      }
+
+      const numGpa = Number(st.gpa);
+      const gpa = !isNaN(numGpa) ? Math.min(4.0, Math.max(0, numGpa)).toFixed(2) : "0.00";
+
+      return {
+        ...st,
+        id: st.student_id || st.id,
+        code: st.student_code || st.code,
+        name: st.full_name || st.name,
+        gpa: gpa,
+        isPassed: Number(gpa) >= 2.0,
+        subjects: mappedSubjects,
+        totalCredit: res.summary.total_credit || 0,
+        totalScore:
+          st.total_raw_score !== null && st.total_raw_score !== undefined
+            ? Number(Number(st.total_raw_score).toFixed(4))
+            : 0,
+        group_results: processedGroupResults,
+        trainingTimeScore: st.training_time_score ?? st.trainingTimeScore ?? null,
+        examTimeScore: st.exam_time_score ?? st.examTimeScore ?? null,
+        behaviorScore: st.behavior_score ?? st.behaviorScore ?? null
+      };
+    });
+    
+    this.updateProcessedTime();
+    this.isLoading = false;
+    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
 
@@ -352,14 +435,57 @@ export class ClassOverview implements OnInit {
     return '-';
   }
 
+  get totalSubjectColumnsCount(): number {
+    if (this.subjectGroups && this.subjectGroups.length > 0) {
+      return this.subjectGroups.reduce((acc, grp) => acc + (grp.subjects?.length || 1), 0);
+    }
+    return this.masterSubjects?.length || 0;
+  }
+
+  getGroupCode(grp: any): string {
+    if (!grp) return '';
+    const raw = (grp.groupCode || grp.group_name || grp.groupName || '').trim();
+    const match = raw.match(/^([A-Za-z]+\d+)/);
+    if (match) return match[1].toUpperCase();
+    return raw;
+  }
+
+  getGroupType(groupCode: string): string {
+    const code = (groupCode || '').trim().toUpperCase();
+    if (code.startsWith('MN')) return 'mn';
+    if (code.startsWith('M')) return 'm';
+    if (code.startsWith('S')) return 's';
+    if (code.startsWith('P')) return 'p';
+    return 'other';
+  }
+
+  getGroupTypeLabel(groupCode: string): string {
+    const type = this.getGroupType(groupCode);
+    switch (type) {
+      case 'm': return 'หมวดวิชาหลัก (M)';
+      case 'mn': return 'หมวดวิชาชีพรอง (MN)';
+      case 's': return 'หมวดวิชาสนับสนุน (S)';
+      case 'p': return 'หมวดวิชาปฏิบัติ (P)';
+      default: return 'กลุ่มวิชา';
+    }
+  }
+
+  getGroupCreditsText(grp: any): string {
+    if (!grp) return '';
+    if (grp.is_su) return 'S/U';
+    if (grp.isSingle) {
+      return `${grp.credit} นก.`;
+    }
+    return `รวม ${grp.subjects?.length || 0} วิชา (${grp.credit} นก.)`;
+  }
+
   getGroupColorCode(groupName: string, isSingle: boolean): string {
     const name = groupName ? groupName.trim().toUpperCase() : '';
-    if (name.startsWith('MN')) return 'FFFFEBEE'; // Red/Pink (Minor)
-    if (name.startsWith('M')) return 'FFFFF9C4';  // Yellow (Main)
-    if (name.startsWith('S')) return 'FFE3F2FD';  // Blue (Supporting)
-    if (name.startsWith('P')) return 'FFF5F5F5';  // White/Gray (Practical)
-    // Fallback: หากไม่ได้ตั้งชื่อนำหน้าด้วยตัวย่อ ให้ใช้สีตามหน้าเว็บ (ชมพูสำหรับวิชาเดี่ยว, เขียวสำหรับวิชากลุ่ม)
-    return isSingle ? 'FFFCE4EC' : 'FFE8F5E9';
+    if (name.startsWith('MN')) return 'FFFFF7ED'; // Orange (Minor)
+    if (name.startsWith('M')) return 'FFEBF5FF';  // Blue (Major)
+    if (name.startsWith('S')) return 'FFF0FDF4';  // Emerald Green (Supporting)
+    if (name.startsWith('P')) return 'FFF5F3FF';  // Violet (Practical)
+    return isSingle ? 'FFEBF5FF' : 'FFF0FDF4';
   }
 
   getSubjectIndex(sub: SubjectHeader): number {
@@ -411,29 +537,39 @@ export class ClassOverview implements OnInit {
     if (this.subjectGroups.length > 0) {
       this.subjectGroups.forEach(grp => {
         const startCol = colIndex;
-        const color = this.getGroupColorCode(grp.groupCode || grp.groupName, grp.isSingle);
+        const code = this.getGroupCode(grp);
+        const color = this.getGroupColorCode(code, grp.isSingle);
+        const credText = this.getGroupCreditsText(grp);
+        const subjects = grp.subjects || [];
         
-        headerRow1.push(grp.groupName);
-        for (let i = 1; i < grp.subjects.length; i++) {
-           headerRow1.push(''); // ช่องว่างสำหรับ colspan
-        }
-        
-        if (grp.subjects.length > 1) {
-          mergeCells.push({ s: worksheet.getColumn(startCol).letter + '1', e: worksheet.getColumn(startCol + grp.subjects.length - 1).letter + '1', color: color });
+        if (grp.isSingle) {
+          headerRow1.push(`${code}\n(${credText})`);
+          const subName = subjects[0]?.name || grp.cleanSubjectName || code;
+          headerRow2.push(`${subName}\nเกรด (แต้ม)`);
+          colColors[colIndex] = color;
+          colIndex++;
         } else {
-          mergeCells.push({ s: worksheet.getColumn(startCol).letter + '1', e: worksheet.getColumn(startCol).letter + '1', color: color });
+          headerRow1.push(`${code}\n${credText}`);
+          for (let i = 1; i < subjects.length; i++) {
+             headerRow1.push(''); // ช่องว่างสำหรับ colspan
+          }
+          mergeCells.push({ 
+            s: worksheet.getColumn(startCol).letter + '1', 
+            e: worksheet.getColumn(startCol + subjects.length - 1).letter + '1', 
+            color: color 
+          });
+          
+          subjects.forEach(sub => {
+             headerRow2.push(`${sub.name}\nเกรด (แต้ม)`);
+             colColors[colIndex] = color;
+             colIndex++;
+          });
         }
-        
-        grp.subjects.forEach(sub => {
-           headerRow2.push(sub.name);
-           colColors[colIndex] = color;
-           colIndex++;
-        });
       });
     } else {
       this.masterSubjects.forEach(sub => {
-        headerRow1.push(sub.name);
-        headerRow2.push('');
+        headerRow1.push(`${sub.name}\n(${sub.credit} นก.)`);
+        headerRow2.push('เกรด (แต้ม)');
         colIndex++;
       });
     }
@@ -491,6 +627,8 @@ export class ClassOverview implements OnInit {
       if (this.subjectGroups.length > 0) {
          this.subjectGroups.forEach(grp => {
            const result = student.group_results?.[grp.groupId];
+           const subjects = grp.subjects || [];
+
            if (grp.isSingle) {
               if (result) {
                  row.push(this.getNumericGradeDisplay(result.grade, result.index_value, grp.credit) + ` (${result.index_value})`);
@@ -500,17 +638,22 @@ export class ClassOverview implements OnInit {
               }
               cIdx++;
            } else {
-              grp.subjects.forEach(sub => {
-                 const subResult = student.subjects?.find(s => (s as any).id === sub.id || s.name === sub.name);
-                 if (subResult) {
-                    const gradeInfo = this.formatGradeWithIndex(subResult);
-                    row.push(gradeInfo.gradeDisplay + (gradeInfo.indexDisplay ? ` ${gradeInfo.indexDisplay}` : ''));
-                 } else {
-                    row.push('-');
-                    fills.push({ col: cIdx, color: 'FFFFF9C4' }); // สีเหลืองอ่อน ถ้ารอคะแนน
+              // สำหรับกลุ่มรวมหลายวิชา ให้แสดงคะแนนกลุ่มครอบคลุมทั้งกลุ่ม
+              if (result) {
+                 const gradeText = this.getNumericGradeDisplay(result.grade, result.index_value, grp.credit) + ` (${result.index_value})`;
+                 row.push(gradeText);
+                 for (let i = 1; i < subjects.length; i++) {
+                    row.push('');
                  }
-                 cIdx++;
-              });
+                 const studentRowNumber = index + 3; // แถวที่ 1-2 เป็น header
+                 worksheet.mergeCells(worksheet.getColumn(cIdx).letter + studentRowNumber + ':' + worksheet.getColumn(cIdx + subjects.length - 1).letter + studentRowNumber);
+              } else {
+                 for (let i = 0; i < subjects.length; i++) {
+                    row.push('-');
+                    fills.push({ col: cIdx + i, color: 'FFFFF9C4' });
+                 }
+              }
+              cIdx += subjects.length;
            }
          });
       } else {
@@ -608,6 +751,23 @@ export class ClassOverview implements OnInit {
       return !isNaN(gp) ? gp.toFixed(2) : gStr;
     }
     return gStr;
+  }
+
+  getGradeBadgeClass(grade: string, indexValue: number | string, credit: number): string {
+    const disp = this.getNumericGradeDisplay(grade, indexValue, credit);
+    const num = Number(disp);
+    if (isNaN(num)) return 'badge-neutral';
+    if (num >= 3.5) return 'badge-grade-excellent';
+    if (num >= 3.0) return 'badge-grade-very-good';
+    if (num >= 2.5) return 'badge-grade-good';
+    if (num >= 2.0) return 'badge-grade-fair';
+    return 'badge-grade-poor';
+  }
+
+  getGradeTooltip(grade: string, indexValue: number | string, credit: number, subjectName: string): string {
+    const gradeDisp = this.getNumericGradeDisplay(grade, indexValue, credit);
+    const cr = credit ? Number(credit) : 0;
+    return `${subjectName}\nเกรด: ${gradeDisp}\nแต้มคะแนนสะสม: ${indexValue}${cr > 0 ? ` (คำนวณจาก ${gradeDisp} × ${cr} นก.)` : ''}`;
   }
 
   private updateProcessedTime(): void {

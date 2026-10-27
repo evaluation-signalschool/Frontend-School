@@ -203,6 +203,26 @@ $white: #ffffff;
   }
 }
 
+/* แถบแจ้งเตือนระหว่างดึงข้อมูลรุ่นใหม่โดยไม่ทำลายตาราง */
+.refreshing-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background-color: #f5f3ff;
+  color: $primary-purple;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid #ddd6fe;
+  font-weight: 600;
+  font-size: 13.5px;
+  margin-bottom: 12px;
+
+  .spinning {
+    animation: spin 1s linear infinite;
+  }
+}
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -270,21 +290,125 @@ $white: #ffffff;
     justify-content: space-between;
   }
 
+  .header-left-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
   .info-badge-summary {
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 13.5px;
-    color: #555;
+    color: #4b5563;
     background-color: $pastel-purple-light;
     padding: 8px 14px;
     border-radius: 8px;
+    border: 1px solid rgba($border-purple, 0.6);
 
     mat-icon {
       font-size: 18px;
       width: 18px;
       height: 18px;
       color: $primary-purple;
+    }
+  }
+
+  .format-legend-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #faf7fd;
+    border: 1px solid #e9dff5;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    flex-wrap: wrap;
+
+    .legend-title {
+      font-weight: 600;
+      color: #6b21a8;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .legend-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #ffffff;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+
+      .sample-grade {
+        font-family: 'Prompt', monospace;
+        font-weight: 700;
+        color: #7c3aed;
+        background: #f5f3ff;
+        padding: 1px 6px;
+        border-radius: 4px;
+        border: 1px solid #ddd6fe;
+        font-size: 12px;
+      }
+
+      .sample-points {
+        font-family: monospace;
+        font-weight: 600;
+        color: #64748b;
+        background: #f8fafc;
+        padding: 1px 5px;
+        border-radius: 4px;
+        border: 1px solid #cbd5e1;
+        font-size: 12px;
+      }
+
+      .chip-text {
+        font-size: 12px;
+      }
+    }
+
+    .legend-group-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+
+      .grp-badge-chip {
+        font-family: 'Prompt', monospace;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 1px 7px;
+        border-radius: 4px;
+
+        &.m-chip {
+          background-color: #eff6ff;
+          color: #1d4ed8;
+          border: 1px solid #bfdbfe;
+        }
+
+        &.mn-chip {
+          background-color: #fff7ed;
+          color: #c2410c;
+          border: 1px solid #fed7aa;
+        }
+
+        &.s-chip {
+          background-color: #f0fdf4;
+          color: #15803d;
+          border: 1px solid #86efac;
+        }
+
+        &.p-chip {
+          background-color: #f0fdfa;
+          color: #0f766e;
+          border: 1px solid #99f6e4;
+        }
+      }
     }
   }
 }
@@ -413,10 +537,13 @@ $white: #ffffff;
   }
 }
 
-/* แท็บ 2: ตารางคะแนนรวมพร้อมตรึง 3 คอลัมน์แรก */
+/* แท็บ 2: ตารางคะแนนรวมพร้อมตรึง 2 คอลัมน์แรก */
 .freeze-pane-wrapper {
-  max-height: 600px;
+  max-height: 650px;
   overflow: auto;
+  border-radius: 12px;
+  border: 1px solid $border-purple;
+  box-shadow: 0 4px 16px rgba(142, 68, 173, 0.05);
 }
 
 .master-grid-table {
@@ -427,20 +554,33 @@ $white: #ffffff;
   background-color: $white;
 
   th, td {
-    padding: 12px 14px;
+    padding: 10px 14px;
     font-size: 13.5px;
-    border-bottom: 1px solid $border-purple;
-    border-right: 1px solid rgba($border-purple, 0.5);
+    border-bottom: 1px solid #ede4f7;
+    border-right: 1px solid #ede4f7;
     white-space: nowrap;
+    vertical-align: middle;
+
+    &.text-center {
+      text-align: center !important;
+    }
+
+    &.text-left {
+      text-align: left !important;
+    }
+
+    &.text-right {
+      text-align: right !important;
+    }
   }
 
   /* ตรึง 2 คอลัมน์แรกไว้ทางซ้าย */
   .sticky-col-1 {
     position: sticky;
     left: 0;
-    width: 70px;
-    min-width: 70px;
-    max-width: 70px;
+    width: 65px;
+    min-width: 65px;
+    max-width: 65px;
     background-color: $white;
     z-index: 10;
     box-sizing: border-box;
@@ -448,13 +588,13 @@ $white: #ffffff;
 
   .sticky-col-2 {
     position: sticky;
-    left: 70px;
-    width: 280px;
-    min-width: 280px;
-    max-width: 280px;
+    left: 65px;
+    width: 270px;
+    min-width: 270px;
+    max-width: 270px;
     background-color: $white;
     z-index: 10;
-    box-shadow: 4px 0 8px -2px rgba(142, 68, 173, 0.18);
+    box-shadow: 4px 0 8px -2px rgba(142, 68, 173, 0.12);
     border-right: 2px solid $border-purple !important;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -467,9 +607,10 @@ $white: #ffffff;
       position: sticky;
       top: 0;
       z-index: 20;
-      background-color: #f4ecfb;
-      color: $text-dark;
+      background-color: #f7f2fb;
+      color: #334155;
       font-weight: 600;
+      border-bottom: 2px solid $border-purple;
 
       &.sticky-col-1, &.sticky-col-2 {
         z-index: 30; // คอลัมน์หัวตารางที่ล็อก ต้องอยู่ชั้นบนสุด
@@ -477,79 +618,392 @@ $white: #ffffff;
       }
 
       &.sticky-col-2 {
-        box-shadow: 4px 0 8px -2px rgba(142, 68, 173, 0.18);
+        box-shadow: 4px 0 8px -2px rgba(142, 68, 173, 0.16);
         border-right: 2px solid $border-purple !important;
       }
+    }
 
-      /* วิชาเดี่ยว: แถบสีชมพู */
+    .main-header-row th {
+      top: 0;
+    }
+
+    .sub-header-row th {
+      top: 50px;
+      z-index: 19;
+      background-color: #faf6fd;
+      border-bottom: 2px solid $border-purple;
+    }
+
+    /* หัวข้อกลุ่มวิชา 2-tier (M, MN, S, P) */
+    .group-header-cell {
+      padding: 8px 12px;
+      vertical-align: middle;
+      text-align: center;
+      transition: background-color 0.2s ease;
+
+      .group-header-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+
+        .grp-code-tag {
+          font-family: 'Prompt', monospace;
+          font-size: 15px;
+          font-weight: 800;
+          letter-spacing: 0.5px;
+          line-height: 1.2;
+        }
+
+        .sub-header-meta {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          .credit-pill {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 12px;
+            white-space: nowrap;
+            line-height: 1.3;
+
+            &.su-pill {
+              color: #059669;
+              background-color: #ecfdf5;
+              border: 1px solid #a7f3d0;
+            }
+          }
+        }
+      }
+
+      /* หมวดวิชาหลัก (M) */
+      &.grp-type-m {
+        border-top: 3.5px solid #2563eb;
+        background-color: #f0f7ff;
+        border-left: 2px dashed rgba(37, 99, 235, 0.35);
+        border-right: 2px dashed rgba(37, 99, 235, 0.35);
+
+        .grp-code-tag {
+          color: #1d4ed8;
+        }
+
+        .credit-pill {
+          color: #1e40af;
+          background-color: #dbeafe;
+          border: 1px solid #bfdbfe;
+
+          &.multi-credit-pill {
+            color: #1e3a8a;
+            background-color: #bfdbfe;
+            border-color: #93c5fd;
+          }
+        }
+      }
+
+      /* หมวดวิชาชีพรอง (MN) */
+      &.grp-type-mn {
+        border-top: 3.5px solid #ea580c;
+        background-color: #fff7ed;
+        border-left: 2px dashed rgba(234, 88, 12, 0.35);
+        border-right: 2px dashed rgba(234, 88, 12, 0.35);
+
+        .grp-code-tag {
+          color: #c2410c;
+        }
+
+        .credit-pill {
+          color: #9a3412;
+          background-color: #ffedd5;
+          border: 1px solid #fed7aa;
+
+          &.multi-credit-pill {
+            color: #7c2d12;
+            background-color: #fed7aa;
+            border-color: #fdba74;
+          }
+        }
+      }
+
+      /* หมวดวิชาสนับสนุน (S) */
+      &.grp-type-s {
+        border-top: 3.5px solid #16a34a;
+        background-color: #f0fdf4;
+        border-left: 2px dashed rgba(22, 163, 74, 0.35);
+        border-right: 2px dashed rgba(22, 163, 74, 0.35);
+
+        .grp-code-tag {
+          color: #15803d;
+        }
+
+        .credit-pill {
+          color: #166534;
+          background-color: #dcfce7;
+          border: 1px solid #86efac;
+
+          &.multi-credit-pill {
+            color: #14532d;
+            background-color: #bbf7d0;
+            border-color: #4ade80;
+          }
+        }
+      }
+
+      /* หมวดวิชาปฏิบัติ (P) */
+      &.grp-type-p {
+        border-top: 3.5px solid #0d9488;
+        background-color: #f0fdfa;
+        border-left: 2px dashed rgba(13, 148, 136, 0.35);
+        border-right: 2px dashed rgba(13, 148, 136, 0.35);
+
+        .grp-code-tag {
+          color: #0f766e;
+        }
+
+        .credit-pill {
+          color: #115e59;
+          background-color: #ccfbf1;
+          border: 1px solid #99f6e4;
+
+          &.multi-credit-pill {
+            color: #134e4a;
+            background-color: #99f6e4;
+            border-color: #5eead4;
+          }
+        }
+      }
+
+      /* หมวดอื่น ๆ */
+      &.grp-type-other {
+        border-top: 3.5px solid #8e44ad;
+        background-color: #faf5ff;
+        border-left: 2px dashed rgba(142, 68, 173, 0.35);
+        border-right: 2px dashed rgba(142, 68, 173, 0.35);
+
+        .grp-code-tag {
+          color: #6b21a8;
+        }
+
+        .credit-pill {
+          color: #7c3aed;
+          background-color: #f3e8ff;
+          border: 1px solid #ddd6fe;
+        }
+      }
+    }
+
+    /* หัวคอลัมน์วิชาเดี่ยว (Fallback เมื่อไม่มี subjectGroups) */
+    .subject-col-header {
+      padding: 10px 12px;
+      min-width: 150px;
+      max-width: 220px;
+      white-space: normal;
+      background-color: #fbf9fe;
+      transition: background-color 0.2s ease;
+
       &.group-header-single {
-        background-color: #fce4ec;
-        border-bottom: 2px solid #e91e63;
-        .grp-header-title {
-          font-size: 13px;
-          font-weight: 700;
-          color: #c2185b;
-        }
-        .grp-header-credit {
-          font-size: 11px;
-          color: #880e4f;
-          font-weight: 500;
-        }
+        border-top: 3px solid #8e44ad;
       }
 
-      /* วิชากลุ่ม: แถบสีเขียว */
-      &.group-header-multi {
-        background-color: #e8f5e9;
-        border-bottom: 2px solid #43a047;
-        .grp-header-title {
-          font-size: 13px;
-          font-weight: 700;
-          color: #2e7d32;
-        }
-        .grp-header-credit {
-          font-size: 11px;
-          color: #1b5e20;
-          font-weight: 500;
-        }
-      }
+      .subject-header-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
 
-      /* แถวที่ 2: ชื่อวิชาย่อย */
-      &.subject-col-row2 {
-        background-color: #f8f8f8;
-        border-bottom: 1px solid $border-purple;
         .sub-header-title {
-          font-size: 12.5px;
+          font-size: 13px;
           font-weight: 600;
-          color: $text-dark;
-          white-space: normal;
-          max-width: 120px;
-          word-wrap: break-word;
+          color: #1e293b;
+          text-align: center;
+          line-height: 1.35;
+          word-break: break-word;
+          max-height: 52px;
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+
+        .sub-header-meta {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          flex-wrap: wrap;
+
+          .credit-pill {
+            font-size: 11px;
+            font-weight: 600;
+            color: #7c3aed;
+            background-color: #f3e8ff;
+            padding: 2px 8px;
+            border-radius: 12px;
+            border: 1px solid #ddd6fe;
+
+            &.su-pill {
+              color: #059669;
+              background-color: #ecfdf5;
+              border-color: #a7f3d0;
+            }
+          }
+
+          .format-tag {
+            font-size: 10.5px;
+            font-weight: 500;
+            color: #64748b;
+            background-color: rgba(255, 255, 255, 0.85);
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px dashed #cbd5e1;
+          }
         }
       }
+    }
+
+    /* แถวย่อยวิชา (Row 2 แสดงรายชื่อวิชาย่อยใต้แต่ละกลุ่ม) */
+    .subject-col-sub {
+      padding: 8px 10px;
+      background-color: #fafafa;
+      border-bottom: 2px solid $border-purple;
+      vertical-align: middle;
+      text-align: center;
+      min-width: 140px;
+      max-width: 220px;
+      white-space: normal;
 
       .sub-header-title {
-        font-size: 13.5px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #334155;
+        white-space: normal;
+        line-height: 1.35;
+        margin-bottom: 4px;
+        word-break: break-word;
+        max-height: 48px;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        text-align: center;
       }
-      .sub-header-credit {
-        font-size: 11.5px;
-        color: $primary-purple;
+
+      .format-tag {
+        display: inline-block;
+        font-size: 10px;
         font-weight: 500;
+        color: #94a3b8;
+        background-color: rgba(255, 255, 255, 0.85);
+        padding: 1px 5px;
+        border-radius: 4px;
+        border: 1px dashed #cbd5e1;
+      }
+
+      &.grp-sub-m {
+        background-color: #f8faff;
+        border-bottom-color: #bfdbfe;
+      }
+
+      &.grp-sub-mn {
+        background-color: #fffaf5;
+        border-bottom-color: #fed7aa;
+      }
+
+      &.grp-sub-s {
+        background-color: #f6fcf8;
+        border-bottom-color: #86efac;
+      }
+
+      &.grp-sub-p {
+        background-color: #f5fdfc;
+        border-bottom-color: #99f6e4;
+      }
+    }
+
+    /* หัวคอลัมน์พิเศษทางขวา */
+    .highlight-col {
+      background-color: #f3ebfa !important;
+      border-top: 3px solid #a855f7;
+      color: #6b21a8;
+      padding: 10px 12px;
+
+      .special-col-title {
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.25;
+      }
+
+      .special-col-sub {
+        font-size: 11px;
+        font-weight: 500;
+        color: #7e22ce;
+        opacity: 0.85;
       }
     }
   }
 
-  /* เซลล์คะแนนสำหรับวิชากลุ่ม (colspan) */
+  /* เซลล์คะแนนวิชาเดี่ยว */
+  .score-cell {
+    text-align: center !important;
+    vertical-align: middle !important;
+    padding: 8px 12px;
+
+    .score-display-box {
+      margin: 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+  }
+
+  /* เซลล์คะแนนสำหรับวิชากลุ่ม (colspan) ที่อยู่ตรงกลางสวยงาม */
   .score-cell-group {
-    background-color: rgba(76, 175, 80, 0.06);
-    border-left: 2px solid #a5d6a7;
-    border-right: 2px solid #a5d6a7;
+    text-align: center !important;
+    vertical-align: middle !important;
+    padding: 8px 12px;
+
+    .group-score-center {
+      margin: 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    &.score-group-m {
+      background-color: rgba(37, 99, 235, 0.025);
+      border-left: 2px dashed #bfdbfe;
+      border-right: 2px dashed #bfdbfe;
+    }
+
+    &.score-group-mn {
+      background-color: rgba(234, 88, 12, 0.025);
+      border-left: 2px dashed #fed7aa;
+      border-right: 2px dashed #fed7aa;
+    }
+
+    &.score-group-s {
+      background-color: rgba(22, 163, 74, 0.025);
+      border-left: 2px dashed #86efac;
+      border-right: 2px dashed #86efac;
+    }
+
+    &.score-group-p {
+      background-color: rgba(13, 148, 136, 0.025);
+      border-left: 2px dashed #99f6e4;
+      border-right: 2px dashed #99f6e4;
+    }
   }
 
   tbody tr {
+    transition: background-color 0.15s ease;
+
     &:hover td {
-      background-color: #f9f5fc;
+      background-color: #fbf8fd;
       &.sticky-col-1, &.sticky-col-2 {
-        background-color: #f9f5fc;
+        background-color: #fbf8fd;
       }
     }
 
@@ -560,46 +1014,112 @@ $white: #ffffff;
         white-space: nowrap;
 
         .rank-tag {
+          display: inline-block;
           color: $primary-purple;
           font-weight: 600;
           margin-right: 6px;
         }
       }
 
-      .raw-score {
-        font-weight: 600;
-        margin-right: 4px;
-      }
-      .grade-badge {
-        font-size: 12px;
-        color: $primary-purple;
-        font-weight: 500;
-      }
-      .index-val {
-        font-size: 12px;
-        color: $text-muted;
-        margin-left: 4px;
-        font-weight: 500;
-      }
-      .font-bold {
+      .empty-dash {
+        color: #cbd5e1;
         font-weight: 600;
       }
-      .text-purple {
-        color: $primary-purple;
+
+      /* กล่องแสดงเกรดและแต้มคะแนนสะสม */
+      .score-display-box {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+
+        .grade-badge {
+          display: inline-block;
+          font-family: 'Prompt', monospace;
+          font-size: 13px;
+          font-weight: 700;
+          padding: 2px 8px;
+          border-radius: 6px;
+          min-width: 40px;
+          text-align: center;
+          transition: transform 0.15s ease;
+
+          &.badge-grade-excellent {
+            background-color: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+          }
+
+          &.badge-grade-very-good {
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+          }
+
+          &.badge-grade-good {
+            background-color: #f5f3ff;
+            color: #6d28d9;
+            border: 1px solid #ddd6fe;
+          }
+
+          &.badge-grade-fair {
+            background-color: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fde68a;
+          }
+
+          &.badge-grade-poor {
+            background-color: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+          }
+
+          &.badge-neutral {
+            background-color: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+          }
+
+          &.su-badge {
+            background-color: #ecfdf5;
+            color: #059669;
+            border: 1px solid #a7f3d0;
+          }
+        }
+
+        .index-points {
+          font-size: 12px;
+          font-family: monospace;
+          font-weight: 600;
+          color: #64748b;
+          background-color: #f8fafc;
+          padding: 2px 6px;
+          border-radius: 4px;
+          border: 1px solid #e2e8f0;
+        }
       }
-      .text-success {
-        color: #2e7d32;
+
+      .gpa-badge {
+        display: inline-block;
+        font-weight: 700;
+        font-size: 14px;
+        font-family: 'Prompt', monospace;
+        padding: 3px 12px;
+        border-radius: 12px;
+        background-color: #f3e8ff;
+        color: #6d28d9;
+        border: 1px solid #d8b4fe;
       }
     }
   }
 
   .highlight-col {
-    background-color: #f0e6f7 !important;
-    color: $primary-purple;
+    background-color: #faf5ff !important;
+    color: #6b21a8;
   }
 
   .highlight-cell {
-    background-color: #faf5fc;
+    background-color: #fdfafe;
   }
 }
 
