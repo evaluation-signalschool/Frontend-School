@@ -131,30 +131,27 @@
               <strong>การจัดสรรสิทธิ์เลือกลงหน่วย:</strong>
             </div>
             <div class="quota-preset-buttons">
-              <button type="button" class="btn-quota-preset" [class.active]="!selectionQuotaCount || selectionQuotaCount >= students.length" (click)="setSelectionQuota(null)">
+              <button type="button" class="btn-quota-preset" [class.active]="quotaMode === 'all'" (click)="setQuotaMode('all')">
                 <mat-icon>people</mat-icon>
-                <span>ทุกคนมีสิทธิ์เลือก (แบบ นนส.)</span>
+                <span>ทุกคนมีสิทธิ์เลือกหน่วย (แบบ นนส.)</span>
               </button>
-              <button type="button" class="btn-quota-preset" [class.active]="selectionQuotaCount === 15" (click)="setSelectionQuota(15)">
+              <button type="button" class="btn-quota-preset" [class.active]="quotaMode === 'technician'" (click)="setQuotaMode('technician')">
                 <mat-icon>engineering</mat-icon>
-                <span>15 คนแรกเลือกหน่วย + 15 คนหลังสังกัดเดิม (แบบช่าง)</span>
+                <span>เลขที่ 16-30 เลือกหน่วย (15 คนหลัง) + เลขที่ 1-15 สังกัดเดิม (แบบช่าง)</span>
               </button>
             </div>
           </div>
           <div class="quota-panel-right">
             <div class="quota-custom-input-group">
-              <label>จำนวนผู้มีสิทธิ์เลือกหน่วย:</label>
-              <input type="number"
-                     min="1"
-                     [max]="students.length || 999"
-                     [ngModel]="selectionQuotaCount || students.length"
-                     (ngModelChange)="onSelectionQuotaInputChange($event)"
-                     class="quota-number-input">
-              <span class="unit-text">นาย (ลำดับที่ 1 ถึง {{ selectionQuotaCount || students.length }})</span>
+              <label>ช่วงเลขที่เลือกหน่วย:</label>
+              <input type="number" min="1" [max]="quotaEndCode || 99" [(ngModel)]="quotaStartCode" (change)="onQuotaRangeChange()" class="quota-number-input">
+              <span>ถึง</span>
+              <input type="number" [min]="quotaStartCode || 1" max="999" [(ngModel)]="quotaEndCode" (change)="onQuotaRangeChange()" class="quota-number-input">
+              <span class="unit-text">นาย ({{ selectionQuotaStudents.length }} คน)</span>
             </div>
-            <button type="button" class="btn-fill-orig-affil" (click)="applyPreAssignedAffiliations()" title="ดึงสังกัดเดิมลงเป็นหน่วยบรรจุให้อัตโนมัติสำหรับนักเรียนกลุ่มมีหน่วยเดิม">
+            <button type="button" class="btn-fill-orig-affil" (click)="applyPreAssignedAffiliations()" title="ดึงสังกัดเดิมจากข้อมูลนักเรียนมาแสดง">
               <mat-icon>sync_alt</mat-icon>
-              <span>ดึงสังกัดเดิมให้ผู้มีหน่วยเดิม</span>
+              <span>ดึงสังกัดเดิมจากข้อมูลนักเรียน</span>
             </button>
           </div>
         </div>
@@ -169,8 +166,8 @@
             <div class="stat-info">
               <div class="stat-value">{{ students.length }}</div>
               <div class="stat-label">นักเรียนทั้งหมดในรุ่น</div>
-              @if (selectionQuotaCount && selectionQuotaCount < students.length) {
-                <div class="stat-sub-note">เลือกหน่วย {{ selectionQuotaCount }} | สังกัดเดิม {{ students.length - selectionQuotaCount }}</div>
+              @if (isQuotaActive) {
+                <div class="stat-sub-note">เลือกหน่วย {{ selectionQuotaStudents.length }} นาย | สังกัดเดิม {{ preAssignedStudents.length }} นาย</div>
               }
             </div>
           </div>
@@ -181,9 +178,9 @@
               <mat-icon>check_circle</mat-icon>
             </div>
             <div class="stat-info">
-              @if (selectionQuotaCount && selectionQuotaCount < students.length) {
-                <div class="stat-value">{{ selectionQuotaAssignedCount }} <small>/ {{ selectionQuotaCount }}</small></div>
-                <div class="stat-label">กลุ่มเลือกหน่วยกรอกแล้ว ({{ selectionQuotaCount > 0 ? ((selectionQuotaAssignedCount / selectionQuotaCount) * 100).toFixed(0) : 0 }}%)</div>
+              @if (isQuotaActive) {
+                <div class="stat-value">{{ selectionQuotaAssignedCount }} <small>/ {{ selectionQuotaStudents.length }}</small></div>
+                <div class="stat-label">กลุ่มเลือกหน่วยกรอกแล้ว ({{ selectionQuotaStudents.length > 0 ? ((selectionQuotaAssignedCount / selectionQuotaStudents.length) * 100).toFixed(0) : 0 }}%)</div>
               } @else {
                 <div class="stat-value">{{ getTotalAssignedCount() }} <small>/ {{ students.length }}</small></div>
                 <div class="stat-label">กรอกเลือกหน่วยแล้ว ({{ students.length > 0 ? ((getTotalAssignedCount() / students.length) * 100).toFixed(0) : 0 }}%)</div>
@@ -198,20 +195,20 @@
             </div>
             <div class="stat-info">
               <div class="stat-value">{{ unassignedCount }}</div>
-              <div class="stat-label">{{ (selectionQuotaCount && selectionQuotaCount < students.length) ? 'ยังไม่เลือกหน่วย (ในโควตา)' : 'ยังไม่ได้กรอกหน่วย' }}</div>
+              <div class="stat-label">{{ isQuotaActive ? 'รอเลือกหน่วย (เลขที่ 16-30)' : 'ยังไม่ได้กรอกหน่วย' }}</div>
             </div>
           </div>
 
           <!-- การ์ด 4: กลุ่มมีหน่วยเดิมแล้ว (สังกัดเดิม) ถ้ามีการจำกัดโควตา -->
-          @if (selectionQuotaCount && selectionQuotaCount < students.length) {
+          @if (isQuotaActive) {
             <div class="stat-card stat-preassigned">
               <div class="stat-icon-wrap">
                 <mat-icon>domain</mat-icon>
               </div>
               <div class="stat-info">
                 <div class="stat-value">{{ preAssignedStudents.length }}</div>
-                <div class="stat-label">มีหน่วยเดิมแล้ว (สังกัดเดิม)</div>
-                <div class="stat-sub-note">ลำดับที่ {{ selectionQuotaCount + 1 }} ถึง {{ students.length }}</div>
+                <div class="stat-label">สังกัดเดิม (ตามข้อมูลนักเรียน)</div>
+                <div class="stat-sub-note">เลขที่ 1 ถึง {{ (quotaStartCode || 16) - 1 }} (ไม่ต้องเลือกหน่วย)</div>
               </div>
             </div>
           }
@@ -231,12 +228,12 @@
             <button class="pill-btn" [class.active]="filterStatus === 'all'" (click)="filterStatus = 'all'">
               ทั้งหมด ({{ students.length }})
             </button>
-            @if (selectionQuotaCount && selectionQuotaCount < students.length) {
+            @if (isQuotaActive) {
               <button class="pill-btn pill-info" [class.active]="filterStatus === 'in_quota'" (click)="filterStatus = 'in_quota'">
-                กลุ่มเลือกหน่วย ({{ selectionQuotaStudents.length }})
+                กลุ่มเลือกหน่วย เลขที่ {{ quotaStartCode }}-{{ quotaEndCode }} ({{ selectionQuotaStudents.length }})
               </button>
               <button class="pill-btn pill-indigo" [class.active]="filterStatus === 'pre_assigned'" (click)="filterStatus = 'pre_assigned'">
-                กลุ่มสังกัดเดิม ({{ preAssignedStudents.length }})
+                กลุ่มสังกัดเดิม เลขที่ 1-{{ (quotaStartCode || 16) - 1 }} ({{ preAssignedStudents.length }})
               </button>
             }
             <button class="pill-btn pill-warning" [class.active]="filterStatus === 'unassigned'" (click)="filterStatus = 'unassigned'">
@@ -489,17 +486,28 @@
             <tbody>
               @for (student of filteredStudents; track student.student_id || student.student_code; let i = $index) {
                 <tr [class.row-assigned]="student.selectedUnitName" [class.row-unassigned]="!student.selectedUnitName">
-                  <!-- 1. ลำดับที่เลือก (Rank 1 ถึง N คำนวณจากคะแนนรวมสุทธิ) -->
+                  <!-- 1. ลำดับที่เลือก (สำหรับ 16-30 แสดงเลือกลำดับ 1 ถึง 15 ตามคะแนน / สำหรับ 1-15 แสดงสังกัดเดิม) -->
                   <td class="col-rank sticky-col-1 text-center">
-                    <span class="rank-badge" [class.rank-gold]="student.rank === 1" [class.rank-silver]="student.rank === 2" [class.rank-bronze]="student.rank === 3">
-                      {{ student.rank }}
-                    </span>
-                    @if (selectionQuotaCount && selectionQuotaCount < students.length) {
-                      @if (student.rank <= selectionQuotaCount) {
-                        <span class="sub-rank-tag selection-tag" title="มีสิทธิ์เลือกหน่วยตามลำดับ">เลือกหน่วย</span>
+                    @if (isQuotaActive) {
+                      @if (isStudentInSelectionQuota(student)) {
+                        <span class="rank-badge selection-rank-badge"
+                              [class.rank-gold]="student.selectionRank === 1"
+                              [class.rank-silver]="student.selectionRank === 2"
+                              [class.rank-bronze]="student.selectionRank === 3"
+                              [title]="'ลำดับสิทธิ์ในการเลือกหน่วย: ลำดับที่ ' + student.selectionRank + ' (คะแนนรวมสุทธิ ' + student.final_score_formatted + ')'">
+                          {{ student.selectionRank }}
+                        </span>
+                        <span class="sub-rank-tag selection-tag" title="สิทธิ์การเลือกลำดับที่ {{ student.selectionRank }} ในกลุ่มเลือกหน่วย 15 คน">
+                          เลือกลำดับ {{ student.selectionRank }}
+                        </span>
                       } @else {
-                        <span class="sub-rank-tag origin-tag" title="นักเรียนมีหน่วยประจำการเดิมอยู่แล้ว">สังกัดเดิม</span>
+                        <span class="rank-badge rank-preassigned" title="มีสังกัดเดิมอยู่แล้ว ไม่ต้องเลือกหน่วย">-</span>
+                        <span class="sub-rank-tag origin-tag" title="บรรจุสังกัดเดิมตามข้อมูลนักเรียน">สังกัดเดิม</span>
                       }
+                    } @else {
+                      <span class="rank-badge" [class.rank-gold]="student.rank === 1" [class.rank-silver]="student.rank === 2" [class.rank-bronze]="student.rank === 3">
+                        {{ student.rank }}
+                      </span>
                     }
                   </td>
 
@@ -555,25 +563,28 @@
                     {{ student.final_score_formatted }}
                   </td>
 
-                  <!-- 11. ช่องกรอกหน่วยที่เลือกบรรจุ -->
+                  <!-- 11. ช่องกรอกหน่วยที่เลือกบรรจุ (เลขที่ 16-30 ให้เลือกหน่วย / เลขที่ 1-15 ดึงสังกัดเดิมในข้อมูลนักเรียนมาแสดง) -->
                   <td class="col-unit text-left">
-                    <div class="unit-select-box">
-                      <div class="unit-input-group-row">
-                        <input type="text"
-                               [ngModel]="student.selectedUnitName"
-                               (ngModelChange)="onUnitNameChange(student, $event)"
-                               [placeholder]="!isStudentInSelectionQuota(student) && student.originalAffiliation && student.originalAffiliation !== '-' ? ('ใช้สังกัดเดิม: ' + student.originalAffiliation) : 'พิมพ์หน่วยที่เลือกบรรจุ...'"
-                               class="select-unit-input"
-                               [class.selected]="student.selectedUnitName"
-                               [class.preassigned-field]="!isStudentInSelectionQuota(student)"
-                               list="unitListSuggestions">
-                        @if (!isStudentInSelectionQuota(student) && !student.selectedUnitName && student.originalAffiliation && student.originalAffiliation !== '-') {
-                          <button type="button" class="btn-inline-orig" (click)="onUnitNameChange(student, student.originalAffiliation)" title="คลิกเพื่อนำสังกัดเดิมมาใช้">
-                            ใช้สังกัดเดิม
-                          </button>
-                        }
+                    @if (isStudentInSelectionQuota(student)) {
+                      <!-- กลุ่มเลขที่ 16-30: เลือกหน่วยตามลำดับคะแนน 1 ถึง 15 -->
+                      <div class="unit-select-box">
+                        <div class="unit-input-group-row">
+                          <input type="text"
+                                 [ngModel]="student.selectedUnitName"
+                                 (ngModelChange)="onUnitNameChange(student, $event)"
+                                 placeholder="พิมพ์หน่วยที่เลือกบรรจุ..."
+                                 class="select-unit-input"
+                                 [class.selected]="student.selectedUnitName"
+                                 list="unitListSuggestions">
+                        </div>
                       </div>
-                    </div>
+                    } @else {
+                      <!-- กลุ่มเลขที่ 1-15: ดึงสังกัดเดิมในข้อมูลนักเรียนมาแสดง -->
+                      <div class="preassigned-unit-badge" [title]="'สังกัดเดิมจากข้อมูลนักเรียน: ' + (student.originalAffiliation || '-')">
+                        <mat-icon class="unit-orig-icon">domain</mat-icon>
+                        <span class="unit-orig-text">{{ (student.originalAffiliation && student.originalAffiliation !== '-') ? student.originalAffiliation : 'สังกัดเดิม (ตามข้อมูลนักเรียน)' }}</span>
+                      </div>
+                    }
                   </td>
 
                   <!-- 12. วันเวลาที่เลือก -->
@@ -662,8 +673,8 @@
           <h3 class="print-sub-header">หลักสูตร: {{ courseName }} | รุ่น: {{ batchName }}</h3>
           <p class="print-instruction">
             <strong>คำชี้แจง:</strong>
-            @if (selectionQuotaCount && selectionQuotaCount < students.length) {
-              นักเรียนลำดับที่ 1 ถึง {{ selectionQuotaCount }} ให้เลือกลงหน่วยบรรจุตามลำดับผลการเรียน (ลำดับที่ 1 มีสิทธิ์เลือกก่อนตามลำดับ) โดยเขียนระบุชื่อหน่วยที่เลือกและลงลายมือชื่อกำกับ / ลำดับที่ {{ selectionQuotaCount + 1 }} ถึง {{ students.length }} เป็นผู้มีหน่วยประจำการเดิม (บรรจุสังกัดเดิม) ให้ตรวจสอบหน่วยและลงลายมือชื่อกำกับ
+            @if (isQuotaActive) {
+              นักเรียนกลุ่มเลือกหน่วยบรรจุ (เลขที่ {{ quotaStartCode }} ถึง {{ quotaEndCode }}) ให้เลือกลงหน่วยบรรจุตามลำดับสิทธิ์ผลการเรียน (เลือกลำดับที่ 1 มีสิทธิ์เลือกก่อนตามลำดับ) โดยเขียนระบุชื่อหน่วยที่เลือกและลงลายมือชื่อกำกับ / นักเรียนกลุ่มผู้มีหน่วยประจำการเดิม (เลขที่ 1 ถึง {{ (quotaStartCode || 16) - 1 }} บรรจุสังกัดเดิม) ให้ตรวจสอบหน่วยและลงลายมือชื่อกำกับ
             } @else {
               ให้นักเรียนเลือกลงหน่วยบรรจุตามลำดับผลการเรียน (ลำดับที่ 1 มีสิทธิ์เลือกก่อนตามลำดับ) โดยเขียนระบุชื่อหน่วยที่เลือก และลงลายมือชื่อกำกับทุกนาย
             }
@@ -693,20 +704,22 @@
             </tr>
           </thead>
           <tbody>
-            @for (st of students; track st.student_id; let i = $index) {
+            @for (st of printCoordinationStudents; track st.student_id || st.student_code; let i = $index) {
               <tr [class.print-row-preassigned]="!isStudentInSelectionQuota(st)">
-                <td class="text-center font-bold">{{ st.rank || (i + 1) }}</td>
+                <td class="text-center font-bold">
+                  {{ isStudentInSelectionQuota(st) ? (st.selectionRank || (i + 1)) : '-' }}
+                </td>
                 <td class="text-center">{{ st.student_code }}</td>
                 <td class="text-left">{{ st.full_name }}</td>
                 <td class="text-left">{{ st.originalAffiliation }}</td>
                 <td class="text-center font-bold font-mono">{{ st.final_score_formatted }}</td>
 
-                <!-- ช่องหน่วยที่เลือกบรรจุ: 15 คนแรกเว้นจุดไข่ปลาให้เขียน / 15 คนหลังใส่ชื่อหน่วยเดิมไว้ตามที่กำหนด -->
+                <!-- ช่องหน่วยที่เลือกบรรจุ: กลุ่มเลือกหน่วย (เลขที่ 16-30) เว้นจุดไข่ปลาให้เขียน / กลุ่มสังกัดเดิม (เลขที่ 1-15) แสดงสังกัดเดิม -->
                 @if (isStudentInSelectionQuota(st)) {
                   <td class="text-center dotted-cell">................................................</td>
                 } @else {
                   <td class="text-center font-bold print-unit-fixed">
-                    {{ st.selectedUnitName || (st.originalAffiliation && st.originalAffiliation !== '-' ? ('บรรจุสังกัดเดิม (' + st.originalAffiliation + ')') : 'มีหน่วยเดิมอยู่แล้ว') }}
+                    {{ (st.originalAffiliation && st.originalAffiliation !== '-') ? st.originalAffiliation : 'สังกัดเดิม' }}
                   </td>
                 }
 
@@ -763,9 +776,11 @@
             </tr>
           </thead>
           <tbody>
-            @for (st of students; track st.student_id; let i = $index) {
+            @for (st of printCoordinationStudents; track st.student_id || st.student_code; let i = $index) {
               <tr>
-                <td class="text-center font-bold">{{ st.rank || (i + 1) }}</td>
+                <td class="text-center font-bold">
+                  {{ isStudentInSelectionQuota(st) ? ('ลำดับที่ ' + (st.selectionRank || (i + 1))) : 'สังกัดเดิม' }}
+                </td>
                 <td class="text-center">{{ st.student_code }}</td>
                 <td class="text-left">{{ st.full_name }}</td>
                 <td class="text-left">{{ st.originalAffiliation }}</td>
@@ -773,8 +788,10 @@
                 <td class="text-center font-mono">{{ st.behavior_score_20_formatted }}</td>
                 <td class="text-center font-bold font-mono">{{ st.final_score_formatted }}</td>
                 <td class="text-left font-bold">
-                  {{ st.selectedUnitName || (st.originalAffiliation && st.originalAffiliation !== '-' ? st.originalAffiliation : 'ยังไม่ได้เลือกหน่วย') }}
-                  @if (!isStudentInSelectionQuota(st)) {
+                  @if (isStudentInSelectionQuota(st)) {
+                    {{ st.selectedUnitName || 'ยังไม่ได้เลือกหน่วย' }}
+                  } @else {
+                    {{ (st.originalAffiliation && st.originalAffiliation !== '-') ? st.originalAffiliation : 'สังกัดเดิม' }}
                     <span class="print-orig-tag">(สังกัดเดิม)</span>
                   }
                 </td>

@@ -61,6 +61,7 @@ export interface StudentUnitAssignment {
   gpa?: string;
   rank: number;
   officialRank: number | null;
+  selectionRank?: number | null;
   originalAffiliation: string;
   group_scores: Record<number, SubjectScoreDetail>;
   total_weighted_score: number;
@@ -160,8 +161,14 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
   sortBy: string = 'rank';
   sortDirection: 'asc' | 'desc' = 'asc';
 
-  // โควตาผู้มีสิทธิ์เลือกหน่วยตามลำดับ (เช่น 15 คนแรกสำหรับช่างอิเล็กทรอนิกส์ ส่วนที่เหลือดึงสังกัดเดิม)
-  selectionQuotaCount: number | null = null;
+  // โควตาผู้มีสิทธิ์เลือกหน่วย:
+  // 'technician' = เลขที่ 16-30 เลือกหน่วย (15 คนหลัง) + เลขที่ 1-15 สังกัดเดิม (15 คนแรก)
+  // 'all' = ทุกคนมีสิทธิ์เลือก (แบบ นนส.)
+  // 'custom' = กำหนดช่วงเลขที่เอง
+  quotaMode: 'technician' | 'all' | 'custom' = 'technician';
+  quotaStartCode: number = 16;
+  quotaEndCode: number = 30;
+  selectionQuotaCount: number | null = 15;
 
   // Modal State for Unit Management
   isUnitModalOpen: boolean = false;
@@ -200,19 +207,56 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
            batch.includes('ช่าง') || batch.includes('อิเล็ก');
   }
 
-  isStudentInSelectionQuota(student: StudentUnitAssignment): boolean {
-    if (!this.selectionQuotaCount || this.selectionQuotaCount <= 0) return true;
-    return (student.rank || 0) <= this.selectionQuotaCount;
+  parseStudentCode(code: any): number | null {
+    if (code === undefined || code === null) return null;
+    const match = String(code).trim().match(/\d+/);
+    if (match) {
+      const num = parseInt(match[0], 10);
+      return isNaN(num) ? null : num;
+    }
+    return null;
+  }
+
+  get isQuotaActive(): boolean {
+    return this.quotaMode !== 'all';
+  }
+
+  isStudentInSelectionQuota(student: Partial<StudentUnitAssignment>): boolean {
+    if (this.quotaMode === 'all') return true;
+
+    if (this.quotaMode === 'technician') {
+      // เลือกหน่วยไม่ใช่ 15 คนแรก แต่เป็น 15 คนหลังตั้งแต่เลขที่ 16-30
+      const codeNum = this.parseStudentCode(student.student_code);
+      if (codeNum !== null) {
+        return codeNum >= 16 && codeNum <= 30;
+      }
+      // กรณีไม่มีเลขที่ ดูจากลำดับผลการเรียน 15 คนหลัง
+      const total = this.students.length || 30;
+      const threshold = total > 15 ? total - 15 : 15;
+      return (student.rank || 0) > threshold;
+    }
+
+    if (this.quotaMode === 'custom') {
+      const codeNum = this.parseStudentCode(student.student_code);
+      if (codeNum !== null) {
+        const start = this.quotaStartCode || 16;
+        const end = this.quotaEndCode || 30;
+        return codeNum >= start && codeNum <= end;
+      }
+      return (student.rank || 0) > 15;
+    }
+
+    return true;
   }
 
   get selectionQuotaStudents(): StudentUnitAssignment[] {
-    if (!this.selectionQuotaCount || this.selectionQuotaCount <= 0) return this.students;
-    return this.students.filter((s) => (s.rank || 0) <= this.selectionQuotaCount!);
+    if (!this.isQuotaActive) return this.students;
+    return this.students.filter((s) => this.isStudentInSelectionQuota(s));
   }
 
   get preAssignedStudents(): StudentUnitAssignment[] {
-    if (!this.selectionQuotaCount || this.selectionQuotaCount <= 0) return [];
-    return this.students.filter((s) => (s.rank || 0) > this.selectionQuotaCount!);
+    if (!this.isQuotaActive) return [];
+    return this.students.filter((s) => !this.isStudentInSelectionQuota(s));
   }
 
   get selectionQuotaAssignedCount(): number {
@@ -234,13 +278,68 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
   }
 
   get unassignedCount(): number {
-    if (this.selectionQuotaCount && this.selectionQuotaCount > 0) {
+    if (this.isQuotaActive) {
       return this.selectionQuotaUnassignedCount;
     }
     return this.students.filter((s) => !s.selectedUnitName || s.selectedUnitName.trim() === '').length;
   }
 
+  calculateSelectionRanks(): void {
+    if (!this.students || this.students.length === 0) return;
+
+    if (!this.isQuotaActive) {
+      this.students.forEach((s, idx) => {
+        s.selectionRank = s.rank || (idx + 1);
+      });
+      return;
+    }
+
+    // 1. แยกกลุ่มเลือกหน่วย (เลขที่ 16-30)
+    const selectionGroup = this.students.filter((s) => this.isStudentInSelectionQuota(s));
+
+    // เรียงตามคะแนนสุทธิ final_score จากมากไปน้อย เพื่อหาว่าใน 15 คนนี้ใครได้เลือกลำดับที่ 1 ถึง 15
+    selectionGroup.sort((a, b) => {
+      const diff = (b.final_score || 0) - (a.final_score || 0);
+      if (Math.abs(diff) > 0.000001) return diff;
+      const wDiff = (b.total_weighted_score || 0) - (a.total_weighted_score || 0);
+      if (Math.abs(wDiff) > 0.000001) return wDiff;
+      return (b.behavior_score || 0) - (a.behavior_score || 0);
+    });
+
+    // กำหนดลำดับสิทธิ์การเลือกหน่วย 1 ถึง 15 ใน 15 คนนี้
+    selectionGroup.forEach((st, idx) => {
+      st.selectionRank = idx + 1;
+    });
+
+    // 2. กลุ่มสังกัดเดิม (เลขที่ 1-15)
+    const preAssignedGroup = this.students.filter((s) => !this.isStudentInSelectionQuota(s));
+    preAssignedGroup.forEach((st) => {
+      st.selectionRank = null; // สังกัดเดิม ไม่ต้องเลือกหน่วย
+      // ดึงสังกัดในข้อมูลนักเรียนมาแสดงเป็นหน่วยบรรจุ
+      const aff = (st.originalAffiliation && st.originalAffiliation !== '-') ? st.originalAffiliation.trim() : '';
+      st.selectedUnitName = aff || 'สังกัดเดิม';
+      st.selectedUnitId = 'orig_' + st.student_id;
+      st.assignedAt = 'สังกัดเดิม';
+    });
+  }
+
+  get printCoordinationStudents(): StudentUnitAssignment[] {
+    if (!this.isQuotaActive) return this.students;
+    // กลุ่มเลือกหน่วย (16-30) เรียงตามลำดับที่ได้เลือก 1 ถึง 15 (ใครได้เลือกลำดับที่ 1 ขึ้นก่อน)
+    const quota = [...this.selectionQuotaStudents].sort(
+      (a, b) => (a.selectionRank || 999) - (b.selectionRank || 999)
+    );
+    // กลุ่มสังกัดเดิม (1-15) เรียงตามเลขที่ 1 ถึง 15 ดึงสังกัดจากข้อมูลนักเรียน
+    const pre = [...this.preAssignedStudents].sort((a, b) => {
+      const cA = this.parseStudentCode(a.student_code) || 0;
+      const cB = this.parseStudentCode(b.student_code) || 0;
+      return cA - cB;
+    });
+    return [...quota, ...pre];
+  }
+
   printCoordinationSheet(): void {
+    this.calculateSelectionRanks();
     this.printMode = 'coordination';
     this.cdr.detectChanges();
     setTimeout(() => {
@@ -652,10 +751,16 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
         if (savedConfig) {
           const cfg = JSON.parse(savedConfig);
           this.isBatchEnabledForUnitSelection = cfg.enabled !== false;
-          this.selectionQuotaCount = cfg.selectionQuotaCount !== undefined ? cfg.selectionQuotaCount : (this.isTechnicianCourse ? 15 : null);
+          this.quotaMode = cfg.quotaMode || (this.isTechnicianCourse ? 'technician' : 'all');
+          this.quotaStartCode = cfg.quotaStartCode !== undefined ? cfg.quotaStartCode : 16;
+          this.quotaEndCode = cfg.quotaEndCode !== undefined ? cfg.quotaEndCode : 30;
+          this.selectionQuotaCount = cfg.selectionQuotaCount !== undefined ? cfg.selectionQuotaCount : 15;
         } else {
           this.isBatchEnabledForUnitSelection = true;
-          this.selectionQuotaCount = this.isTechnicianCourse ? 15 : null;
+          this.quotaMode = this.isTechnicianCourse ? 'technician' : 'all';
+          this.quotaStartCode = 16;
+          this.quotaEndCode = 30;
+          this.selectionQuotaCount = 15;
         }
       } catch (e) {
         console.error('Error loading units:', e);
@@ -691,6 +796,9 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
         STORAGE_KEY_PREFIX_CONFIG + bId,
         JSON.stringify({
           enabled: this.isBatchEnabledForUnitSelection,
+          quotaMode: this.quotaMode,
+          quotaStartCode: this.quotaStartCode,
+          quotaEndCode: this.quotaEndCode,
           selectionQuotaCount: this.selectionQuotaCount,
         })
       );
@@ -702,70 +810,87 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
     this.saveConfig();
   }
 
-  setSelectionQuota(count: number | null): void {
-    this.selectionQuotaCount = count;
-    this.saveConfig();
-
-    // เมื่อกำหนดโควตา ดึงสังกัดเดิมให้อัตโนมัติสำหรับคนที่มีหน่วยเดิม (ลำดับที่ count + 1 เป็นต้นไป)
-    if (count && count > 0) {
-      let filled = 0;
-      this.students.forEach((s) => {
-        if ((s.rank || 0) > count) {
-          if (!s.selectedUnitName && s.originalAffiliation && s.originalAffiliation !== '-') {
-            s.selectedUnitName = s.originalAffiliation;
-            s.selectedUnitId = 'orig_' + s.student_id;
-            s.assignedAt = 'บรรจุสังกัดเดิม';
-            filled++;
-          }
-        }
-      });
-      if (filled > 0) {
-        this.hasUnsavedChanges = true;
-      }
+  setQuotaMode(mode: 'technician' | 'all' | 'custom'): void {
+    this.quotaMode = mode;
+    if (mode === 'technician') {
+      this.quotaStartCode = 16;
+      this.quotaEndCode = 30;
+      this.selectionQuotaCount = 15;
+      this.autoFillOriginalAffiliations();
+    } else if (mode === 'all') {
+      this.selectionQuotaCount = null;
     }
+    this.calculateSelectionRanks();
+    this.saveConfig();
     this.cdr.detectChanges();
   }
 
-  onSelectionQuotaInputChange(val: any): void {
-    const num = Number(val);
-    if (!val || isNaN(num) || num <= 0) {
-      this.setSelectionQuota(null);
+  setSelectionQuota(count: number | null): void {
+    if (!count) {
+      this.setQuotaMode('all');
     } else {
-      this.setSelectionQuota(Math.min(this.students.length || 999, Math.max(1, num)));
+      this.setQuotaMode('technician');
+    }
+  }
+
+  onQuotaRangeChange(): void {
+    this.quotaMode = 'custom';
+    const start = this.quotaStartCode || 1;
+    const end = this.quotaEndCode || start;
+    this.selectionQuotaCount = Math.max(0, end - start + 1);
+    this.calculateSelectionRanks();
+    this.saveConfig();
+    this.cdr.detectChanges();
+  }
+
+  autoFillOriginalAffiliations(): void {
+    let filled = 0;
+    this.students.forEach((s) => {
+      if (!this.isStudentInSelectionQuota(s)) {
+        const aff = (s.originalAffiliation && s.originalAffiliation !== '-') ? s.originalAffiliation : '';
+        if (aff && s.selectedUnitName !== aff) {
+          s.selectedUnitName = aff;
+          s.selectedUnitId = 'orig_' + s.student_id;
+          s.assignedAt = 'สังกัดเดิม';
+          filled++;
+        }
+      }
+    });
+    if (filled > 0) {
+      this.hasUnsavedChanges = true;
     }
   }
 
   applyPreAssignedAffiliations(): void {
-    if (!this.selectionQuotaCount || this.selectionQuotaCount <= 0) {
-      if (this.isTechnicianCourse && this.students.length >= 20) {
-        this.selectionQuotaCount = 15;
-      }
+    if (this.quotaMode === 'all') {
+      this.setQuotaMode('technician');
     }
 
     let count = 0;
     this.students.forEach((s) => {
       if (!this.isStudentInSelectionQuota(s)) {
-        if (!s.selectedUnitName || s.selectedUnitName.trim() === '') {
-          if (s.originalAffiliation && s.originalAffiliation !== '-') {
-            s.selectedUnitName = s.originalAffiliation;
-            s.selectedUnitId = 'orig_' + s.student_id;
-            s.assignedAt = 'บรรจุสังกัดเดิม';
-            count++;
-          }
+        const aff = (s.originalAffiliation && s.originalAffiliation !== '-') ? s.originalAffiliation : '';
+        if (aff) {
+          s.selectedUnitName = aff;
+          s.selectedUnitId = 'orig_' + s.student_id;
+          s.assignedAt = 'สังกัดเดิม';
+          count++;
         }
       }
     });
 
+    this.calculateSelectionRanks();
     this.hasUnsavedChanges = true;
     this.saveConfig();
     this.cdr.detectChanges();
 
+    const maxCode = Math.max(1, (this.quotaStartCode || 16) - 1);
     if (count > 0) {
       Swal.fire({
         icon: 'success',
         title: 'ดึงสังกัดเดิมสำเร็จ',
-        text: `ดึงสังกัดเดิมลงเป็นหน่วยบรรจุให้ ${count} นายเรียบร้อยแล้ว`,
-        timer: 1600,
+        text: `ดึงข้อมูลสังกัดเดิมจากข้อมูลนักเรียนมาแสดงเป็นหน่วยบรรจุให้ ${count} นายเรียบร้อยแล้ว`,
+        timer: 1800,
         showConfirmButton: false,
         toast: true,
         position: 'top-end',
@@ -773,8 +898,8 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
     } else {
       Swal.fire({
         icon: 'info',
-        title: 'ตรวจสอบเรียบร้อย',
-        text: 'นักเรียนกลุ่มมีหน่วยเดิม มีชื่อหน่วยครบถ้วนแล้ว',
+        title: 'ข้อมูลสังกัดเดิมครบถ้วน',
+        text: `นักเรียนกลุ่มเลขที่ 1 ถึง ${maxCode} มีข้อมูลสังกัดเดิมแสดงเรียบร้อยแล้ว`,
         timer: 1600,
         showConfirmButton: false,
         toast: true,
@@ -867,7 +992,10 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
       } catch (_) {}
     }
 
-    if (this.isTechnicianCourse && (!this.selectionQuotaCount || this.selectionQuotaCount <= 0)) {
+    if (this.isTechnicianCourse && !this.quotaMode) {
+      this.quotaMode = 'technician';
+      this.quotaStartCode = 16;
+      this.quotaEndCode = 30;
       this.selectionQuotaCount = 15;
     }
 
@@ -888,8 +1016,11 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
       let assignedAt: string | null = null;
       let notes: string = '';
 
-      const isQuotaLimit = this.selectionQuotaCount && this.selectionQuotaCount > 0;
-      const isInQuota = !isQuotaLimit || (rank <= this.selectionQuotaCount!);
+      // ตรวจสอบกลุ่มเลือกหน่วย (เลขที่ 16-30 คือกลุ่มเลือกหน่วย / เลขที่ 1-15 คือกลุ่มสังกัดเดิม)
+      const isInQuota = this.isStudentInSelectionQuota({
+        student_code: sCode,
+        rank: rank,
+      });
 
       if (savedItem && savedItem.unitName && savedItem.unitName.trim() !== '') {
         selectedUnitId = savedItem.unitId;
@@ -897,10 +1028,10 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
         assignedAt = savedItem.assignedAt;
         notes = savedItem.notes || '';
       } else {
-        if (!isInQuota && origAff) {
-          // อยู่นอกโควตาเลือกหน่วย (เช่น ลำดับที่ 16 เป็นต้นไปในช่างอิเล็กทรอนิกส์) -> ดึงสังกัดเดิมลงเป็นหน่วยบรรจุให้อัตโนมัติ
+        if (!isInQuota) {
+          // อยู่นอกกลุ่มเลือกหน่วย (เลขที่ 1-15 / กลุ่มสังกัดเดิม) -> ดึงสังกัดเดิมลงเป็นหน่วยบรรจุให้อัตโนมัติ
           selectedUnitId = 'orig_' + sId;
-          selectedUnitName = origAff;
+          selectedUnitName = (origAff && origAff !== '-') ? origAff : 'บรรจุสังกัดเดิม';
           assignedAt = 'บรรจุสังกัดเดิม';
         } else if (origAff) {
           // เช็คว่ามีหน่วยตรงกับสังกัดเดิมหรือไม่
@@ -943,6 +1074,7 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
 
     // เรียงตามลำดับอันดับที่คำนวณจากคะแนนรวมสุทธิ 1 ถึง N เสมอ
     this.students.sort((a, b) => (a.rank || 0) - (b.rank || 0));
+    this.calculateSelectionRanks();
   }
 
   // --- คำนวณยอดโควตา (Quota Calculation) ---
@@ -1295,7 +1427,23 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
     list.sort((a, b) => {
       let comparison = 0;
       if (this.sortBy === 'rank') {
-        comparison = (a.rank ?? 9999) - (b.rank ?? 9999);
+        if (this.isQuotaActive) {
+          const aInQuota = this.isStudentInSelectionQuota(a);
+          const bInQuota = this.isStudentInSelectionQuota(b);
+          if (aInQuota && bInQuota) {
+            comparison = (a.selectionRank ?? 9999) - (b.selectionRank ?? 9999);
+          } else if (aInQuota && !bInQuota) {
+            comparison = -1; // ผู้มีสิทธิ์เลือกหน่วย (16-30) ขึ้นก่อน เรียงตามเลือกลำดับที่ 1 ถึง 15
+          } else if (!aInQuota && bInQuota) {
+            comparison = 1;
+          } else {
+            const cA = this.parseStudentCode(a.student_code) || 0;
+            const cB = this.parseStudentCode(b.student_code) || 0;
+            comparison = cA - cB;
+          }
+        } else {
+          comparison = (a.rank ?? 9999) - (b.rank ?? 9999);
+        }
       } else if (this.sortBy === 'code') {
         const cA = parseInt(a.student_code, 10);
         const cB = parseInt(b.student_code, 10);
@@ -1314,8 +1462,8 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
       } else if (this.sortBy === 'final_score') {
         comparison = a.final_score - b.final_score;
       } else if (this.sortBy === 'unit') {
-        const uA = a.selectedUnitName || 'zzz';
-        const uB = b.selectedUnitName || 'zzz';
+        const uA = a.selectedUnitName || a.originalAffiliation || 'zzz';
+        const uB = b.selectedUnitName || b.originalAffiliation || 'zzz';
         comparison = uA.localeCompare(uB);
       } else if (this.sortBy.startsWith('group_raw_')) {
         const gId = Number(this.sortBy.replace('group_raw_', ''));
@@ -1431,9 +1579,13 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
       };
     });
 
-    this.students.forEach((s) => {
+    const exportList = this.isQuotaActive ? this.printCoordinationStudents : this.students;
+    exportList.forEach((s) => {
+      const isQuota = this.isStudentInSelectionQuota(s);
       const rowData: Record<string, any> = {
-        rank: s.rank || '-',
+        rank: this.isQuotaActive
+          ? (isQuota ? (s.selectionRank ? `เลือกลำดับที่ ${s.selectionRank}` : '-') : 'สังกัดเดิม')
+          : (s.rank || '-'),
         code: s.student_code,
         name: s.full_name,
         orig_aff: s.originalAffiliation,
@@ -1442,7 +1594,9 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
         acad_80: s.academic_score_80_formatted,
         beh_20: s.behavior_score_20_formatted,
         final_score: s.final_score_formatted,
-        unit: s.selectedUnitName || 'ยังไม่ได้เลือกหน่วย',
+        unit: isQuota
+          ? (s.selectedUnitName || 'ยังไม่ได้เลือกหน่วย')
+          : (s.originalAffiliation && s.originalAffiliation !== '-' ? s.originalAffiliation : 'สังกัดเดิม'),
         time: s.assignedAt || '-',
         notes: s.notes || '-',
       };
