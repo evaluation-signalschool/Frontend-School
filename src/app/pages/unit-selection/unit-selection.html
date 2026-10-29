@@ -401,12 +401,14 @@
 
                 <!-- คอลัมน์รายวิชา: แสดงชื่อวิชาเรียงตามลำดับ -->
                 @for (grp of subjectGroups; track grp.groupId) {
-                  <th colspan="2" class="col-subject-group text-center">
+                  <th [attr.colspan]="grp.isMerged && grp.subjects && grp.subjects.length > 1 ? grp.subjects.length + 1 : 2"
+                      class="col-subject-group text-center"
+                      [class.col-subject-merged-group]="grp.isMerged && grp.subjects && grp.subjects.length > 1">
                     <div class="grp-header-title" [title]="grp.displayName">
                       <span class="grp-code-pill">{{ grp.groupName }}</span>
                       <span class="grp-name-title">{{ grp.subjectNames || grp.displayName }}</span>
                       @if (grp.isMerged) {
-                        <span class="merged-tag" title="รวมคะแนนดิบ {{ grp.subjectsCount }} วิชาก่อนคูณหน่วยกิต">เมิร์จ</span>
+                        <span class="merged-tag" title="เฉลี่ยคะแนนดิบ {{ grp.subjectsCount || (grp.subjects ? grp.subjects.length : 2) }} วิชาก่อนคูณหน่วยกิต">เมิร์จ ({{ grp.subjectsCount || (grp.subjects ? grp.subjects.length : 2) }} วิชา)</span>
                       }
                     </div>
                   </th>
@@ -447,23 +449,47 @@
               <!-- แถว Header ย่อย 1: ชื่อแถว (คะแนนดิบ | คะแนนดิบ * ค่าน้ำหนัก) -->
               <tr class="sub-header-row">
                 @for (grp of subjectGroups; track grp.groupId) {
-                  <th class="col-sub-raw text-center" (click)="setSort('group_raw_' + grp.groupId)" title="คะแนนดิบ">
-                    คะแนนดิบ
-                  </th>
-                  <th class="col-sub-w text-center" (click)="setSort('group_w_' + grp.groupId)" title="คะแนนดิบ * ค่าน้ำหนัก">
-                    คะแนนดิบ * ค่าน้ำหนัก
-                  </th>
+                  @if (grp.isMerged && grp.subjects && grp.subjects.length > 1) {
+                    @for (sub of grp.subjects; track sub.id) {
+                      <th class="col-sub-raw col-merged-sub-raw text-center" (click)="setSort('sub_raw_' + sub.id)" [title]="sub.name + ' (คะแนนดิบ)'">
+                        <span class="sub-title-truncate">{{ sub.name }}</span>
+                        <span class="sub-desc-label">คะแนนดิบ</span>
+                      </th>
+                    }
+                    <th class="col-sub-w col-merged-total-w text-center" (click)="setSort('group_w_' + grp.groupId)" [title]="grp.subjects.length + ' วิชารวมกัน (ค่าน้ำหนัก)'">
+                      <span>{{ grp.subjects.length }} วิชารวมกัน</span>
+                      <span class="sub-desc-label">หน่วยกิต {{ grp.credit }}</span>
+                    </th>
+                  } @else {
+                    <th class="col-sub-raw text-center" (click)="setSort('group_raw_' + grp.groupId)" title="คะแนนดิบ">
+                      คะแนนดิบ
+                    </th>
+                    <th class="col-sub-w text-center" (click)="setSort('group_w_' + grp.groupId)" title="คะแนนดิบ * ค่าน้ำหนัก">
+                      คะแนนดิบ * ค่าน้ำหนัก
+                    </th>
+                  }
                 }
               </tr>
               <!-- แถว Header ย่อย 2: ค่าเกณฑ์ (ค่าคะแนนดิบ | ค่าหน่วยกิต และเกณฑ์คะแนนรวมตอนท้าย) -->
               <tr class="sub-header-criteria-row">
                 @for (grp of subjectGroups; track grp.groupId) {
-                  <th class="col-sub-criteria-raw text-center font-mono" title="ค่าคะแนนดิบเต็มของรายวิชา">
-                    {{ grp.group_max_score_formatted || '100.0000' }}
-                  </th>
-                  <th class="col-sub-criteria-credit text-center font-mono" title="ค่าหน่วยกิต">
-                    {{ grp.credit }} นก.
-                  </th>
+                  @if (grp.isMerged && grp.subjects && grp.subjects.length > 1) {
+                    @for (sub of grp.subjects; track sub.id) {
+                      <th class="col-sub-criteria-raw col-merged-sub-raw text-center font-mono" [title]="'คะแนนเต็ม ' + sub.name">
+                        {{ sub.max_score_formatted || sub.max_score.toFixed(4) }}
+                      </th>
+                    }
+                    <th class="col-sub-criteria-credit col-merged-total-w text-center font-mono text-purple font-bold" [title]="'ค่าน้ำหนักเต็ม (เฉลี่ยคะแนนดิบ * ' + grp.credit + ' นก.)'">
+                      ค่าน้ำหนัก {{ grp.group_max_weighted_formatted || ((grp.group_max_score || 0) * grp.credit).toFixed(4) }}
+                    </th>
+                  } @else {
+                    <th class="col-sub-criteria-raw text-center font-mono" title="ค่าคะแนนดิบเต็มของรายวิชา">
+                      {{ grp.group_max_score_formatted || '100.0000' }}
+                    </th>
+                    <th class="col-sub-criteria-credit text-center font-mono" title="ค่าหน่วยกิต">
+                      {{ grp.credit }} นก.
+                    </th>
+                  }
                 }
                 <!-- เกณฑ์คะแนนรวมและคะแนนสรุปผลตอนท้ายทุกวิชา -->
                 <th class="col-sub-criteria-summary text-center font-mono text-muted" title="คะแนนเต็มรวมทั้งหมดทุกวิชา">
@@ -526,16 +552,29 @@
                     {{ student.originalAffiliation }}
                   </td>
 
-                  <!-- 5. คะแนนรายวิชา (2 คอลัมน์ต่อวิชา: 1. คะแนนดิบ | 2. คะแนนดิบ * ค่าน้ำหนัก) -->
+                  <!-- 5. คะแนนรายวิชา (วิชาทั่วไป: 2 คอลัมน์ / วิชาเมิร์จ: คอลัมน์คะแนนดิบแต่ละวิชา + คอลัมน์รวม*นก.) -->
                   @for (grp of subjectGroups; track grp.groupId) {
-                    <!-- ช่องแรก: คะแนนของ นร. ที่ได้ (คะแนนดิบ) -->
-                    <td class="col-sub-raw text-center font-mono">
-                      {{ student.group_scores[grp.groupId]?.raw_score_formatted || '0.0000' }}
-                    </td>
-                    <!-- ช่องสอง: คะแนนดิบ * ค่าน้ำหนัก -->
-                    <td class="col-sub-w text-center font-mono text-purple font-medium">
-                      {{ student.group_scores[grp.groupId]?.weighted_score_formatted || '0.0000' }}
-                    </td>
+                    @if (grp.isMerged && grp.subjects && grp.subjects.length > 1) {
+                      @for (sub of grp.subjects; track sub.id) {
+                        <!-- คะแนนดิบของแต่ละวิชาย่อยในกลุ่มเมิร์จ -->
+                        <td class="col-sub-raw col-merged-sub-raw text-center font-mono" [title]="sub.name + ': ' + getStudentSubjectRaw(student, grp.groupId, sub.id)">
+                          {{ getStudentSubjectRaw(student, grp.groupId, sub.id) }}
+                        </td>
+                      }
+                      <!-- คอลัมน์รวมกลุ่ม: นำค่าเฉลี่ยคะแนนดิบ * หน่วยกิต ได้เป็นค่าน้ำหนัก -->
+                      <td class="col-sub-w col-merged-total-w text-center font-mono text-purple font-bold" [title]="grp.subjects.length + ' วิชารวมกัน (ค่าน้ำหนัก): ' + (student.group_scores[grp.groupId]?.weighted_score_formatted || '0.0000')">
+                        {{ student.group_scores[grp.groupId]?.weighted_score_formatted || '0.0000' }}
+                      </td>
+                    } @else {
+                      <!-- วิชาเดี่ยวทั่วไป ช่องแรก: คะแนนดิบ -->
+                      <td class="col-sub-raw text-center font-mono">
+                        {{ student.group_scores[grp.groupId]?.raw_score_formatted || '0.0000' }}
+                      </td>
+                      <!-- ช่องสอง: คะแนนดิบ * ค่าน้ำหนัก -->
+                      <td class="col-sub-w text-center font-mono text-purple font-medium">
+                        {{ student.group_scores[grp.groupId]?.weighted_score_formatted || '0.0000' }}
+                      </td>
+                    }
                   }
 
                   <!-- 6. คะแนนรวมทั้งหมด -->
@@ -625,7 +664,7 @@
                 </tr>
               } @empty {
                 <tr>
-                  <td [attr.colspan]="14 + (subjectGroups.length * 2)" class="empty-table-row">
+                  <td [attr.colspan]="totalTableColumnsCount" class="empty-table-row">
                     ไม่พบข้อมูลนักเรียนที่ตรงตามเงื่อนไข
                   </td>
                 </tr>

@@ -1623,6 +1623,12 @@ $border-color: #e2e8f0;
           }
         }
 
+        &.col-subject-merged-group {
+          background-color: #f5f3ff !important;
+          border-left: 1.5px solid #c4b5fd;
+          border-right: 2px solid #8b5cf6 !important;
+        }
+
         &.highlight-header {
           background-color: #ccfbf1;
           color: #0f766e;
@@ -1656,10 +1662,49 @@ $border-color: #e2e8f0;
           min-width: 80px;
         }
 
+        &.col-merged-sub-raw {
+          min-width: 100px;
+          max-width: 145px;
+          background-color: #fbfbfe;
+          color: #1e293b;
+          border-right: 1px dashed #cbd5e1;
+
+          .sub-title-truncate {
+            display: block;
+            white-space: normal;
+            line-height: 1.25;
+            font-size: 11px;
+            font-weight: 600;
+          }
+
+          .sub-desc-label {
+            display: block;
+            font-size: 10px;
+            color: #64748b;
+            font-weight: normal;
+            margin-top: 2px;
+          }
+        }
+
         &.col-sub-w {
           color: #7c3aed;
           background-color: #faf5ff;
           min-width: 130px;
+        }
+
+        &.col-merged-total-w {
+          min-width: 115px;
+          background-color: #f5f3ff;
+          color: #6d28d9;
+          border-right: 2px solid #8b5cf6 !important;
+
+          .sub-desc-label {
+            display: block;
+            font-size: 10px;
+            color: #7c3aed;
+            font-weight: 600;
+            margin-top: 2px;
+          }
         }
 
         &.col-sub-max {
@@ -1688,9 +1733,19 @@ $border-color: #e2e8f0;
           background-color: #f8fafc;
         }
 
+        &.col-merged-sub-raw {
+          background-color: #f8fafc;
+          border-right: 1px dashed #cbd5e1;
+        }
+
         &.col-sub-criteria-credit {
           color: #7c3aed;
           background-color: #faf5ff;
+        }
+
+        &.col-merged-total-w {
+          background-color: #ede9fe;
+          border-right: 2px solid #8b5cf6 !important;
         }
 
         &.col-sub-criteria-max {
@@ -1796,6 +1851,12 @@ $border-color: #e2e8f0;
         min-width: 75px;
       }
 
+      &.col-merged-sub-raw {
+        min-width: 100px;
+        background-color: #fdfdfe;
+        border-right: 1px dashed #e2e8f0;
+      }
+
       &.col-sub-max {
         min-width: 75px;
         background-color: #fafafa;
@@ -1805,6 +1866,12 @@ $border-color: #e2e8f0;
       &.col-sub-w {
         min-width: 130px;
         background-color: #faf5ff;
+      }
+
+      &.col-merged-total-w {
+        min-width: 115px;
+        background-color: #faf5ff;
+        border-right: 2px solid #8b5cf6 !important;
       }
 
       /* Sticky columns in tbody */

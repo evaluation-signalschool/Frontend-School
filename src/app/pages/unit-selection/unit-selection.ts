@@ -21,9 +21,23 @@ export interface UnitQuota {
   description?: string;
 }
 
+export interface SubjectDetail {
+  id: number;
+  name: string;
+  max_score: number;
+  max_score_formatted?: string;
+  is_su?: boolean;
+}
+
 export interface SubjectScoreDetail {
   groupId: number;
   groupName: string;
+  isMerged?: boolean;
+  subjectsCount?: number;
+  sum_raw_score?: number;
+  sum_raw_score_formatted?: string;
+  avg_raw_score?: number;
+  avg_raw_score_formatted?: string;
   max_score?: number;
   max_score_formatted?: string;
   raw_score: number;
@@ -34,6 +48,17 @@ export interface SubjectScoreDetail {
   weighted_score_formatted: string;
   max_weighted_score?: number;
   max_weighted_score_formatted?: string;
+  subject_scores?: Record<
+    number,
+    {
+      id: number;
+      name: string;
+      raw_score: number;
+      raw_score_formatted: string;
+      max_score: number;
+      max_score_formatted?: string;
+    }
+  >;
 }
 
 export interface SubjectGroupHeader {
@@ -45,6 +70,9 @@ export interface SubjectGroupHeader {
   fullName?: string;
   isMerged: boolean;
   subjectsCount: number;
+  subjects?: SubjectDetail[];
+  sum_max_score?: number;
+  avg_max_score?: number;
   group_max_score?: number;
   group_max_score_formatted?: string;
   group_max_weighted?: number;
@@ -63,6 +91,7 @@ export interface StudentUnitAssignment {
   officialRank: number | null;
   selectionRank?: number | null;
   originalAffiliation: string;
+  subject_raw_scores?: Record<number, number>;
   group_scores: Record<number, SubjectScoreDetail>;
   total_weighted_score: number;
   total_weighted_score_formatted: string;
@@ -530,16 +559,33 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  get totalTableColumnsCount(): number {
+    let count = 4; // rank, code, name, orig
+    this.subjectGroups.forEach((g) => {
+      count += (g.isMerged && g.subjects && g.subjects.length > 1) ? (g.subjects.length + 1) : 2;
+    });
+    count += 5; // total_w, behavior, acad_80, beh_20, final_score
+    count += 5; // unit, time, notes, status, actions
+    return count;
+  }
+
   computeEstimatedTableWidth(): number {
-    const subjectCount = this.subjectGroups?.length || 0;
+    let dynamicColsCount = 0;
+    this.subjectGroups.forEach((g) => {
+      if (g.isMerged && g.subjects && g.subjects.length > 1) {
+        dynamicColsCount += g.subjects.length + 1;
+      } else {
+        dynamicColsCount += 2;
+      }
+    });
     // 4 คอลัมน์แรก (ลำดับ, เลขที่, ยศ-ชื่อ, สังกัดเดิม): ~520px
-    // วิชา (2 คอลัมน์ต่อวิชา คะแนนดิบ 80px + คะแนนดิบ*นก. 130px + ขอบ/padding ~225px): ~225px ต่อวิชา
-    // ส่วนสรุปคะแนนรวมท้ายวิชา (8 คอลัมน์): ~950px
-    // ส่วนเลือกหน่วยบรรจุ (4 คอลัมน์): ~650px
+    // วิชา: ~115px ต่อคอลัมน์ย่อย
+    // ส่วนสรุปคะแนนรวมท้ายวิชา (5 คอลัมน์): ~850px
+    // ส่วนเลือกหน่วยบรรจุ (5 คอลัมน์): ~650px
     // ระยะเผื่อขอบ: ~250px
     const baseColsWidth = 520;
-    const subjectsWidth = subjectCount * 225;
-    const summaryColsWidth = 950;
+    const subjectsWidth = dynamicColsCount * 115;
+    const summaryColsWidth = 850;
     const unitColsWidth = 650;
     const safetyMargin = 250;
     return Math.max(baseColsWidth + subjectsWidth + summaryColsWidth + unitColsWidth + safetyMargin, 3600);
@@ -1054,6 +1100,7 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
         rank: rank,
         officialRank: rank,
         originalAffiliation: origAff || '-',
+        subject_raw_scores: st.subject_raw_scores || {},
         group_scores: st.group_scores || {},
         total_weighted_score: Number(st.total_weighted_score) || 0,
         total_weighted_score_formatted: st.total_weighted_score_formatted || (Number(st.total_weighted_score) || 0).toFixed(4),
@@ -1075,6 +1122,17 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
     // เรียงตามลำดับอันดับที่คำนวณจากคะแนนรวมสุทธิ 1 ถึง N เสมอ
     this.students.sort((a, b) => (a.rank || 0) - (b.rank || 0));
     this.calculateSelectionRanks();
+  }
+
+  getStudentSubjectRaw(student: StudentUnitAssignment, groupId: number, subjectId: number): string {
+    const grpScore = student.group_scores?.[groupId];
+    if (grpScore?.subject_scores?.[subjectId]?.raw_score_formatted) {
+      return grpScore.subject_scores[subjectId].raw_score_formatted;
+    }
+    if (student.subject_raw_scores && student.subject_raw_scores[subjectId] !== undefined) {
+      return Number(student.subject_raw_scores[subjectId]).toFixed(4);
+    }
+    return '0.0000';
   }
 
   // --- คำนวณยอดโควตา (Quota Calculation) ---
@@ -1465,6 +1523,20 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
         const uA = a.selectedUnitName || a.originalAffiliation || 'zzz';
         const uB = b.selectedUnitName || b.originalAffiliation || 'zzz';
         comparison = uA.localeCompare(uB);
+      } else if (this.sortBy.startsWith('sub_raw_')) {
+        const subId = Number(this.sortBy.replace('sub_raw_', ''));
+        const getSubRaw = (st: StudentUnitAssignment) => {
+          if (st.subject_raw_scores && st.subject_raw_scores[subId] !== undefined) {
+            return Number(st.subject_raw_scores[subId]);
+          }
+          for (const grp of Object.values(st.group_scores || {})) {
+            if (grp.subject_scores && grp.subject_scores[subId]?.raw_score !== undefined) {
+              return Number(grp.subject_scores[subId].raw_score);
+            }
+          }
+          return 0;
+        };
+        comparison = getSubRaw(a) - getSubRaw(b);
       } else if (this.sortBy.startsWith('group_raw_')) {
         const gId = Number(this.sortBy.replace('group_raw_', ''));
         const sA = a.group_scores[gId]?.raw_score || 0;
@@ -1493,7 +1565,7 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
     } else {
       this.sortBy = by;
-      if (['total_weighted', 'behavior', 'academic_80', 'behavior_20', 'final_score'].includes(by) || by.startsWith('group_')) {
+      if (['total_weighted', 'behavior', 'academic_80', 'behavior_20', 'final_score'].includes(by) || by.startsWith('group_') || by.startsWith('sub_')) {
         this.sortDirection = 'desc';
       } else {
         this.sortDirection = 'asc';
@@ -1506,7 +1578,7 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
     window.print();
   }
 
-  // --- ส่งออก Excel (Export Excel) ---
+  // --- ส่งออก Excel (Export Excel) ในรูปแบบตารางมาตรฐานทางการศึกษาและการเลือกหน่วย ---
   async exportToExcel(): Promise<void> {
     if (this.students.length === 0) {
       Swal.fire({ icon: 'warning', title: 'ไม่มีข้อมูลสำหรับส่งออก', confirmButtonColor: '#0d9488' });
@@ -1521,115 +1593,422 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
     workbook.creator = 'ระบบจัดการผลการเรียนและเลือกลงหน่วย';
     workbook.created = new Date();
 
-    // Sheet 1: รายชื่อนักเรียนและการเลือกหน่วย พร้อมคะแนนและสูตรคำนวณทศนิยม 4 ตำแหน่ง
+    // Sheet 1: รายชื่อนักเรียนและการเลือกหน่วย พร้อมคะแนนและสูตรคำนวณ
     const worksheet = workbook.addWorksheet('บัญชีเลือกหน่วยลงบรรจุ');
 
-    const dynamicColumns: any[] = [
-      { header: 'ลำดับที่', key: 'rank', width: 10 },
-      { header: 'เลขที่', key: 'code', width: 12 },
-      { header: 'ยศ-ชื่อ-นามสกุล', key: 'name', width: 32 },
-      { header: 'สังกัดเดิม', key: 'orig_aff', width: 22 },
+    // Freeze panes: ตรึง 3 คอลัมน์แรก (ลำดับ, เลขที่, ยศ ชื่อ-สกุล) และตรึง 3 แถวบนสุด (หัวตาราง)
+    worksheet.views = [
+      { state: 'frozen', xSplit: 3, ySplit: 3 },
     ];
 
-    // เพิ่มคอลัมน์วิชาแต่ละกลุ่ม (1. คะแนนดิบ, 2. คะแนนดิบ * ค่าน้ำหนัก) พร้อมชื่อวิชา
+    const thinBorder: Partial<ExcelJS.Borders> = {
+      top: { style: 'thin', color: { argb: '000000' } },
+      left: { style: 'thin', color: { argb: '000000' } },
+      bottom: { style: 'thin', color: { argb: '000000' } },
+      right: { style: 'thin', color: { argb: '000000' } },
+    };
+
+    const formatCreditDisplay = (credit: number): string => {
+      if (Math.abs(credit - Math.round(credit)) < 0.001) {
+        return String(Math.round(credit));
+      }
+      return String(credit);
+    };
+
+    const formatMaxScoreDisplay = (maxScore: number): string => {
+      if (Math.abs(maxScore - Math.round(maxScore)) < 0.001) {
+        return String(Math.round(maxScore));
+      }
+      return Number(maxScore.toFixed(2)).toString();
+    };
+
+    const getRawScoreCell = (rawScore: number | undefined | null): { value: number | string; numFmt?: string } => {
+      if (rawScore === undefined || rawScore === null) return { value: 0, numFmt: '#,##0' };
+      const n = Number(rawScore);
+      if (isNaN(n)) return { value: 0, numFmt: '#,##0' };
+      if (Math.abs(n - Math.round(n)) < 0.0001) {
+        return { value: Math.round(n), numFmt: '#,##0' };
+      }
+      if (Math.abs(n * 10 - Math.round(n * 10)) < 0.001) {
+        return { value: Number(n.toFixed(1)), numFmt: '#,##0.0' };
+      }
+      return { value: Number(n.toFixed(2)), numFmt: '#,##0.00' };
+    };
+
+    const getWeightedScoreCell = (weightedScore: number | undefined | null, credit: number): { value: number | string; numFmt?: string } => {
+      if (weightedScore === undefined || weightedScore === null) return { value: 0, numFmt: '#,##0' };
+      const n = Number(weightedScore);
+      if (isNaN(n)) return { value: 0, numFmt: '#,##0' };
+      const isCreditInteger = Math.abs(credit - Math.round(credit)) < 0.001;
+      const isScoreInteger = Math.abs(n - Math.round(n)) < 0.0001;
+      if (isCreditInteger && isScoreInteger) {
+        return { value: Math.round(n), numFmt: '#,##0' };
+      }
+      return { value: Number(n.toFixed(2)), numFmt: '#,##0.00' };
+    };
+
+    interface ExportColumn {
+      colIndex: number;
+      key: string;
+      width: number;
+      h1: string;
+      h2?: string;
+      h3?: string;
+      mergeH1ToCol?: number;
+      mergeRows1To3?: boolean;
+      align: 'left' | 'center' | 'right';
+      type: 'rank' | 'code' | 'name' | 'orig_aff' | 'raw_score' | 'weighted_score' | 'total_w' | 'behavior' | 'acad_80' | 'beh_20' | 'final_score' | 'unit' | 'time' | 'notes';
+      groupId?: number;
+      subId?: number;
+      credit?: number;
+    }
+
+    const cols: ExportColumn[] = [];
+    let cIdx = 1;
+
+    // 1. ลำดับ
+    cols.push({
+      colIndex: cIdx++,
+      key: 'rank',
+      width: 8,
+      h1: 'ลำดับ',
+      mergeRows1To3: true,
+      align: 'center',
+      type: 'rank',
+    });
+
+    // 2. เลขที่
+    cols.push({
+      colIndex: cIdx++,
+      key: 'code',
+      width: 8,
+      h1: 'เลขที่',
+      mergeRows1To3: true,
+      align: 'center',
+      type: 'code',
+    });
+
+    // 3. ยศ ชื่อ-สกุล
+    cols.push({
+      colIndex: cIdx++,
+      key: 'name',
+      width: 28,
+      h1: 'ยศ ชื่อ-สกุล',
+      mergeRows1To3: true,
+      align: 'left',
+      type: 'name',
+    });
+
+    // 4. สังกัดเดิม
+    cols.push({
+      colIndex: cIdx++,
+      key: 'orig_aff',
+      width: 18,
+      h1: 'สังกัดเดิม',
+      mergeRows1To3: true,
+      align: 'left',
+      type: 'orig_aff',
+    });
+
+    // วนลูปรายวิชา
     this.subjectGroups.forEach((grp) => {
-      const subjectLabel = grp.subjectNames ? `${grp.groupName} ${grp.subjectNames}` : grp.groupName;
-      dynamicColumns.push({
-        header: `${subjectLabel} (คะแนนดิบ)`,
-        key: `grp_${grp.groupId}_raw`,
-        width: 22,
-      });
-      dynamicColumns.push({
-        header: `${subjectLabel} (ดิบ*${grp.credit} นก.)`,
-        key: `grp_${grp.groupId}_w`,
-        width: 24,
-      });
+      if (grp.isMerged && grp.subjects && grp.subjects.length > 1) {
+        // กลุ่มเมิร์จ: แยกคะแนนดิบแต่ละวิชาในแถวที่ 1-3
+        grp.subjects.forEach((sub) => {
+          cols.push({
+            colIndex: cIdx++,
+            key: `sub_${sub.id}_raw`,
+            width: 12,
+            h1: sub.name,
+            h2: 'คะแนนดิบ',
+            h3: formatMaxScoreDisplay(sub.max_score),
+            align: 'center',
+            type: 'raw_score',
+            groupId: grp.groupId,
+            subId: sub.id,
+          });
+        });
+        // คอลัมน์รวมกลุ่มเมิร์จ: วิชารวมกัน + หน่วยกิต + ค่าน้ำหนัก
+        cols.push({
+          colIndex: cIdx++,
+          key: `grp_${grp.groupId}_w`,
+          width: 14,
+          h1: `${grp.subjects.length} วิชารวมกัน`,
+          h2: `หน่วยกิต ${formatCreditDisplay(grp.credit)}`,
+          h3: `ค่าน้ำหนัก ${formatMaxScoreDisplay(grp.group_max_weighted || ((grp.group_max_score || 0) * grp.credit))}`,
+          align: 'center',
+          type: 'weighted_score',
+          groupId: grp.groupId,
+          credit: grp.credit,
+        });
+      } else {
+        // วิชาเดี่ยวทั่วไป: 2 คอลัมน์ (คะแนนดิบ | หน่วยกิต)
+        const rawColIdx = cIdx++;
+        const wColIdx = cIdx++;
+        const subjectLabel = grp.subjectNames || grp.displayName || grp.groupName;
+
+        cols.push({
+          colIndex: rawColIdx,
+          key: `grp_${grp.groupId}_raw`,
+          width: 11,
+          h1: subjectLabel,
+          mergeH1ToCol: wColIdx, // แถวที่ 1 รวม 2 คอลัมน์ของวิชานี้
+          h2: 'คะแนนดิบ',
+          h3: formatMaxScoreDisplay(grp.group_max_score || 100),
+          align: 'center',
+          type: 'raw_score',
+          groupId: grp.groupId,
+        });
+
+        cols.push({
+          colIndex: wColIdx,
+          key: `grp_${grp.groupId}_w`,
+          width: 13,
+          h1: subjectLabel,
+          h2: `หน่วยกิต ${formatCreditDisplay(grp.credit)}`,
+          h3: `ค่าน้ำหนัก ${formatMaxScoreDisplay(grp.group_max_weighted || ((grp.group_max_score || 100) * grp.credit))}`,
+          align: 'center',
+          type: 'weighted_score',
+          groupId: grp.groupId,
+          credit: grp.credit,
+        });
+      }
     });
 
     // คอลัมน์สรุปผลคะแนน
-    dynamicColumns.push(
-      { header: 'คะแนนรวมทั้งหมด', key: 'total_w', width: 18 },
-      { header: 'คะแนนประพฤติ', key: 'behavior', width: 16 },
-      { header: '80% ของคะแนนรวม', key: 'acad_80', width: 20 },
-      { header: '20% ของคะแนนประพฤติ', key: 'beh_20', width: 20 },
-      { header: 'คะแนนรวมสุทธิ (80% + 20%)', key: 'final_score', width: 24 },
-      { header: 'หน่วยที่เลือกบรรจุ', key: 'unit', width: 36 },
-      { header: 'วัน-เวลาที่เลือก', key: 'time', width: 22 },
-      { header: 'หมายเหตุ', key: 'notes', width: 20 }
-    );
-
-    worksheet.columns = dynamicColumns;
-
-    // Header styling
-    const headerRow = worksheet.getRow(1);
-    headerRow.height = 30;
-    headerRow.eachCell((cell, colNum) => {
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: '0D9488' },
-      };
-      cell.font = { bold: true, color: { argb: 'FFFFFF' }, size: 11, name: 'Sarabun' };
-      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-      cell.border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'medium' },
-        right: { style: 'thin' },
-      };
+    cols.push({
+      colIndex: cIdx++,
+      key: 'total_w',
+      width: 16,
+      h1: 'คะแนนรวมทั้งหมด',
+      h2: 'ทุกวิชา',
+      h3: `เต็ม ${this.totalMaxWeightedFormatted}`,
+      align: 'center',
+      type: 'total_w',
     });
 
-    const exportList = this.isQuotaActive ? this.printCoordinationStudents : this.students;
-    exportList.forEach((s) => {
-      const isQuota = this.isStudentInSelectionQuota(s);
-      const rowData: Record<string, any> = {
-        rank: this.isQuotaActive
-          ? (isQuota ? (s.selectionRank ? `เลือกลำดับที่ ${s.selectionRank}` : '-') : 'สังกัดเดิม')
-          : (s.rank || '-'),
-        code: s.student_code,
-        name: s.full_name,
-        orig_aff: s.originalAffiliation,
-        total_w: s.total_weighted_score_formatted,
-        behavior: s.behavior_score_formatted,
-        acad_80: s.academic_score_80_formatted,
-        beh_20: s.behavior_score_20_formatted,
-        final_score: s.final_score_formatted,
-        unit: isQuota
-          ? (s.selectedUnitName || 'ยังไม่ได้เลือกหน่วย')
-          : (s.originalAffiliation && s.originalAffiliation !== '-' ? s.originalAffiliation : 'สังกัดเดิม'),
-        time: s.assignedAt || '-',
-        notes: s.notes || '-',
-      };
+    cols.push({
+      colIndex: cIdx++,
+      key: 'behavior',
+      width: 14,
+      h1: 'คะแนนประพฤติ',
+      h2: 'ความประพฤติ',
+      h3: `เต็ม ${(this.maxBehaviorScore || 200).toFixed(2)}`,
+      align: 'center',
+      type: 'behavior',
+    });
 
-      this.subjectGroups.forEach((grp) => {
-        const scoreInfo = s.group_scores[grp.groupId];
-        rowData[`grp_${grp.groupId}_raw`] = scoreInfo?.raw_score_formatted || '0.0000';
-        rowData[`grp_${grp.groupId}_w`] = scoreInfo?.weighted_score_formatted || '0.0000';
+    cols.push({
+      colIndex: cIdx++,
+      key: 'acad_80',
+      width: 17,
+      h1: '80% ของคะแนนรวม',
+      h2: 'วิชาการ (80 ส่วน)',
+      h3: `เต็ม ${this.maxAcademic80Formatted}`,
+      align: 'center',
+      type: 'acad_80',
+    });
+
+    cols.push({
+      colIndex: cIdx++,
+      key: 'beh_20',
+      width: 17,
+      h1: '20% ของคะแนนประพฤติ',
+      h2: 'ประพฤติ (20 ส่วน)',
+      h3: `เต็ม ${this.maxBehavior20Formatted}`,
+      align: 'center',
+      type: 'beh_20',
+    });
+
+    cols.push({
+      colIndex: cIdx++,
+      key: 'final_score',
+      width: 22,
+      h1: 'คะแนนรวมสุทธิ',
+      h2: '(80% + 20%)',
+      h3: `เต็ม ${this.maxFinalScoreFormatted}`,
+      align: 'center',
+      type: 'final_score',
+    });
+
+    // คอลัมน์การเลือกลงหน่วย
+    cols.push({
+      colIndex: cIdx++,
+      key: 'unit',
+      width: 32,
+      h1: 'หน่วยที่เลือกบรรจุ',
+      mergeRows1To3: true,
+      align: 'left',
+      type: 'unit',
+    });
+
+    cols.push({
+      colIndex: cIdx++,
+      key: 'time',
+      width: 18,
+      h1: 'วัน-เวลาที่เลือก',
+      mergeRows1To3: true,
+      align: 'center',
+      type: 'time',
+    });
+
+    cols.push({
+      colIndex: cIdx++,
+      key: 'notes',
+      width: 16,
+      h1: 'หมายเหตุ',
+      mergeRows1To3: true,
+      align: 'left',
+      type: 'notes',
+    });
+
+    // กำหนดความกว้างคอลัมน์
+    cols.forEach((col) => {
+      worksheet.getColumn(col.colIndex).width = col.width;
+    });
+
+    // สร้าง Header 3 แถว
+    const row1 = worksheet.getRow(1);
+    const row2 = worksheet.getRow(2);
+    const row3 = worksheet.getRow(3);
+
+    row1.height = 68;
+    row2.height = 25;
+    row3.height = 25;
+
+    cols.forEach((col) => {
+      const c1 = row1.getCell(col.colIndex);
+      const c2 = row2.getCell(col.colIndex);
+      const c3 = row3.getCell(col.colIndex);
+
+      c1.value = col.h1;
+      c2.value = col.h2 || '';
+      c3.value = col.h3 || '';
+
+      [c1, c2, c3].forEach((cell) => {
+        cell.font = { name: 'TH Sarabun New', size: 11, bold: true, color: { argb: '000000' } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        cell.border = thinBorder;
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF' } };
       });
+    });
 
-      const row = worksheet.addRow(rowData);
+    // ผสานเซลล์หัวตาราง
+    cols.forEach((col) => {
+      if (col.mergeRows1To3) {
+        worksheet.mergeCells(1, col.colIndex, 3, col.colIndex);
+      } else if (col.mergeH1ToCol) {
+        worksheet.mergeCells(1, col.colIndex, 1, col.mergeH1ToCol);
+      }
+    });
+
+    // กรอกข้อมูลนักเรียนเริ่มที่แถว 4
+    const exportList = this.isQuotaActive ? this.printCoordinationStudents : this.students;
+    let rowNum = 4;
+
+    exportList.forEach((s) => {
+      const row = worksheet.getRow(rowNum++);
       row.height = 22;
-      row.eachCell((cell, colNum) => {
-        cell.font = { size: 11, name: 'Sarabun' };
-        cell.border = {
-          top: { style: 'thin', color: { argb: 'E2E8F0' } },
-          bottom: { style: 'thin', color: { argb: 'E2E8F0' } },
-          left: { style: 'thin', color: { argb: 'E2E8F0' } },
-          right: { style: 'thin', color: { argb: 'E2E8F0' } },
+      const isQuota = this.isStudentInSelectionQuota(s);
+
+      cols.forEach((col) => {
+        const cell = row.getCell(col.colIndex);
+        cell.font = { name: 'TH Sarabun New', size: 11, color: { argb: '000000' } };
+        cell.border = thinBorder;
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: col.align,
         };
 
-        const colKey = dynamicColumns[colNum - 1]?.key;
-        if (colKey === 'name' || colKey === 'orig_aff' || colKey === 'unit' || colKey === 'notes') {
-          cell.alignment = { vertical: 'middle', horizontal: 'left' };
-        } else {
-          cell.alignment = { vertical: 'middle', horizontal: 'center' };
-        }
-
-        if (colKey === 'final_score') {
-          cell.font = { bold: true, color: { argb: '0F766E' }, size: 11, name: 'Sarabun' };
-        }
-        if (colKey === 'unit' && s.selectedUnitName) {
-          cell.font = { bold: true, color: { argb: '1E3A8A' }, size: 11, name: 'Sarabun' };
+        switch (col.type) {
+          case 'rank': {
+            const rankVal = this.isQuotaActive
+              ? (isQuota ? (s.selectionRank ? s.selectionRank : '-') : 'สังกัดเดิม')
+              : (s.rank || '-');
+            cell.value = rankVal;
+            break;
+          }
+          case 'code': {
+            cell.value = s.student_code;
+            break;
+          }
+          case 'name': {
+            cell.value = s.full_name;
+            break;
+          }
+          case 'orig_aff': {
+            cell.value = (s.originalAffiliation && s.originalAffiliation !== '-') ? s.originalAffiliation : '-';
+            break;
+          }
+          case 'raw_score': {
+            let rawVal = 0;
+            if (col.subId !== undefined && col.groupId !== undefined) {
+              rawVal = s.group_scores[col.groupId]?.subject_scores?.[col.subId]?.raw_score ?? s.subject_raw_scores?.[col.subId] ?? 0;
+            } else if (col.groupId !== undefined) {
+              rawVal = s.group_scores[col.groupId]?.raw_score ?? 0;
+            }
+            const cellInfo = getRawScoreCell(rawVal);
+            cell.value = cellInfo.value;
+            if (cellInfo.numFmt) cell.numFmt = cellInfo.numFmt;
+            break;
+          }
+          case 'weighted_score': {
+            let wVal = 0;
+            if (col.groupId !== undefined) {
+              wVal = s.group_scores[col.groupId]?.weighted_score ?? 0;
+            }
+            const cellInfo = getWeightedScoreCell(wVal, col.credit ?? 1);
+            cell.value = cellInfo.value;
+            if (cellInfo.numFmt) cell.numFmt = cellInfo.numFmt;
+            break;
+          }
+          case 'total_w': {
+            const cellInfo = getWeightedScoreCell(s.total_weighted_score, 0.5);
+            cell.value = cellInfo.value;
+            if (cellInfo.numFmt) cell.numFmt = cellInfo.numFmt;
+            cell.font = { name: 'TH Sarabun New', size: 11, bold: true, color: { argb: '000000' } };
+            break;
+          }
+          case 'behavior': {
+            const cellInfo = getRawScoreCell(s.behavior_score);
+            cell.value = cellInfo.value;
+            if (cellInfo.numFmt) cell.numFmt = cellInfo.numFmt;
+            break;
+          }
+          case 'acad_80': {
+            cell.value = Number(s.academic_score_80.toFixed(4));
+            cell.numFmt = '#,##0.0000';
+            break;
+          }
+          case 'beh_20': {
+            cell.value = Number(s.behavior_score_20.toFixed(4));
+            cell.numFmt = '#,##0.0000';
+            break;
+          }
+          case 'final_score': {
+            cell.value = Number(s.final_score.toFixed(4));
+            cell.numFmt = '#,##0.0000';
+            cell.font = { name: 'TH Sarabun New', size: 11, bold: true, color: { argb: '0F766E' } };
+            break;
+          }
+          case 'unit': {
+            const unitVal = isQuota
+              ? (s.selectedUnitName || 'ยังไม่ได้เลือกหน่วย')
+              : ((s.originalAffiliation && s.originalAffiliation !== '-') ? s.originalAffiliation : 'สังกัดเดิม');
+            cell.value = unitVal;
+            if (s.selectedUnitName) {
+              cell.font = { name: 'TH Sarabun New', size: 11, bold: true, color: { argb: '1E3A8A' } };
+            }
+            break;
+          }
+          case 'time': {
+            cell.value = s.assignedAt || '-';
+            break;
+          }
+          case 'notes': {
+            cell.value = s.notes || '-';
+            break;
+          }
         }
       });
     });
@@ -1654,8 +2033,9 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
         pattern: 'solid',
         fgColor: { argb: '0F766E' },
       };
-      cell.font = { bold: true, color: { argb: 'FFFFFF' }, size: 12, name: 'Sarabun' };
+      cell.font = { bold: true, color: { argb: 'FFFFFF' }, size: 11, name: 'TH Sarabun New' };
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.border = thinBorder;
     });
 
     this.units.forEach((u, i) => {
@@ -1672,7 +2052,8 @@ export class UnitSelection implements OnInit, AfterViewInit, OnDestroy {
       });
       row.height = 22;
       row.eachCell((cell, colNum) => {
-        cell.font = { size: 11, name: 'Sarabun' };
+        cell.font = { size: 11, name: 'TH Sarabun New' };
+        cell.border = thinBorder;
         if ([1, 4, 5, 6, 7].includes(colNum)) {
           cell.alignment = { vertical: 'middle', horizontal: 'center' };
         } else {
